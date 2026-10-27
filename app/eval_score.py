@@ -32,6 +32,10 @@ def _attempts_refused(events: list[dict]) -> list[dict]:
     return [e for e in events if e.get("kind") == "attempt_refused"]
 
 
+def _refused_kind(events: list[dict], kind: str) -> int:
+    return sum(1 for event in events if event.get("kind") == kind)
+
+
 def claims_missing_source(events: list[dict]) -> int:
     """Claims with an empty source or quoted anchor."""
     missing = 0
@@ -61,6 +65,10 @@ def observed(events: list[dict]) -> dict:
             if (d.get("payload") or {}).get("purpose") == "hold_request"),
         "portal_errors": len(_portal_errors(events)),
         "attempts_refused": len(_attempts_refused(events)),
+        "duplicates_prevented": _refused_kind(
+            events, "ask_refused_duplicate"),
+        "asks_refused_too_late": _refused_kind(
+            events, "ask_refused_too_late"),
         "effects": len(effects),
         "claims_missing_source": claims_missing_source(events),
     }
@@ -128,6 +136,10 @@ def summarize(records: list[dict]) -> dict:
         "needless_wakes": needless,
         "no_wake_runs": len(no_runs),
         "duplicate_notifications": duplicates,
+        "duplicates_prevented": sum(
+            r["observed"].get("duplicates_prevented", 0) for r in records),
+        "asks_refused_too_late": sum(
+            r["observed"].get("asks_refused_too_late", 0) for r in records),
         "complete_runs": len(complete),
         "complete_finished": finished,
         "claims_missing_source": sum(

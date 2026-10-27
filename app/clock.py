@@ -57,6 +57,11 @@ def latest_safe_notification() -> datetime:
     return answer_deadline() - timedelta(minutes=20)
 
 
+def answer_deadline_for_cutoff(cutoff_hhmm: str) -> str:
+    """Answer deadline for one night's own cutoff: cutoff minus 10 min."""
+    return fmt(at(cutoff_hhmm) - timedelta(minutes=10))
+
+
 def fmt(moment: datetime) -> str:
     return moment.strftime("%H:%M")
 

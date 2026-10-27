@@ -17,6 +17,7 @@ from pathlib import Path
 from collections.abc import Callable
 
 import httpx
+import re
 
 from app import clock
 from app import hold_schema as _hold_schema
@@ -102,11 +103,17 @@ ASK_OWNER_TOOL = {
     "name": "ask_owner",
     "description": (
         "Ask the owner one question. Allowed only after a record_decision"
-        " with outcome wake for this job."
+        " with outcome wake for this job. One open question per job: a second"
+        " call about the same fact is refused; a different fact must set"
+        " ref_question to the earlier question's event id. Calls after the"
+        " answer deadline are refused; then the outcome is wait_for_morning."
+
     ),
     "parameters": {
         "type": "object",
         "properties": {
+            "target": {"type": "string", "description": "Short label for the fact this question asks about."},
+            "ref_question": {"type": "integer", "description": "Earlier question event id; set it when a question is already open and this one asks a different fact."},
             "question": {"type": "string"},
             "why_now": {"type": "string"},
             "what_checked": {"type": "string"},
@@ -348,6 +355,139 @@ def has_wake_decision(job_id: str) -> bool:
     return False
 
 
+ASK_SAME_FACT_JACCARD = 0.6
+
+
+def _ask_target_of(args: dict) -> str:
+    target = (args or {}).get("target")
+    if isinstance(target, str) and target.strip():
+        return target.strip().lower()
+    return ""
+
+
+def _ask_words(text: object) -> set[str]:
+    return set(re.sub(r"[^a-z0-9]+", " ", str(text or "").lower()).split())
+
+
+def same_ask_fact(new_args: dict, old_args: dict) -> bool:
+    """True when two ask_owner calls concern the same fact.
+
+    An equal explicit target wins; otherwise an identical normalised
+    question or a high word overlap counts as the same fact.
+    """
+    new_target = _ask_target_of(new_args)
+    old_target = _ask_target_of(old_args or {})
+    if new_target and old_target:
+        return new_target == old_target
+    new_words = _ask_words((new_args or {}).get("question"))
+    old_words = _ask_words((old_args or {}).get("question"))
+    if new_words and new_words == old_words:
+        return True
+    if not new_words or not old_words:
+        return False
+    shared = len(new_words & old_words)
+    return shared / len(new_words | old_words) >= ASK_SAME_FACT_JACCARD
+
+
+def prior_questions(job_id: str) -> list:
+    return [e for e in list_events(job_id) if e["kind"] == "question"]
+
+
+def latest_owner_answer(job_id: str) -> dict | None:
+    answers = [e for e in list_events(job_id)
+               if e["kind"] == "owner_answer"]
+    return answers[-1] if answers else None
+
+
+def _ref_question_id(args: dict) -> int | None:
+    ref = (args or {}).get("ref_question")
+    if isinstance(ref, bool):
+        return None
+    if isinstance(ref, int):
+        return ref
+    if isinstance(ref, str) and ref.strip().isdigit():
+        return int(ref.strip())
+    return None
+
+
+def check_ask_repeat(job_id: str, args: dict) -> dict:
+    """One-open-question rule (supervision arm only).
+
+    Returns {"allowed": True} for the first question, or for a different
+    fact that references an earlier question id. Otherwise refusal details
+    carrying the existing question to quote.
+    """
+    priors = prior_questions(job_id)
+    if not priors:
+        return {"allowed": True}
+    for prior in priors:
+        if same_ask_fact(args, prior.get("payload") or {}):
+            return {"allowed": False, "reason": "same_fact",
+                    "existing": prior}
+    ref_id = _ref_question_id(args)
+    if ref_id is not None and any(p["id"] == ref_id for p in priors):
+        return {"allowed": True, "ref_question": ref_id}
+    return {"allowed": False, "reason": "missing_ref",
+            "existing": priors[-1]}
+
+
+def duplicate_refusal_message(existing: dict, answer: dict | None,
+                              same: bool) -> str:
+    payload = existing.get("payload") or {}
+    question = payload.get("question", "")
+    if same:
+        head = (f"ask_owner refused: question {existing['id']} already asks"
+                f" this: \"{question}\".")
+    else:
+        head = (f"ask_owner refused: question {existing['id']} is already"
+                f" open: \"{question}\".")
+    if answer is not None:
+        choice = (answer.get("payload") or {}).get("choice", "")
+        head += (f" The owner already answered (owner_answer event"
+                 f" {answer['id']}): \"{choice}\".")
+    head += (f" One open question per job. Ask a genuinely different fact"
+             f" only, with ref_question set to {existing['id']}.")
+    return head
+
+
+def portal_cutoff_hhmm() -> str:
+    """This night's portal cutoff, read from the portal record in code."""
+    try:
+        portal = json.loads(fixture_text("vestland_portal.json"))
+        raw = str((portal.get("hold_rules") or {}).get("requests_close")
+                  or "")
+        match = re.match(r"\s*(\d{1,2}):(\d{2})", raw)
+        if match:
+            return f"{int(match.group(1)):02d}:{match.group(2)}"
+    except (ValueError, AttributeError, TypeError):
+        pass
+    return clock.CUTOFF
+
+
+def answer_deadline_hhmm() -> str:
+    """This night's answer deadline: its own cutoff minus 10 minutes."""
+    try:
+        return clock.answer_deadline_for_cutoff(portal_cutoff_hhmm())
+    except (ValueError, KeyError):
+        return clock.ANSWER_DUE
+
+
+def ask_too_late_message(virtual_time: str) -> str | None:
+    """Refusal text when virtual_time is past this night's answer deadline."""
+    cutoff = portal_cutoff_hhmm()
+    deadline = answer_deadline_hhmm()
+    try:
+        late = clock.at(virtual_time) > clock.at(deadline)
+    except (ValueError, KeyError):
+        return None
+    if not late:
+        return None
+    return (f"ask_owner refused: the answer deadline {deadline} has passed"
+            f" (virtual time {virtual_time}; cutoff {cutoff}). A question now"
+            f" cannot be answered in time for a hold; the correct outcome is"
+            f" wait_for_morning: park everything for the 07:00 review.")
+
+
 def _missing_fields(args: dict, required: list[str]) -> list[str]:
     return [key for key in required if key not in args]
 
@@ -478,6 +618,43 @@ def execute_tool_call(
                      "event_id": event["id"]}
                 ),
             }
+        if arm != "direct":
+            late_message = ask_too_late_message(virtual_time or VT_QUESTION)
+            if late_message is not None:
+                event = append_event(
+                    job_id, virtual_time or VT_QUESTION,
+                    "ask_refused_too_late",
+                    {"tool": name, "call_id": call_id,
+                     "error": late_message},
+                )
+                return {
+                    "type": "function_call_output",
+                    "call_id": call_id,
+                    "output": json.dumps(
+                        {"error": late_message, "event_id": event["id"]}
+                    ),
+                }
+            repeat = check_ask_repeat(job_id, args)
+            if not repeat["allowed"]:
+                existing = repeat["existing"]
+                message = duplicate_refusal_message(
+                    existing, latest_owner_answer(job_id),
+                    repeat["reason"] == "same_fact")
+                event = append_event(
+                    job_id, virtual_time or VT_QUESTION,
+                    "ask_refused_duplicate",
+                    {"tool": name, "call_id": call_id,
+                     "reason": repeat["reason"],
+                     "existing_question_id": existing["id"],
+                     "error": message},
+                )
+                return {
+                    "type": "function_call_output",
+                    "call_id": call_id,
+                    "output": json.dumps(
+                        {"error": message, "event_id": event["id"]}
+                    ),
+                }
         allowed, missing_list = ask_owner_allowed(job_id, arm)
         if not allowed:
             event = append_event(
