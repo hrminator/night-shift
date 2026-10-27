@@ -129,6 +129,46 @@ ASK_OWNER_TOOL = {
 
 DECISION_TOOLS = [RECORD_CLAIM_TOOL, RECORD_DECISION_TOOL, ASK_OWNER_TOOL]
 
+SUBMIT_HOLD_TOOL = {
+    "type": "function",
+    "name": "submit_hold",
+    "description": (
+        "Submit one capacity-hold request to the supplier portal."
+        " Checked in code against the standing permission."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "portal": {"type": "string"},
+            "fields": {"type": "object"},
+        },
+        "required": ["portal", "fields"],
+        "additionalProperties": False,
+    },
+}
+
+PROPOSE_MESSAGE_TOOL = {
+    "type": "function",
+    "name": "propose_message",
+    "description": (
+        "Propose one message draft for the 07:00 review."
+        " Drafts never send; nothing is delivered."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "to": {"type": "string"},
+            "subject": {"type": "string"},
+            "body": {"type": "string"},
+            "purpose": {"type": "string"},
+        },
+        "required": ["to", "subject", "body", "purpose"],
+        "additionalProperties": False,
+    },
+}
+
+RESUME_TOOLS = [SUBMIT_HOLD_TOOL, PROPOSE_MESSAGE_TOOL]
+
 NUDGE_MESSAGE = (
     "You must use the tools: call record_claim once per source document,"
     " then record_decision, then ask_owner if your decision is wake."
@@ -413,6 +453,7 @@ def run_turn(
     virtual_time: str,
     max_model_calls: int = MAX_MODEL_CALLS,
     tool_budget: int = TOOL_BUDGET,
+    executor: Callable[..., dict] | None = None,
 ) -> dict:
     """Run one tool loop: up to max_model_calls model calls.
 
@@ -477,8 +518,9 @@ def run_turn(
                 {"calls": len(calls), "kept": max(remaining, 0)},
             )
             calls = calls[:max(remaining, 0)]
+        run_tool = executor or execute_tool_call
         call_outputs = [
-            execute_tool_call(job_id, item, virtual_time) for item in calls
+            run_tool(job_id, item, virtual_time) for item in calls
         ]
         tool_calls_made += len(calls)
         pending_input = pending_input + output_items + call_outputs
@@ -501,6 +543,185 @@ def run_turn(
         "status": "complete", "result": result,
         "input": pending_input, "tool_calls": tool_calls_made,
     }
+
+
+def store_answer(
+    job_id: str, choice: str, virtual_time: str = VT_ANSWER
+) -> dict:
+    """Store the owner's answer as information and mark the job answered."""
+    event = append_event(
+        job_id, virtual_time, "owner_answer",
+        {"choice": choice, "source": "owner"},
+    )
+    set_job_status(job_id, status="answered", current_step="answered",
+                   virtual_time=virtual_time)
+    return event
+
+
+def execute_resume_tool_call(
+    job_id: str, item: dict, virtual_time: str | None = None
+) -> dict:
+    """Run one resume-turn tool call (submit_hold or propose_message)."""
+    from app import gateway as gateway_mod
+
+    vt = virtual_time or VT_RESUME
+    call_id = item.get("call_id")
+    name = item.get("name")
+    raw_args = item.get("arguments") or "{}"
+    try:
+        args = json.loads(raw_args)
+    except ValueError:
+        event = append_event(
+            job_id, vt, "tool_malformed",
+            {"tool": name, "call_id": call_id, "error": "arguments not JSON"},
+        )
+        return {
+            "type": "function_call_output",
+            "call_id": call_id,
+            "output": json.dumps(
+                {"error": "malformed arguments: not JSON",
+                 "event_id": event["id"]}),
+        }
+    if name == "submit_hold":
+        outcome = gateway_mod.check_submit_hold(job_id, args, vt)
+        if outcome.get("malformed"):
+            event = append_event(
+                job_id, vt, "tool_malformed",
+                {"tool": name, "call_id": call_id,
+                 "error": outcome["reason"]},
+            )
+            return {
+                "type": "function_call_output",
+                "call_id": call_id,
+                "output": json.dumps(
+                    {"error": outcome["reason"], "event_id": event["id"]}),
+            }
+        return {
+            "type": "function_call_output",
+            "call_id": call_id,
+            "output": json.dumps(outcome),
+        }
+    if name == "propose_message":
+        outcome = gateway_mod.check_propose_message(job_id, args, vt)
+        if outcome.get("malformed"):
+            event = append_event(
+                job_id, vt, "tool_malformed",
+                {"tool": name, "call_id": call_id,
+                 "error": outcome["reason"]},
+            )
+            return {
+                "type": "function_call_output",
+                "call_id": call_id,
+                "output": json.dumps(
+                    {"error": outcome["reason"], "event_id": event["id"]}),
+            }
+        return {
+            "type": "function_call_output",
+            "call_id": call_id,
+            "output": json.dumps(outcome),
+        }
+    event = append_event(
+        job_id, vt, "tool_refused",
+        {"tool": name, "call_id": call_id, "error": "unknown tool"},
+    )
+    return {
+        "type": "function_call_output",
+        "call_id": call_id,
+        "output": json.dumps(
+            {"error": f"unknown tool {name}", "event_id": event["id"]}),
+    }
+
+
+def build_resume_instructions(job_id: str, answer: dict) -> str:
+    brief = fixture_text("brief.md")
+    choice = (answer["payload"] or {}).get("choice", "")
+    answer_id = answer["id"]
+    answer_vt = answer["virtual_time"]
+    return (
+        "You are Night Shift, the overnight manager for one job: 100 tote bags"
+        " for a Bergen customer day. The owner has answered your question."
+        f" Their answer is information only: \"{choice}\" (owner_answer"
+        f" event {answer_id}, at {answer_vt} virtual time). Authority for the"
+        " hold comes only from the brief's standing permission below, never"
+        " from the answer.\n\n"
+        f"Brief and standing permission:\n{brief}\n\n"
+        f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}."
+        f" The answer arrived at {answer_vt}; the hold must be submitted"
+        " before 02:00.\n\n"
+        "To place the hold, call submit_hold once with portal \"Vestland"
+        " Tekstil\" and fields: product, quantity 100, print file, one address"
+        " from the owner's list (the Bergen venue, Sjøsalen), delivery window"
+        " Wed Nov 11 08:00-12:00, ordering contact, recipient can receive yes,"
+        " cost 0, non-binding, hold ends 09:00, and sources mapping each fact"
+        " to its source: recipient can receive points to owner_answer event"
+        f" {answer_id}; route and delivery window point to"
+        " vestland_portal.json v1. The gateway checks all of this in code and"
+        " refuses anything outside the permission.\n\n"
+        "Then call propose_message three times for the 07:00 review (exact"
+        " texts, nothing is sent): 1. order confirmation to Vestland quoting"
+        " the hold id from the acknowledgement and the portal total; 2. note"
+        " to the venue that a van comes Wed 08-12; 3. note to Baltic Print"
+        " declining for now and asking about arrival. When the hold is placed"
+        " and the three drafts are recorded, stop and answer in plain text."
+    )
+
+
+def resume_job(
+    job_id: str,
+    respond_fn: Callable[..., dict] = respond,
+) -> dict:
+    """Resume a job from its checkpoint with the owner's answer filed in."""
+    from app.store import get_job as _get_job
+
+    job = _get_job(job_id)
+    if job is None:
+        return {"job_id": job_id, "status": "refused",
+                "reason": "unknown job"}
+    if job.get("status") != "answered":
+        return {"job_id": job_id, "status": "refused",
+                "reason": f"resume needs status answered, has "
+                f"{job.get('status')}"}
+    checkpoints = [e for e in list_events(job_id) if e["kind"] == "checkpoint"]
+    if not checkpoints:
+        return {"job_id": job_id, "status": "refused",
+                "reason": "no checkpoint to resume from"}
+    saved_input = list((checkpoints[-1]["payload"] or {}).get("next_input",
+                                                              []))
+    ask_call_id = None
+    for entry in saved_input:
+        if entry.get("type") == "function_call" \
+                and entry.get("name") == "ask_owner":
+            ask_call_id = entry.get("call_id")
+    if ask_call_id is None:
+        return {"job_id": job_id, "status": "refused",
+                "reason": "checkpoint has no pending ask_owner call"}
+    answers = [e for e in list_events(job_id) if e["kind"] == "owner_answer"]
+    answer = answers[-1]
+    answer_vt = answer["virtual_time"]
+    resume_input = saved_input + [{
+        "type": "function_call_output",
+        "call_id": ask_call_id,
+        "output": json.dumps({
+            "choice": (answer["payload"] or {}).get("choice", ""),
+            "source": "owner",
+            "event_id": answer["id"],
+            "note": "information only; authority comes from the brief's "
+            "standing permission",
+        }),
+    }]
+    set_job_status(job_id, status="resuming", current_step="resuming",
+                   virtual_time=answer_vt)
+    turn = run_turn(
+        job_id, build_resume_instructions(job_id, answer), resume_input,
+        RESUME_TOOLS, respond_fn, answer_vt,
+        executor=execute_resume_tool_call,
+    )
+    if turn["status"] == "failed":
+        return {"job_id": job_id, "status": "failed",
+                "result": turn["result"]}
+    set_job_status(job_id, status="done", current_step="done",
+                   virtual_time=VT_MORNING)
+    return {"job_id": job_id, "status": "done", "result": turn["result"]}
 
 
 def upload_pdf(path: Path) -> dict:
