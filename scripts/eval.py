@@ -1,21 +1,27 @@
 """Evaluation harness: run cases as fresh nights, score the event log.
 
-Runs each case N times sequentially as a fresh night in a throwaway
-DATA_DIR per run, exports every job, and writes results.json plus
-report.md. Every run is marked a development run.
+Runs each case N times as a fresh night in a throwaway DATA_DIR per run,
+exports every job, and writes results.json plus report.md. Every run is
+marked a development run. Nights run in parallel threads with
+``--concurrency N`` (default 2); each thread pins its own throwaway
+DATA_DIR, so ``--concurrency 1`` is the sequential path.
 
 Usage:
   uv run python scripts/eval.py --arm supervision --cases all --runs 1
   uv run python scripts/eval.py --arm direct --cases W1_timely_answer --runs 3
+  uv run python scripts/eval.py --arm direct --cases all --concurrency 1
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
+import threading
 import time
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -25,6 +31,8 @@ from app import eval_night, eval_score, eval_world, runner
 from app.adapter import MODEL, respond as real_respond
 from app.spend import cost_usd, usage_of
 
+_PRINT_LOCK = threading.Lock()
+
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -33,11 +41,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--cases", default="all",
                         help="'all' or comma-separated case ids")
     parser.add_argument("--runs", type=int, default=1)
+    parser.add_argument("--concurrency", type=int, default=2,
+                        help="parallel nights; 1 runs sequentially")
     parser.add_argument("--out", default="",
                         help="output dir; default results/<utc timestamp>/")
     args = parser.parse_args(argv)
     if args.runs < 1:
         raise SystemExit("--runs must be >= 1")
+    if args.concurrency < 1:
+        raise SystemExit("--concurrency must be >= 1")
     return args
 
 
@@ -53,17 +65,30 @@ def resolve_cases(selection: str) -> list[dict]:
     return [by_id[name] for name in wanted]
 
 
-def run_all(arm: str, cases: list[dict], runs: int, out_dir: Path) -> dict:
-    """Run every case N times sequentially; write results.json + report.md."""
+def run_all(arm: str, cases: list[dict], runs: int, out_dir: Path,
+            concurrency: int = 2) -> dict:
+    """Run every case N times; write results.json + report.md."""
     started = datetime.now(timezone.utc)
     out_dir.mkdir(parents=True, exist_ok=True)
-    records: list[dict] = []
-    episode = {"index": 0}
-    for case in cases:
-        for run in range(1, runs + 1):
-            episode["index"] += 1
-            records.append(run_once(
-                arm, case, run, out_dir, episode["index"]))
+    tasks = [(case, run, episode)
+             for episode, (case, run) in enumerate(
+                 ((case, run) for case in cases
+                  for run in range(1, runs + 1)), start=1)]
+    harness_start = time.time()
+    if concurrency == 1:
+        records = [run_once(arm, case, run, out_dir, episode)
+                   for case, run, episode in tasks]
+    else:
+        with ThreadPoolExecutor(max_workers=concurrency,
+                                thread_name_prefix="night") as pool:
+            futures = [pool.submit(run_once, arm, case, run, out_dir,
+                                   episode)
+                       for case, run, episode in tasks]
+            records = [future.result() for future in futures]
+    records.sort(key=lambda record: record["episode"])
+    elapsed = time.time() - harness_start
+    wall_sum = round(sum(record.get("wall_seconds", 0.0)
+                         for record in records), 1)
     summary = eval_score.summarize(records)
     payload = {
         "development_run": True,
@@ -72,7 +97,10 @@ def run_all(arm: str, cases: list[dict], runs: int, out_dir: Path) -> dict:
         "effort": runner.EFFORT,
         "cases": [case["id"] for case in cases],
         "runs_per_case": runs,
+        "concurrency": concurrency,
         "started_utc": started.isoformat(timespec="seconds"),
+        "elapsed_seconds": round(elapsed, 1),
+        "wall_sum_seconds": wall_sum,
         "records": records,
         "summary": summary,
     }
@@ -129,6 +157,7 @@ def run_once(arm: str, case: dict, run: int, out_dir: Path,
             "pass": scored["pass"],
             "predicates": scored["predicates"],
             "observed": scored["observed"],
+            "decision_reason": decision_first_sentence(events),
         })
         if night["status"] not in ("done", "waiting_for_owner",
                                    "decision_done"):
@@ -141,16 +170,37 @@ def run_once(arm: str, case: dict, run: int, out_dir: Path,
             "error": f"{type(exc).__name__}: {exc}",
             "traceback": traceback.format_exc(limit=5),
             "observed": {},
+            "decision_reason": "—",
         })
     record["calls"] = calls
     record["usd"] = round(sum(call["usd"] for call in calls), 4)
     record["seconds"] = round(sum(call["seconds"] for call in calls), 1)
     record["wall_seconds"] = round(time.time() - wall_start, 1)
-    print(f"[{arm}/{case['id']}/{run}] status={record.get('status')}"
-          f" pass={record.get('pass')} usd={record['usd']}"
-          f" s={record['seconds']} wall={record['wall_seconds']}",
-          flush=True)
+    with _PRINT_LOCK:
+        print(f"[{arm}/{case['id']}/{run}] status={record.get('status')}"
+              f" pass={record.get('pass')} usd={record['usd']}"
+              f" s={record['seconds']} wall={record['wall_seconds']}",
+              flush=True)
     return record
+
+
+def first_sentence(text: str, limit: int = 240) -> str:
+    """One sentence: up to the first sentence end, whitespace folded."""
+    snippet = re.split(r"(?<=[.!?])\s+", (text or "").strip(),
+                       maxsplit=1)[0]
+    snippet = " ".join(snippet.split())
+    if len(snippet) > limit:
+        return snippet[:limit].rstrip() + "…"
+    return snippet
+
+
+def decision_first_sentence(events: list[dict]) -> str:
+    """First sentence of the night's last recorded decision reason."""
+    decisions = [e for e in events if e.get("kind") == "decision"]
+    if not decisions:
+        return "—"
+    reason = str((decisions[-1].get("payload") or {}).get("reason", ""))
+    return first_sentence(reason) or "—"
 
 
 def render_report(payload: dict) -> str:
@@ -162,7 +212,8 @@ def render_report(payload: dict) -> str:
         f"Arm: {payload['arm']} · model: {payload['model']} · effort:"
         f" {payload['effort']} · started: {payload['started_utc']}",
         f"Cases: {', '.join(payload['cases'])} ·"
-        f" runs per case: {payload['runs_per_case']}",
+        f" runs per case: {payload['runs_per_case']} ·"
+        f" concurrency: {payload.get('concurrency', 1)}",
         "",
         "## Decision-only cases (wake pairs)",
         "",
@@ -170,8 +221,10 @@ def render_report(payload: dict) -> str:
         f" {summary['must_wake_runs']}.",
         f"Needless wakes {summary['needless_wakes']} on"
         f" {summary['no_wake_runs']} no-wake runs.",
-        f"Duplicate notifications (runs with more than one question):"
-        f" {summary['duplicate_notifications']} (counted separately).",
+        f"Duplicate notifications that still got through (runs with more"
+        f" than one question): {summary['duplicate_notifications']}.",
+        f"Duplicates prevented by the app (ask_refused_duplicate):"
+        f" {summary.get('duplicates_prevented', 0)} (counted separately).",
         "",
         "## Complete-job cases (W1-W4)",
         "",
@@ -186,16 +239,21 @@ def render_report(payload: dict) -> str:
         f"Claims without a source: {summary['claims_missing_source']}.",
         f"Unauthorized attempts (refused): {summary['attempts_refused']};"
         f" executed effects: {summary['effects']} (counted separately).",
+        f"Late asks refused (ask_refused_too_late):"
+        f" {summary.get('asks_refused_too_late', 0)}.",
         f"Cost: ${summary['usd_total']:.4f} total,"
         f" ${summary['usd_per_episode']:.4f} mean per episode.",
         f"Model seconds: {summary['seconds_total']:.1f} total,"
         f" {summary['seconds_per_episode']:.1f} mean per episode.",
+        f"Harness wall: {payload.get('elapsed_seconds', '?')} s for"
+        f" {len(payload['records'])} episodes (sum of episode walls"
+        f" {payload.get('wall_sum_seconds', '?')} s).",
         "",
         "## Per-case episodes",
         "",
         "| case | run | status | pass | notified | notified_at | holds |"
-        " drafts | usd | seconds |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        " drafts | usd | seconds | wall |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for record in payload["records"]:
         seen = record.get("observed") or {}
@@ -204,7 +262,17 @@ def render_report(payload: dict) -> str:
             f" {record.get('status', '?')} | {record.get('pass', '?')} |"
             f" {seen.get('notified', '?')} | {seen.get('notified_at', '?')} |"
             f" {seen.get('holds', '?')} | {seen.get('drafts', '?')} |"
-            f" {record.get('usd', '?')} | {record.get('seconds', '?')} |")
+            f" {record.get('usd', '?')} | {record.get('seconds', '?')} |"
+            f" {record.get('wall_seconds', '?')} |")
+    lines += ["",
+              "## Decision reasons (first sentence)",
+              ""]
+    for record in payload["records"]:
+        lines.append(
+            f"- {record['case']} run {record['run']}"
+            f" ({record.get('status', '?')},"
+            f" pass={record.get('pass', '?')}):"
+            f" {record.get('decision_reason', '—')}")
     lines += ["",
               "Every run above is a development run.",
               ""]
@@ -216,7 +284,8 @@ def main(argv: list[str] | None = None) -> int:
     cases = resolve_cases(args.cases)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     out_dir = Path(args.out) if args.out else Path("results") / stamp
-    payload = run_all(args.arm, cases, args.runs, out_dir)
+    payload = run_all(args.arm, cases, args.runs, out_dir,
+                      concurrency=args.concurrency)
     print(f"WROTE {out_dir / 'results.json'}")
     print(f"WROTE {out_dir / 'report.md'}")
     print(json.dumps(payload["summary"], indent=1))

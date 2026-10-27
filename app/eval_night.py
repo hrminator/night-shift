@@ -14,7 +14,7 @@ from pathlib import Path
 
 from app import eval_world
 from app import runner
-from app.store import append_event, create_job, init_db, list_events, set_job_status
+from app.store import append_event, clear_thread_data_dir, create_job, init_db, list_events, set_job_status, set_thread_data_dir
 
 
 def run_case(
@@ -30,6 +30,7 @@ def run_case(
     """Run one case night; export the job; return run details."""
     if arm not in ("supervision", "direct"):
         raise ValueError(f"unknown arm {arm!r}")
+    set_thread_data_dir(data_dir)
     previous_data_dir = os.environ.get("DATA_DIR")
     os.environ["DATA_DIR"] = str(data_dir)
     try:
@@ -37,6 +38,7 @@ def run_case(
                          upload_fn or runner.upload_pdf,
                          delete_fn or runner.delete_file)
     finally:
+        clear_thread_data_dir()
         if previous_data_dir is None:
             os.environ.pop("DATA_DIR", None)
         else:

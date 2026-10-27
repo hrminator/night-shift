@@ -233,3 +233,103 @@ def test_summarize_keeps_arms_and_types_separate():
     assert (summary["needless_wakes"], summary["no_wake_runs"]) == (1, 1)
     assert (summary["complete_finished"], summary["complete_runs"]) == (1, 2)
     assert "merged" not in " ".join(summary).lower()
+
+
+def test_parse_args_concurrency_defaults_and_validates():
+    from scripts import eval as harness
+    assert harness.parse_args(["--arm", "direct"]).concurrency == 2
+    assert harness.parse_args(
+        ["--arm", "direct", "--concurrency", "1"]).concurrency == 1
+    for bad in ("0", "-2"):
+        try:
+            harness.parse_args(["--arm", "direct", "--concurrency", bad])
+        except SystemExit:
+            pass
+        else:  # noqa: E701 - must not accept bad concurrency
+            raise AssertionError(bad)
+
+
+def _stub_record(episode, case_id, notified):
+    return {
+        "episode": episode, "case": case_id, "run": 1,
+        "status": "waiting_for_owner", "pass": True,
+        "usd": 0.1, "seconds": 1.0, "wall_seconds": 0.1,
+        "case_type": "decision_only",
+        "case_predicates": {"notified": notified},
+        "observed": {"notified": notified, "notified_at": "00:47",
+                     "notifications": 1, "claims_missing_source": 0,
+                     "attempts_refused": 0, "effects": 0,
+                     "duplicates_prevented": 0,
+                     "asks_refused_too_late": 0},
+        "decision_reason": "Stub reason for ordering.",
+    }
+
+
+def _stub_cases():
+    return [
+        {"id": "b-case", "type": "decision_only",
+         "expected": {"predicates": {"notified": True}}},
+        {"id": "a-case", "type": "decision_only",
+         "expected": {"predicates": {"notified": False}}},
+    ]
+
+
+def test_run_all_parallel_keeps_episode_order(tmp_path, monkeypatch):
+    import time as _time
+
+    from scripts import eval as harness
+
+    def fake_run_once(arm, case, run, out_dir, episode):
+        if episode == 1:
+            _time.sleep(0.2)
+        return _stub_record(episode, case["id"], True)
+
+    monkeypatch.setattr(harness, "run_once", fake_run_once)
+    payload = harness.run_all("supervision", _stub_cases(), 1,
+                              tmp_path / "out", concurrency=2)
+    assert [record["episode"] for record in payload["records"]] == [1, 2]
+    assert payload["concurrency"] == 2
+    assert (tmp_path / "out" / "results.json").exists()
+    report = (tmp_path / "out" / "report.md").read_text(encoding="utf-8")
+    assert "Stub reason for ordering." in report
+    assert "Duplicates prevented by the app" in report
+
+
+def test_run_all_sequential_path(tmp_path, monkeypatch):
+    from scripts import eval as harness
+
+    seen = []
+
+    def fake_run_once(arm, case, run, out_dir, episode):
+        seen.append(episode)
+        return _stub_record(episode, case["id"], False)
+
+    monkeypatch.setattr(harness, "run_once", fake_run_once)
+    payload = harness.run_all("direct", _stub_cases(), 1,
+                              tmp_path / "out", concurrency=1)
+    assert seen == [1, 2]
+    assert [record["episode"] for record in payload["records"]] == [1, 2]
+
+
+def test_thread_data_dirs_are_isolated(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor as _Pool
+
+    from app import store
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "env"))
+
+    def work(sub):
+        store.set_thread_data_dir(tmp_path / sub)
+        try:
+            job = store.create_job()
+            return (str(store.db_path()), job["id"],
+                    [item["id"] for item in store.list_jobs()])
+        finally:
+            store.clear_thread_data_dir()
+
+    with _Pool(max_workers=2) as pool:
+        first, second = list(pool.map(work, ["one", "two"]))
+    assert first[0] != second[0]
+    assert first[1] != second[1]
+    assert first[2] == [first[1]]
+    assert second[2] == [second[1]]
+    assert store.db_path().parent == tmp_path / "env"

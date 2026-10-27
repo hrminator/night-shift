@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -75,8 +76,23 @@ CREATE TABLE IF NOT EXISTS operations (
 """
 
 
+_thread_data_dir = threading.local()
+
+
+def set_thread_data_dir(path: Path | str) -> None:
+    """Pin this thread's database directory (eval concurrency)."""
+    _thread_data_dir.value = str(path)
+
+
+def clear_thread_data_dir() -> None:
+    """Drop this thread's pin; fall back to DATA_DIR again."""
+    _thread_data_dir.value = None
+
+
 def db_path() -> Path:
-    return Path(os.environ.get("DATA_DIR", "data")) / "night_shift.db"
+    override = getattr(_thread_data_dir, "value", None)
+    base = override or os.environ.get("DATA_DIR", "data")
+    return Path(base) / "night_shift.db"
 
 
 def connect(path: Path | None = None) -> sqlite3.Connection:
