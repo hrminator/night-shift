@@ -1,0 +1,41 @@
+{
+  "supplier": "Vestland Tekstil (fictional)",
+  "portal": "order portal record — authoritative source for P2",
+  "version": 1,
+  "production_run": {
+    "date": "Fri Nov 6",
+    "note": "last production run before Nov 16"
+  },
+  "hold_rules": {
+    "requests_close": "02:00 (scenario clock, night of Tue Nov 3 to Wed Nov 4)",
+    "cost": 0,
+    "binding": false,
+    "binding_note": "no order, no payment, no price acceptance",
+    "ends": "09:00 unless an order is confirmed"
+  },
+  "routes": {
+    "oslo_freight": {
+      "status": "full",
+      "note": "Oslo freight for the Nov 6 run is full"
+    },
+    "bergen_van": {
+      "destination": "Bergen addresses",
+      "window": "Wed Nov 11 08:00-12:00",
+      "guaranteed": true
+    }
+  },
+  "prices": {
+    "per_bag_nok": 24,
+    "van_nok": 400,
+    "total_100_bags_nok": 2800
+  },
+  "hold_form_fields": [
+    "product",
+    "quantity",
+    "print file",
+    "delivery address (one address from the owner's list)",
+    "delivery window",
+    "ordering contact",
+    "recipient can receive in window (yes/no)"
+  ]
+}

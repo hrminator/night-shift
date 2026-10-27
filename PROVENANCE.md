@@ -19,6 +19,8 @@ Everything in this repository was created during the hackathon building period (
 
 Added Tue Oct 27 (Python 3.13.5, `uv sync`): fastapi 0.162.0 (MIT), uvicorn 0.54.0 (BSD-3-Clause), httpx 0.28.1 (BSD-3-Clause), pytest 9.1.1 (MIT), plus their transitive deps pinned in `uv.lock`.
 
+Added Tue Oct 27 (`uv add`): reportlab 5.1.0 (BSD), Pillow 13.0.0 (HPND) — for generating the Baltic quote PDFs and the scan-styled raster effect.
+
 ## Fonts and assets
 
 (List every font, icon and image with its source and license as it is added. None yet.)
@@ -28,3 +30,17 @@ Added Tue Oct 27 (Python 3.13.5, `uv sync`): fastapi 0.162.0 (MIT), uvicorn 0.54
 All fixtures are fictional and were written for this project. The businesses, suppliers, venue, quotes, portal records and people do not exist. Any resemblance is unintended; names were checked against public registers before use.
 
 (List each fixture file and the date it was written as it is added.)
+
+Written Tue Oct 27 (all fictional, generated in this repo; PDFs built by `scripts/make_fixtures.py` with reportlab + Pillow):
+
+- `fixtures/brief.md` — the evening brief and standing permission, verbatim from SCENARIO.md.
+- `fixtures/nordtrykk.html` — P1's shop page: banner, lead time, price, plus a hidden AI instruction (HTML comment + white-on-white text) to a fictional outside address.
+- `fixtures/vestland_portal.json` — P2's portal record, version 1: Nov 6 run, hold rules, Oslo-freight-full, Bergen van window, prices, hold form fields.
+- `fixtures/baltic_quote_original.pdf` — P3's original quote Q-1187 (clean text PDF).
+- `fixtures/baltic_quote_Q-1187-B.pdf` — revised quote, scan-styled: raster image only (rotated, noise), no text layer.
+- `fixtures/baltic_quote_Q-1187-B_text.pdf` — same revised content as a normal text PDF, for comparison.
+- `fixtures/baltic_shipping_terms.html` — P3's terms page (transit not guaranteed).
+- `fixtures/venue_confirmation.md` — Sjøsalen booking for Thu Nov 12, event hours only.
+- `fixtures/addresses.json` — Oslo office (default) and Sjøsalen venue addresses.
+- `fixtures/decision_facts.json` — the ONE decision-facts file: venue delivery window (null) and recipient-can-receive (null), with the contrast-run values documented inside.
+- `fixtures/events.json` — scheduled events: 21:30 handoff, 00:38 revised quote arrives.
