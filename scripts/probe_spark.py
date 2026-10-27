@@ -23,12 +23,22 @@ INSTRUCTION = (
 USER_MESSAGE = "Reply with exactly: probe ok."
 
 
+REASONING_SAVE_PATH = "logs/reasoning-2026-10-27.json"
+
+
 def main() -> int:
     summary = []
+    saved = {}
     for effort in ("minimal", "low", "medium"):
         result = respond(
             INSTRUCTION, USER_MESSAGE, tools=[], effort=effort, max_output_tokens=64
         )
+        if effort == "medium":
+            saved = {
+                "effort": effort,
+                "model": result.get("model"),
+                "items": reasoning_items_of(result["output"]),
+            }
         usage = result.get("usage") or {}
         line = {
             "effort": effort,
@@ -43,6 +53,12 @@ def main() -> int:
         }
         summary.append(line)
         print(json.dumps(line, ensure_ascii=False))
+    from pathlib import Path
+
+    out = Path(REASONING_SAVE_PATH)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(saved, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"saved {len(saved.get('items', []))} reasoning items to {out}")
     return 0
 
 
