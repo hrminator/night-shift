@@ -17,6 +17,8 @@ Everything in this repository was created during the hackathon building period (
 
 (List every package with its version and license as it is added.)
 
+Added Tue Oct 27 (Python 3.13.5, `uv sync`): fastapi 0.162.0 (MIT), uvicorn 0.54.0 (BSD-3-Clause), httpx 0.28.1 (BSD-3-Clause), pytest 9.1.1 (MIT), plus their transitive deps pinned in `uv.lock`.
+
 ## Fonts and assets
 
 (List every font, icon and image with its source and license as it is added. None yet.)
