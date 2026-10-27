@@ -743,3 +743,76 @@ def deliver_approved(job_id: str, approval_id: int, virtual_time: str,
          "body": payload.get("body"), "outbox": OUTBOX_LABEL},
         path=path)
     return {"ok": True, "delivered_id": event["id"]}
+
+
+def revised_quote_id_in(events: list[dict]) -> int | None:
+    """Max revised_quote event id in an event list, or None."""
+    ids = [int(e["id"]) for e in events
+           if e.get("kind") == "revised_quote"]
+    return max(ids) if ids else None
+
+
+def draft_events_in(events: list[dict]) -> list[dict]:
+    """All draft events, oldest first."""
+    return sorted((e for e in events if e.get("kind") == "draft"),
+                  key=lambda e: int(e["id"]))
+
+
+def superseded_map_for(events: list[dict]) -> dict[int, str]:
+    """Pre-event drafts and whether a newer same-purpose draft exists.
+
+    A draft proposed before the revised-quote event is ``superseded``
+    when a newer draft with the same purpose exists, else
+    ``superseded_pending``. Post-event drafts are never listed.
+    """
+    rev = revised_quote_id_in(events)
+    if rev is None:
+        return {}
+    drafts = draft_events_in(events)
+    purposes: dict[str, list[int]] = {}
+    for draft in drafts:
+        purpose = str((draft.get("payload") or {}).get("purpose", ""))
+        purposes.setdefault(purpose, []).append(int(draft["id"]))
+    result: dict[int, str] = {}
+    for draft in drafts:
+        did = int(draft["id"])
+        if did >= rev:
+            continue
+        purpose = str((draft.get("payload") or {}).get("purpose", ""))
+        newer = [other for other in purposes.get(purpose, [])
+                 if other > did]
+        result[did] = "superseded" if newer else "superseded_pending"
+    return result
+
+
+def pre_event_draft_lines_for(events: list[dict]) -> list[str]:
+    """One line per pre-event draft: purpose, subject, short body."""
+    rev = revised_quote_id_in(events)
+    if rev is None:
+        return []
+    lines = []
+    for draft in draft_events_in(events):
+        if int(draft["id"]) >= rev:
+            continue
+        payload = draft.get("payload") or {}
+        body = str(payload.get("body", "")).replace("\n", " ")[:160]
+        lines.append(f"purpose {payload.get('purpose', '')!r}:"
+                     f" {payload.get('subject', '')} — {body}")
+    return lines
+
+
+def revised_quote_id(job_id: str, path: Path | None = None) -> int | None:
+    """Max revised_quote event id for a job, or None."""
+    return revised_quote_id_in(list_events(job_id, path=path))
+
+
+def superseded_map(job_id: str,
+                   path: Path | None = None) -> dict[int, str]:
+    """Supersede status per pre-event draft event id for a job."""
+    return superseded_map_for(list_events(job_id, path=path))
+
+
+def pre_event_draft_lines(job_id: str,
+                          path: Path | None = None) -> list[str]:
+    """One line per pre-event draft for the resume follow-up message."""
+    return pre_event_draft_lines_for(list_events(job_id, path=path))

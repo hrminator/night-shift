@@ -510,7 +510,9 @@ def _draft_cards(job_id: str, events: list, with_forms: bool = True) -> str:
     from app import gateway as gateway_mod
     esc = html.escape
     cards = ""
-    for draft in _draft_head_events(events):
+    earlier = ""
+    _smap = gateway_mod.superseded_map_for(events)
+    for draft in [d for d in _draft_head_events(events) if d["id"] not in _smap]:
         payload = draft["payload"] or {}
         version_hash = gateway_mod.head_version_hash(draft)
         state = _draft_state(job_id, draft)
@@ -543,6 +545,21 @@ def _draft_cards(job_id: str, events: list, with_forms: bool = True) -> str:
             f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>"
             f"{leak}{forms}</section>"
         )
+    for draft in [d for d in _draft_head_events(events) if d["id"] in _smap]:
+        payload = draft["payload"] or {}
+        version = payload.get("version", 1)
+        mark = _smap[draft["id"]]
+        earlier += (
+            "<section><h3>"
+            f"{esc(str(payload.get('purpose', 'message')))} · {mark}"
+            f" · v{esc(str(version))}</h3>"
+            f"<p>To: {esc(str(payload.get('to', '')))}</p>"
+            f"<p>Subject: {esc(str(payload.get('subject', '')))}</p>"
+            f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>"
+            "</section>"
+        )
+    if earlier:
+        cards += "<details><summary>Earlier versions (superseded drafts proposed before the 00:38 event)</summary>" + earlier + "</details>"
     return cards
 
 

@@ -869,6 +869,12 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
     contact = studio_contact_line()
     print_file = studio_print_name()
     answer_id = answer["id"]
+    from app import gateway as _gw
+    _stale = _gw.pre_event_draft_lines(job_id)
+    if _stale:
+        _stale_tail = (" Before the 00:38 source event you proposed these drafts, which may now be wrong:\n- " + "\n- ".join(_stale) + "\nRe-issue any that are now wrong with propose_message using the SAME purpose string (you decide the corrected text); leave correct ones alone. A pre-event draft with no newer same-purpose draft stays marked superseded on the morning page until you re-issue it.")
+    else:
+        _stale_tail = ""
     answer_vt = answer["virtual_time"]
     return (
         "You are Night Shift, the overnight manager for one job: 100 tote bags"
@@ -908,7 +914,7 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
         " the hold id from the acknowledgement and the portal total; 2. note"
         " to the venue that a van comes Wed 08-12; 3. note to Baltic Print"
         " declining for now and asking about arrival. When the hold is placed"
-        " and the three drafts are recorded, stop and answer in plain text."
+        " and the three drafts are recorded, stop and answer in plain text." + _stale_tail
     )
 
 
