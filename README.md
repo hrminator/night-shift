@@ -37,6 +37,17 @@ Recorded runs (muse-spark-1.3, Tue Oct 27; exports in `data/runs/`, details in `
 - Hero `6c7c7c742513`: notified at 00:47 ("Can Sjosalen, Sjogaten 5, 5003 Bergen receive the 100 tote bags in the Wed Nov 11 08:00-12:00 van window?"), answered 01:05, hold H-2041 placed on resume first try, morning page with 3 drafts.
 - Contrast `37f34f71d9df`: venue receipt verified from its own file, decided `act_under_permission` at 22:30 and placed hold H-2041 by itself under the standing permission (gateway 8/8, first try), no notification. A second identical contrast run (`36e41552448b`) disagreed with it: it woke at 00:47 asking about venue receipt though its own venue claim quoted the Wednesday delivery line, and placed no hold. Same settings, opposite nights — recorded honestly in `BUILDLOG.md`.
 
+## Evaluation pilots (development runs)
+
+First honest table, muse-spark-1.3, medium, 12 cases x 1 run each arm. Decision-only and complete-job results are never merged. Full per-episode reports in `results/`.
+
+| arm | must-wake | needless wakes | duplicates through / prevented | complete jobs | refused / effects | cost |
+|---|---|---|---|---|---|---|
+| supervision (`results/20261027T125850Z`) | 4/4 | 2/4 | 2 runs / 0 | 4/4 | 3 / 3 | $2.28 |
+| direct (`results/20261027T134105Z` + `results/20261027T135332Z`) | 4/4 | 1/4 | 2 runs / 0 | 4/4 | 3 / 3 | $2.12 |
+
+Both rows are development runs, not final results. The supervision pilot ran before the one-question and ask-deadline rules existed, so its duplicates (W1 and necessity_must_wake asked in the read turn and again after the event) went through unchallenged, and timing_no_wake woke the owner at 02:30, after the cutoff. Its misses: needless wakes on alternatives_no_wake (the 4-working-day Nordtrykk page did not stop the wake) and timing_no_wake (woke after the cutoff). The direct pilot's misses: a needless wake on alternatives_no_wake, and two first-pass episodes (W1, W2) lost to a transport error (WinError 10054) and rerun once into a second folder — the table counts the reruns. After the new rules, one rerun each (`results/20261027T133619Z`): timing_no_wake passes with no wake (the 02:30 ask refused in code), W1 passes with one hold and one prevented duplicate, necessity_must_wake passes, alternatives_no_wake still wakes needlessly. Nothing here is tuned on: per the brief, no instruction tuning.
+
 ## Disclosure
 
 Personal project, built on my own time with no company code, data or resources. All code, tests and fixtures were written by Muse Code. A general AI assistant helped with planning, the written brief, the prompts given to Muse Code, this README and the video script. Details in `PROVENANCE.md`.
