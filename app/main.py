@@ -185,6 +185,8 @@ def _summarize(kind: str, payload: dict) -> str:
         return f"turn done after {payload.get('tool_calls', '?')} tool calls"
     if kind == "approval_requested":
         return f"approval requested for draft {payload.get('draft_id', '?')}"
+    if kind == "resume_pruned_files":
+        return f"resume pruned {payload.get('pruned_input_files', '?')} file items"
     if kind in ("tool_refused", "tool_malformed", "tool_limit"):
         return f"{kind}: {payload.get('error', payload.get('tool', ''))}"
     if kind == "model_plain_text":

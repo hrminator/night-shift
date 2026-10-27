@@ -148,7 +148,22 @@ def respond(
             )
             response = _post(body, timeout)
     finished = datetime.now(timezone.utc)
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except Exception:
+        _append_log(
+            {
+                "ts": finished.isoformat(),
+                "effort": effort,
+                "request": body,
+                "response_error": {
+                    "status": response.status_code,
+                    "text": response.text[:2000],
+                },
+                "fallback": fallback,
+            }
+        )
+        raise
     payload = response.json()
     output_items = payload.get("output", [])
     result = {

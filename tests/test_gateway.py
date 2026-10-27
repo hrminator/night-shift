@@ -82,6 +82,21 @@ def test_valid_hold_passes_with_four_records(tmp_path, monkeypatch):
     assert all(c["payload"]["passed"] for c in checks)
 
 
+def test_sources_accept_natural_keys_and_string_id(tmp_path, monkeypatch):
+    """Regression: the model writes 'recipient can receive' with spaces."""
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    job_id = _seed()
+    answer = _answer(job_id)
+    args = {"portal": "Vestland Tekstil", "fields": _fields(answer["id"])}
+    args["fields"]["sources"] = {
+        "recipient can receive": str(answer["id"]),
+        "route": "vestland_portal.json v1",
+        "delivery window": "vestland_portal.json v1",
+    }
+    result = gateway.check_submit_hold(job_id, args, "01:05")
+    assert result["ok"] is True
+
+
 def test_answer_alone_creates_no_effect(tmp_path, monkeypatch):
     """Contract 3: a factual answer, without the permission, does nothing."""
     monkeypatch.setenv("DATA_DIR", str(tmp_path))

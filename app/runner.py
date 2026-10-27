@@ -648,15 +648,22 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
         f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}."
         f" The answer arrived at {answer_vt}; the hold must be submitted"
         " before 02:00.\n\n"
-        "To place the hold, call submit_hold once with portal \"Vestland"
-        " Tekstil\" and fields: product, quantity 100, print file, one address"
-        " from the owner's list (the Bergen venue, Sjøsalen), delivery window"
-        " Wed Nov 11 08:00-12:00, ordering contact, recipient can receive yes,"
-        " cost 0, non-binding, hold ends 09:00, and sources mapping each fact"
-        " to its source: recipient can receive points to owner_answer event"
-        f" {answer_id}; route and delivery window point to"
-        " vestland_portal.json v1. The gateway checks all of this in code and"
-        " refuses anything outside the permission.\n\n"
+        "To place the hold, call submit_hold once with EXACTLY this shape."
+        " Use these exact field names, no extra fields. cost is the number 0,"
+        " binding is boolean false, and sources.recipient can receive is the"
+        " NUMBER of the owner_answer event (not the answer text):\n"
+        "{\"portal\": \"Vestland Tekstil\", \"fields\": {\"product\": \"100 tote"
+        " bags with logo\", \"quantity\": 100, \"print file\": \"logo.pdf\","
+        " \"address\": \"Sjøsalen, Sjøgaten 5, 5003 Bergen\","
+        " \"delivery window\": \"Wed Nov 11 08:00-12:00\","
+        " \"ordering contact\": \"Fjord & Fern\","
+        " \"recipient can receive\": \"yes\", \"cost\": 0,"
+        " \"binding\": false, \"hold ends\": \"09:00\", \"sources\":"
+        f" {{\"recipient can receive\": {answer_id}, \"route\":"
+        " \"vestland_portal.json v1\", \"window\":"
+        " \"vestland_portal.json v1\"}}}. The gateway checks all of this in"
+        " code and refuses anything outside the permission; if it refuses,"
+        " read the reason and fix exactly that.\n\n"
         "Then call propose_message three times for the 07:00 review (exact"
         " texts, nothing is sent): 1. order confirmation to Vestland quoting"
         " the hold id from the acknowledgement and the portal total; 2. note"
@@ -687,6 +694,21 @@ def resume_job(
                 "reason": "no checkpoint to resume from"}
     saved_input = list((checkpoints[-1]["payload"] or {}).get("next_input",
                                                               []))
+    pruned = 0
+    for entry in saved_input:
+        content = entry.get("content")
+        if entry.get("type") == "message" and isinstance(content, list):
+            kept = [part for part in content
+                    if part.get("type") != "input_file"]
+            pruned += len(content) - len(kept)
+            entry["content"] = kept
+    if pruned:
+        append_event(
+            job_id, VT_RESUME, "resume_pruned_files",
+            {"pruned_input_files": pruned,
+             "note": "uploaded PDFs were deleted after the decision turn;"
+             " their quotes live on in the recorded claims"},
+        )
     ask_call_id = None
     for entry in saved_input:
         if entry.get("type") == "function_call" \
@@ -699,15 +721,13 @@ def resume_job(
     answer = answers[-1]
     answer_vt = answer["virtual_time"]
     resume_input = saved_input + [{
-        "type": "function_call_output",
-        "call_id": ask_call_id,
-        "output": json.dumps({
-            "choice": (answer["payload"] or {}).get("choice", ""),
-            "source": "owner",
-            "event_id": answer["id"],
-            "note": "information only; authority comes from the brief's "
-            "standing permission",
-        }),
+        "type": "message",
+        "role": "user",
+        "content": "The owner answered your question (ask_owner call "
+        f"{ask_call_id}) with: \"{(answer['payload'] or {}).get('choice', '')}\""
+        f" (owner_answer event {answer['id']}, source owner, at {answer_vt}"
+        " virtual time). This is information only; authority for the hold"
+        " comes from the brief's standing permission.",
     }]
     set_job_status(job_id, status="resuming", current_step="resuming",
                    virtual_time=answer_vt)

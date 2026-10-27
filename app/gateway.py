@@ -225,17 +225,34 @@ def _check_time(job_id: str, submit_vt: str,
     return True, f"answer at {answer_vt} by 01:50; submit {submit_vt} pre-02:00"
 
 
+def _normalize_source_key(key: str) -> str:
+    norm = key.lower().strip().replace("-", "_").replace(" ", "_")
+    if "receive" in norm or "recipient" in norm or "answer" in norm:
+        return "recipient_can_receive"
+    if "rout" in norm:
+        return "route"
+    if "window" in norm or "slot" in norm:
+        return "window"
+    return norm
+
+
 def _check_sources(job_id: str, normalized: dict,
                    path: Path | None) -> tuple[bool, str]:
     sources = normalized.get("sources")
     if not isinstance(sources, dict):
         return False, "sources must map each stated fact to its source"
+    flat = {_normalize_source_key(str(key)): value
+            for key, value in sources.items()}
     answer_ids = {e["id"] for e in owner_answers(job_id, path=path)}
-    recipient_source = sources.get("recipient_can_receive")
+    recipient_source = flat.get("recipient_can_receive")
+    if isinstance(recipient_source, str) \
+            and recipient_source.strip().isdigit():
+        recipient_source = int(recipient_source.strip())
     if recipient_source not in answer_ids:
-        return False, "'recipient can receive' must cite the owner_answer event"
+        return False, "'recipient can receive' must cite the owner_answer" \
+            f" event id; got {recipient_source!r}"
     for key in ("route", "window"):
-        pointer = sources.get(key)
+        pointer = flat.get(key)
         if not isinstance(pointer, str):
             return False, f"{key} must cite the portal record version"
         lowered = pointer.lower()
