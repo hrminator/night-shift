@@ -4,7 +4,7 @@ An overnight manager agent for a small business owner, built on Muse Spark 1.3 t
 
 Built solo for the Meta Global AI Developer Hackathon 2026, Indie track, theme "Build for Your World".
 
-- Live: (URL)
+- Live: https://night-shift-demo.fly.dev/ (Day 1: hello page and /evidence)
 - Video: (URL)
 - How it was built, and what was written before the building period: `PROVENANCE.md`
 - Build log: `BUILDLOG.md`
