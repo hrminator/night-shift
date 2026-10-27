@@ -36,7 +36,7 @@ for variant in ("hero", "contrast"):
     if variant == "hero" and summary["status"] == "waiting_for_owner":
         runner.store_answer(job_id, "Bergen: the venue can receive it")
         CURRENT["phase"] = "resume"
-        res = runner.resume_job(job_id)
+        res = runner.resume_job(job_id, respond_fn=wrapped)
         print(f"HERO RESUME STATUS={res['status']}")
     out = runner.export_job(job_id)
     print(f"EXPORT={out}")

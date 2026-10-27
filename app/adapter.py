@@ -69,6 +69,7 @@ def build_request(
         "input": input_items,
         "tools": list(tools) if tools else [],
         "tool_choice": "auto",
+        "parallel_tool_calls": True,
         "reasoning": {"effort": effort},
         "store": False,
         "include": list(INCLUDE_ENCRYPTED_REASONING),

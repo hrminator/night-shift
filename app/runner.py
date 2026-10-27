@@ -27,7 +27,7 @@ ORIGINAL_PDF = FIXTURES / "baltic_quote_original.pdf"
 REVISED_PDF = FIXTURES / "baltic_quote_Q-1187-B.pdf"
 
 EFFORT = "medium"
-MAX_OUTPUT_TOKENS = 4096
+MAX_OUTPUT_TOKENS = 8192
 MAX_MODEL_CALLS = 12
 TOOL_BUDGET = 12
 MAX_TOOL_CALLS = TOOL_BUDGET
@@ -177,6 +177,9 @@ RESUME_TOOLS = [SUBMIT_HOLD_TOOL, PROPOSE_MESSAGE_TOOL]
 READ_TOOLS = [RECORD_CLAIM_TOOL, RECORD_DECISION_TOOL, PROPOSE_MESSAGE_TOOL]
 REASSESS_TOOLS = [RECORD_CLAIM_TOOL, RUN_CHECK_TOOL, RECORD_DECISION_TOOL, ASK_OWNER_TOOL, SUBMIT_HOLD_TOOL, PROPOSE_MESSAGE_TOOL]
 
+WAKE_NUDGE_MESSAGE = "You recorded wake but asked nothing. Either call ask_owner now or record a different decision."
+ACT_NUDGE_MESSAGE = "You recorded act_under_permission but placed no hold. Either call submit_hold now or record a different decision."
+OUTCOME_DEFINITIONS = "Outcomes mean: act_under_permission = every fact the standing permission requires is verified from a source, so you place the one permitted hold yourself and do not notify; wake = a verified route depends on one fact that no source has and only the owner can supply, so you ask for that fact; wait_for_morning = nothing is lost by waiting; no_wake = a verified route exists and no action is needed tonight. submit_hold is available during the night under the standing permission."
 NUDGE_MESSAGE = (
     "You must use the tools: call record_claim once per source document,"
     " then record_decision, then ask_owner if your decision is wake."
@@ -214,6 +217,7 @@ def build_instructions() -> str:
         " quote commits to a date.\n\n"
         f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}."
         " Notify as soon as the decision becomes necessary.\n\n"
+        f"{OUTCOME_DEFINITIONS}\n\n"
         "Authority rule: the standing permission already allows one hold."
         " Never ask the owner for permission. If a verified route depends on"
         " one fact only the owner can supply, ask for that fact.\n\n"
@@ -520,6 +524,21 @@ def question_event_id_of(job_id: str) -> int | None:
     return questions[-1]["id"] if questions else None
 
 
+def consistency_problem(last_decision: str | None, saw_ask: bool, saw_hold: bool) -> str | None:
+    """Return 'wake'/'act' when the turn would end inconsistently, else None."""
+    if last_decision == "wake" and not saw_ask:
+        return "wake"
+    if last_decision == "act_under_permission" and not saw_hold:
+        return "act"
+    return None
+
+
+def _consistency_nudge_text(problem: str) -> tuple[str, str]:
+    if problem == "wake":
+        return ("wake_without_ask", WAKE_NUDGE_MESSAGE)
+    return ("act_without_hold", ACT_NUDGE_MESSAGE)
+
+
 def run_turn(
     job_id: str,
     instructions: str,
@@ -542,8 +561,13 @@ def run_turn(
     pending_input = list(first_input)
     tool_calls_made = 0
     nudged = False
+    last_decision: str | None = None
+    saw_ask = False
+    saw_hold = False
+    nudged_wake = False
+    nudged_act = False
     result: dict = {}
-    for _ in range(max_model_calls):
+    for _turn_iter in range(max_model_calls):
         result = respond_fn(
             instructions, pending_input, tools=tools,
             effort=EFFORT, max_output_tokens=MAX_OUTPUT_TOKENS,
@@ -552,6 +576,24 @@ def run_turn(
         calls = function_calls_of(output_items)
 
         if not calls:
+            _problem = consistency_problem(last_decision, saw_ask, saw_hold)
+            if _problem is not None and ((_problem == "wake" and not nudged_wake) or (_problem == "act" and not nudged_act)):
+                _rule, _msg = _consistency_nudge_text(_problem)
+                append_event(job_id, virtual_time, "nudge", {"rule": _rule, "message": _msg})
+                if _problem == "wake":
+                    nudged_wake = True
+                else:
+                    nudged_act = True
+                pending_input = pending_input + output_items + [{"type": "message", "role": "user", "content": _msg}]
+                if _turn_iter == max_model_calls - 1:
+                    append_event(job_id, virtual_time, "step_failed", {"reason": "inconsistent turn at call limit: " + _problem})
+                    set_job_status(job_id, status="failed", current_step="decision_turn", virtual_time=virtual_time)
+                    return {"status": "failed", "result": result, "input": pending_input, "tool_calls": tool_calls_made}
+                continue
+            if _problem is not None:
+                append_event(job_id, virtual_time, "step_failed", {"reason": "inconsistent turn: " + _problem, "text": result.get("text", "")[:2000]})
+                set_job_status(job_id, status="failed", current_step="decision_turn", virtual_time=virtual_time)
+                return {"status": "failed", "result": result, "input": pending_input, "tool_calls": tool_calls_made}
             if tool_calls_made > 0:
                 append_event(
                     job_id, virtual_time, "turn_done",
@@ -587,7 +629,7 @@ def run_turn(
                 "input": pending_input, "tool_calls": tool_calls_made,
             }
 
-        remaining = tool_budget - tool_calls_made
+        remaining = (tool_budget + (2 if (nudged_wake or nudged_act) else 0) - tool_calls_made)
         if len(calls) > remaining:
             append_event(
                 job_id, virtual_time, "tool_limit",
@@ -598,9 +640,48 @@ def run_turn(
         call_outputs = [
             run_tool(job_id, item, virtual_time) for item in calls
         ]
+        for _item, _out in zip(calls, call_outputs):
+            try:
+                _payload = json.loads(_out.get("output") or "{}")
+            except ValueError:
+                _payload = {}
+            _name = _item.get("name")
+            if _name == "record_decision" and _payload.get("stored"):
+                try:
+                    _args = json.loads(_item.get("arguments") or "{}")
+                except ValueError:
+                    _args = {}
+                if isinstance(_args, dict) and _args.get("outcome") in ("wake", "no_wake", "act_under_permission", "wait_for_morning"):
+                    last_decision = _args["outcome"]
+            elif _name == "ask_owner" and (_payload.get("stored") or _payload.get("question_id")):
+                saw_ask = True
+            elif _name == "submit_hold" and _payload.get("ok") is True:
+                saw_hold = True
         tool_calls_made += len(calls)
         pending_input = pending_input + output_items + call_outputs
-        if tool_calls_made >= tool_budget:
+        _problem = consistency_problem(last_decision, saw_ask, saw_hold)
+        _effective = tool_budget + (2 if (nudged_wake or nudged_act) else 0)
+        _budget_full = tool_calls_made >= _effective
+        if not _budget_full:
+            _problem = None
+        if _problem is not None and ((_problem == "wake" and not nudged_wake) or (_problem == "act" and not nudged_act)):
+            _rule, _msg = _consistency_nudge_text(_problem)
+            append_event(job_id, virtual_time, "nudge", {"rule": _rule, "message": _msg})
+            if _problem == "wake":
+                nudged_wake = True
+            else:
+                nudged_act = True
+            pending_input = pending_input + [{"type": "message", "role": "user", "content": _msg}]
+            if _turn_iter == max_model_calls - 1:
+                append_event(job_id, virtual_time, "step_failed", {"reason": "inconsistent turn at call limit: " + _problem})
+                set_job_status(job_id, status="failed", current_step="decision_turn", virtual_time=virtual_time)
+                return {"status": "failed", "result": result, "input": pending_input, "tool_calls": tool_calls_made}
+            continue
+        if _problem is not None:
+            append_event(job_id, virtual_time, "step_failed", {"reason": "inconsistent turn: " + _problem, "text": result.get("text", "")[:2000]})
+            set_job_status(job_id, status="failed", current_step="decision_turn", virtual_time=virtual_time)
+            return {"status": "failed", "result": result, "input": pending_input, "tool_calls": tool_calls_made}
+        if tool_calls_made >= _effective:
             append_event(
                 job_id, virtual_time, "tool_limit",
                 {"calls": tool_calls_made, "kept": tool_budget,
@@ -751,8 +832,10 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
 
 def resume_job(
     job_id: str,
-    respond_fn: Callable[..., dict] = respond,
+    respond_fn: Callable[..., dict] | None = None,
 ) -> dict:
+    if respond_fn is None:
+        respond_fn = respond  # late binding so a patched wrapper applies
     """Resume a job from its checkpoint with the owner's answer filed in."""
     from app.store import get_job as _get_job
 
@@ -842,11 +925,13 @@ def delete_file(file_id: str) -> None:
 
 def run_decision_turn(
     job_id: str,
-    respond_fn: Callable[..., dict] = respond,
+    respond_fn: Callable[..., dict] | None = None,
     original_file_id: str = "file-original",
     revised_file_id: str = "file-revised",
 ) -> dict:
     """Run the fixed decision turn for a job that already has handoff."""
+    if respond_fn is None:
+        respond_fn = respond  # late binding so a patched wrapper applies
     instructions = build_instructions()
     first_input = [
         {
@@ -875,12 +960,12 @@ def run_decision_turn(
 
 def build_read_instructions() -> str:
     brief = fixture_text("brief.md")
-    return ("You are Night Shift, the overnight manager for one job: 100 tote bags for a Bergen customer day. It is 21:35; only the sources below exist. The revised quote does not exist yet." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}. Notify as soon as the decision becomes necessary.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim once per source document (Nordtrykk page, Baltic original Q-1187, Vestland portal record, Baltic shipping terms, venue confirmation), quoting each delivery commitment verbatim. Then call record_decision with outcome no_wake, act_under_permission, wait_for_morning or wake, with reason and claim ids. You may call propose_message to start the comparison and the Baltic order draft (drafts only, never sent). When done, stop and answer in plain text.")
+    return ("You are Night Shift, the overnight manager for one job: 100 tote bags for a Bergen customer day. It is 21:35; only the sources below exist. The revised quote does not exist yet." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}. Notify as soon as the decision becomes necessary.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim once per source document (Nordtrykk page, Baltic original Q-1187, Vestland portal record, Baltic shipping terms, venue confirmation), quoting each delivery commitment verbatim. Then call record_decision with outcome no_wake, act_under_permission, wait_for_morning or wake, with reason and claim ids. " + OUTCOME_DEFINITIONS + " You may call propose_message to start the comparison and the Baltic order draft (drafts only, never sent). When done, stop and answer in plain text.")
 
 def build_reassess_instructions() -> str:
     brief = fixture_text("brief.md")
     checks = "; ".join(f"{n} ({CHECK_DEFINITIONS[n]})" for n in CHECK_NAMES)
-    return ("You are Night Shift, re-assessing the plan at 00:39 after Baltic's revised quote Q-1187-B arrived at 00:38 and replaced Q-1187. Re-read the new source and re-assess." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): latest safe notification 01:30, answer by 01:50, cutoff 02:00. You decide when to notify.\n\n" + f"Evidence rule for asking: ask_owner is refused in code unless (a) a record_decision with outcome wake exists after the 00:38 event and (b) all six checks are logged by run_check with a result after the event. The six checks: {checks}.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim for the revised quote, call run_check once per check name with result pass|fail, claim-id evidence and a note, then record_decision, then ask_owner only if your decision is wake. If instead a verified route is fully sourced (e.g. recipient-can-receive from the venue confirmation claim), record act_under_permission and call submit_hold yourself under the standing permission. Drafts via propose_message never send.")
+    return ("You are Night Shift, re-assessing the plan at 00:39 after Baltic's revised quote Q-1187-B arrived at 00:38 and replaced Q-1187. Re-read the new source and re-assess." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): latest safe notification 01:30, answer by 01:50, cutoff 02:00. You decide when to notify.\n\n" + f"Evidence rule for asking: ask_owner is refused in code unless (a) a record_decision with outcome wake exists after the 00:38 event and (b) all six checks are logged by run_check with a result after the event. The six checks: {checks}.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim for the revised quote, call run_check once per check name with result pass|fail, claim-id evidence and a note, then record_decision, then ask_owner only if your decision is wake. " + OUTCOME_DEFINITIONS + " If instead a verified route is fully sourced (e.g. recipient-can-receive from the venue confirmation claim), record act_under_permission and call submit_hold yourself under the standing permission. Drafts via propose_message never send.")
 
 def build_read_content(original_file_id: str, variant: str = "hero") -> list[dict]:
     portal = fixture_text("vestland_portal.json")

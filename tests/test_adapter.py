@@ -15,6 +15,7 @@ def test_request_carries_replay_fields_and_no_resume_id():
     assert body["reasoning"] == {"effort": "low"}
     assert body["max_output_tokens"] == 64
     assert body["tool_choice"] == "auto"
+    assert body["parallel_tool_calls"] is True
     assert "previous_response_id" not in body
 
 
