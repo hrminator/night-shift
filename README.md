@@ -17,20 +17,6 @@ Fixtures carry the studio's ordering contact and print file, which the gateway c
 Recorded hero (Oct 27): notified 00:47 about venue receipt only, hold placed on resume. Recorded contrast: decided to act itself but left the hold unplaced.
 Live: https://night-shift-demo.fly.dev/ (redeploy pending). Next: reliability at the public URL, then runtime limits and evaluation.
 
-## Deploy (Fly.io, app `night-shift-demo`, region Stockholm)
-
-The app reads its run records (and later its SQLite file) from `DATA_DIR`,
-default `./data` locally; on Fly `DATA_DIR=/data`, a 1 GB volume. The image
-already contains `data/` and `fixtures/` as seed content. The live site key
-stays a Fly secret and is read first (falling back to NIGHT_SHIFT_API_KEY_EVAL); it is never written into files. From this folder, once the
-hosting account exists, run these three commands (do not run them before then):
-
-```powershell
-fly launch --copy-config --no-deploy
-fly secrets set NIGHT_SHIFT_API_KEY_LIVE=$env:NIGHT_SHIFT_API_KEY_LIVE
-fly deploy
-```
-
 ## Results
 
 Recorded runs (muse-spark-1.3, Tue Oct 27; exports in `data/runs/`, details in `BUILDLOG.md`):
