@@ -1,0 +1,12 @@
+Read AGENTS.md, SCENARIO.md and BUILDLOG.md (Day 3 step D notes). Day 3 step E. Begin every shell command with Set-Location C:\Users\herma\night-shift and set $env:UV_CACHE_DIR='C:\Users\herma\night-shift\.uv-cache'. Not sandboxed; NIGHT_SHIFT_API_KEY_EVAL is in the environment. Port 8123. Commit after each part, do not push, do not deploy, suite green.
+
+Part 1. The contrast failed because the model decided act_under_permission in the 22:30 read turn, where submit_hold was not offered, and then invented a namespaced tool name. Two fixes, no instruction changes:
+  a) Offer the same tool set in every night turn: record_claim, run_check, record_decision, ask_owner, submit_hold, propose_message. The code gates stay exactly as they are (ask_owner needs a wake decision plus the six checks after the 00:38 event; submit_hold goes through the gateway every time). A hold placed under the permission at 22:30 is a legitimate model decision; the gateway decides whether it is permitted, and the record shows when it happened. Do not add any rule about when to hold.
+  b) Normalise tool names: if the model calls a tool with a namespace prefix such as default.submit_hold, strip the prefix before dispatch and log a `tool_name_normalised` event. Unknown names after normalisation are still refused.
+  c) The six checks are defined for the re-assessment after 00:38. If run_check is called in the read turn, accept and log it, but the ask_owner gate still requires checks logged after the 00:38 event.
+
+Part 2. Run the contrast twice and the hero once, fresh from 21:30, same settings. Record each in BUILDLOG.md: every decision with its virtual time and reason, every submit_hold attempt (accepted or refused, with the reason), notification time or "none", question text if any, nudges, calls, seconds and tokens. Export all three. Note plainly whether the two contrast runs agree with each other.
+
+Part 3. If the hero notified and placed the hold on resume, pin RECORDED_JOB in the app default and fly.toml to that hero job id, and rebuild the Docker image to prove it builds. If at least one contrast run placed the hold by itself without a notification, note its job id in README.md under Results as the contrast run; if neither did, write in README.md Results, honestly, what the model did instead.
+
+End with a short summary: what works, what failed, the commit list, and the one-line outcomes of the three runs.

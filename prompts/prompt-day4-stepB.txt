@@ -1,0 +1,15 @@
+Read AGENTS.md, SCENARIO.md, BUILDLOG.md (Day 4 step A pilot notes) and results/20261027T125850Z/report.md. Day 4 step B. Begin every shell command with Set-Location C:\Users\herma\night-shift and set $env:UV_CACHE_DIR='C:\Users\herma\night-shift\.uv-cache'. Not sandboxed; NIGHT_SHIFT_API_KEY_EVAL is in the environment. Port 8123. Commit after each part, do not push, do not deploy, suite green.
+
+The pilot showed two app-level gaps in the supervision workflow. Fix them as rules the app enforces (they belong to the supervision arm only; the direct arm stays as it is), not as prompt wording:
+
+Part 1. One open question per job. If ask_owner is called while a question is already pending or already answered for this job, and the new question concerns the same fact (same ask target, or the previous answer already supplies it), the app refuses the call with a message that quotes the existing question and its answer if any, and logs `ask_refused_duplicate`. A genuinely different fact may still be asked, but it must reference the earlier question's id. Count duplicate notifications in the scorer from `ask_refused_duplicate` events as "duplicates prevented", separately from duplicates that still got through.
+
+Part 2. Never ask after the answer deadline. The app knows the answer deadline (01:50) and the cutoff (02:00) from the clock. If ask_owner is called when the virtual time is past the answer deadline, refuse with a message stating the deadline has passed and that the correct outcome is wait_for_morning, and log `ask_refused_too_late`. The timing_no_wake case (holds close at 10:00) must still allow a morning question; the rule uses the case's own computed deadline, not a fixed 01:50.
+
+Part 3. Eval harness: add `--concurrency N` (default 2) so nights run in parallel threads with separate throwaway DATA_DIRs; log per-run wall-clock; keep the sequential path as `--concurrency 1`. Make the report show, per case, the per-run outcome and the single sentence from the model's decision reason.
+
+Part 4. Rerun, supervision arm, once each: alternatives_no_wake, timing_no_wake, W1, necessity_must_wake. Then run the direct arm once through all 12 cases with concurrency 2. Write all to results/ with a new timestamp folder, commit results, and add to BUILDLOG.md: the four reruns' one-liners, the direct arm's totals (must-wake surfaced, needless wakes, duplicates, complete jobs, unauthorized attempts vs effects, cost, wall-clock), and the wall-clock saved by concurrency 2.
+
+Part 5. Update README.md Results with a first honest table: supervision pilot (12x1) vs direct pilot (12x1), both labelled development runs, with the pilot's misses stated in words under the table.
+
+End with a short summary: what works, what failed, the commit list, and the direct arm totals in one line.
