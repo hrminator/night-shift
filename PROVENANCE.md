@@ -44,3 +44,4 @@ Written Tue Oct 27 (all fictional, generated in this repo; PDFs built by `script
 - `fixtures/addresses.json` — Oslo office (default) and Sjøsalen venue addresses.
 - `fixtures/decision_facts.json` — the ONE decision-facts file: venue delivery window (null) and recipient-can-receive (null), with the contrast-run values documented inside.
 - `fixtures/events.json` — scheduled events: 21:30 handoff, 00:38 revised quote arrives.
+- `fixtures/studio.json` — written Day 3 step C (Muse Code session): the studio's ordering contact (Kari Strandli, fictional name/role/email/phone), the print file name (fjord-fern-logo-print.pdf, 300 dpi, black, name only) and the studio's contact list (owner, ordering contact, venue contact). Read as a source in every night turn; the gateway checks the hold's contact and print file against it and uses its list for the draft leak check. The brief's "Addresses and contacts you may use" line names both fields.

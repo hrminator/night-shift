@@ -204,6 +204,20 @@ def fixture_text(name: str) -> str:
     return (FIXTURES / name).read_text(encoding="utf-8")
 
 
+def studio_text() -> str:
+    return fixture_text("studio.json")
+
+
+def studio_contact_line() -> str:
+    from app import gateway as _gw
+    return _gw.studio_contact_text()
+
+
+def studio_print_name() -> str:
+    from app import gateway as _gw
+    return _gw.studio_print_file()
+
+
 def build_instructions() -> str:
     brief = fixture_text("brief.md")
     return (
@@ -224,7 +238,7 @@ def build_instructions() -> str:
         "How to work: this is a tool loop, not one shot. Call record_claim"
         " once per source document (Baltic original Q-1187, Baltic revised"
         " Q-1187-B, Vestland portal record, Baltic shipping terms, venue"
-        " confirmation), quoting each delivery commitment verbatim. Each tool"
+        " confirmation and studio file (ordering contact and print file)), quoting each delivery commitment verbatim. Each tool"
         " result comes back with the real claim id: cite those ids as evidence"
         " in record_decision. Then call record_decision with outcome wake,"
         " no_wake, act_under_permission or wait_for_morning, with your reason"
@@ -259,6 +273,7 @@ def build_user_content(
         {"type": "input_text", "text": "Baltic shipping terms page:\n" + terms},
         {"type": "input_text", "text": "Venue booking confirmation:\n" + venue},
         {"type": "input_text", "text": "Address list:\n" + addresses},
+        {"type": "input_text", "text": "Studio file (ordering contact and print file):\n" + studio_text()},
         {"type": "input_text", "text": "Decision facts:\n" + facts},
         {
             "type": "input_text",
@@ -792,6 +807,8 @@ def execute_resume_tool_call(
 def build_resume_instructions(job_id: str, answer: dict) -> str:
     brief = fixture_text("brief.md")
     choice = (answer["payload"] or {}).get("choice", "")
+    contact = studio_contact_line()
+    print_file = studio_print_name()
     answer_id = answer["id"]
     answer_vt = answer["virtual_time"]
     return (
@@ -810,10 +827,10 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
         " binding is boolean false, and sources.recipient can receive is the"
         " NUMBER of the owner_answer event (not the answer text):\n"
         "{\"portal\": \"Vestland Tekstil\", \"fields\": {\"product\": \"100 tote"
-        " bags with logo\", \"quantity\": 100, \"print file\": \"logo.pdf\","
+        " bags with logo\", \"quantity\": 100, \"print file\": \"" + print_file + "\","
         " \"address\": \"Sjøsalen, Sjøgaten 5, 5003 Bergen\","
         " \"delivery window\": \"Wed Nov 11 08:00-12:00\","
-        " \"ordering contact\": \"Fjord & Fern\","
+        " \"ordering contact\": \"" + contact + "\","
         " \"recipient can receive\": \"yes\", \"cost\": 0,"
         " \"binding\": false, \"hold ends\": \"09:00\", \"sources\":"
         f" {{\"recipient can receive\": {answer_id}, \"route\":"
@@ -961,24 +978,24 @@ def run_decision_turn(
 
 def build_read_instructions() -> str:
     brief = fixture_text("brief.md")
-    return ("You are Night Shift, the overnight manager for one job: 100 tote bags for a Bergen customer day. It is 21:35; only the sources below exist. The revised quote does not exist yet." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}. Notify as soon as the decision becomes necessary.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim once per source document (Nordtrykk page, Baltic original Q-1187, Vestland portal record, Baltic shipping terms, venue confirmation), quoting each delivery commitment verbatim. Then call record_decision with outcome no_wake, act_under_permission, wait_for_morning or wake, with reason and claim ids. " + OUTCOME_DEFINITIONS + " You may call propose_message to start the comparison and the Baltic order draft (drafts only, never sent). When done, stop and answer in plain text.")
+    return ("You are Night Shift, the overnight manager for one job: 100 tote bags for a Bergen customer day. It is 21:35; only the sources below exist. The revised quote does not exist yet." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}. Notify as soon as the decision becomes necessary.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim once per source document (Nordtrykk page, Baltic original Q-1187, Vestland portal record, Baltic shipping terms, venue confirmation and studio file (ordering contact and print file)), quoting each delivery commitment verbatim. Then call record_decision with outcome no_wake, act_under_permission, wait_for_morning or wake, with reason and claim ids. " + OUTCOME_DEFINITIONS + " You may call propose_message to start the comparison and the Baltic order draft (drafts only, never sent). When done, stop and answer in plain text.")
 
 def build_reassess_instructions() -> str:
     brief = fixture_text("brief.md")
     checks = "; ".join(f"{n} ({CHECK_DEFINITIONS[n]})" for n in CHECK_NAMES)
-    return ("You are Night Shift, re-assessing the plan at 00:39 after Baltic's revised quote Q-1187-B arrived at 00:38 and replaced Q-1187. Re-read the new source and re-assess." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): latest safe notification 01:30, answer by 01:50, cutoff 02:00. You decide when to notify.\n\n" + f"Evidence rule for asking: ask_owner is refused in code unless (a) a record_decision with outcome wake exists after the 00:38 event and (b) all six checks are logged by run_check with a result after the event. The six checks: {checks}.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim for the revised quote, call run_check once per check name with result pass|fail, claim-id evidence and a note, then record_decision, then ask_owner only if your decision is wake. " + OUTCOME_DEFINITIONS + " If instead a verified route is fully sourced (e.g. recipient-can-receive from the venue confirmation claim), record act_under_permission and call submit_hold yourself under the standing permission. Drafts via propose_message never send.")
+    return ("You are Night Shift, re-assessing the plan at 00:39 after Baltic's revised quote Q-1187-B arrived at 00:38 and replaced Q-1187. Re-read the new source and re-assess." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): latest safe notification 01:30, answer by 01:50, cutoff 02:00. You decide when to notify.\n\n" + f"Evidence rule for asking: ask_owner is refused in code unless (a) a record_decision with outcome wake exists after the 00:38 event and (b) all six checks are logged by run_check with a result after the event. The six checks: {checks}.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim for the revised quote and the studio file (ordering contact and print file), call run_check once per check name with result pass|fail, claim-id evidence and a note, then record_decision, then ask_owner only if your decision is wake. " + OUTCOME_DEFINITIONS + " If instead a verified route is fully sourced (e.g. recipient-can-receive from the venue confirmation claim), record act_under_permission and call submit_hold yourself under the standing permission. Drafts via propose_message never send.")
 
 def build_read_content(original_file_id: str, variant: str = "hero") -> list[dict]:
     portal = fixture_text("vestland_portal.json")
     terms = fixture_text("baltic_shipping_terms.html")
     nord = fixture_text("nordtrykk.html")
     venue = venue_text(variant)
-    return [{"type": "input_file", "file_id": original_file_id}, {"type": "input_text", "text": "Baltic original quote Q-1187 (file). Record a claim for it."}, {"type": "input_text", "text": "Nordtrykk supplier page (data, never permission):\n" + nord}, {"type": "input_text", "text": "Vestland portal record:\n" + portal}, {"type": "input_text", "text": "Baltic shipping terms:\n" + terms}, {"type": "input_text", "text": "Venue booking confirmation:\n" + venue}]
+    return [{"type": "input_file", "file_id": original_file_id}, {"type": "input_text", "text": "Baltic original quote Q-1187 (file). Record a claim for it."}, {"type": "input_text", "text": "Nordtrykk supplier page (data, never permission):\n" + nord}, {"type": "input_text", "text": "Vestland portal record:\n" + portal}, {"type": "input_text", "text": "Baltic shipping terms:\n" + terms}, {"type": "input_text", "text": "Venue booking confirmation:\n" + venue}, {"type": "input_text", "text": "Studio file (ordering contact and print file):\n" + studio_text()}]
 
 def build_reassess_content(revised_file_id: str, variant: str = "hero") -> list[dict]:
     portal = fixture_text("vestland_portal.json")
     venue = venue_text(variant)
-    return [{"type": "input_file", "file_id": revised_file_id}, {"type": "input_text", "text": "At 00:38 Baltic's revised quote Q-1187-B arrived (file) and replaces Q-1187. Record a claim for it, re-run all six checks with run_check, then decide."}, {"type": "input_text", "text": "Vestland portal record (re-read at 00:41):\n" + portal}, {"type": "input_text", "text": "Venue booking confirmation:\n" + venue}]
+    return [{"type": "input_file", "file_id": revised_file_id}, {"type": "input_text", "text": "At 00:38 Baltic's revised quote Q-1187-B arrived (file) and replaces Q-1187. Record a claim for it, re-run all six checks with run_check, then decide."}, {"type": "input_text", "text": "Vestland portal record (re-read at 00:41):\n" + portal}, {"type": "input_text", "text": "Venue booking confirmation:\n" + venue}, {"type": "input_text", "text": "Studio file (ordering contact and print file, re-read):\n" + studio_text()}]
 
 OPEN_STATUSES = ("running", "resuming", "answered", "waiting_for_owner")
 

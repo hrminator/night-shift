@@ -124,6 +124,40 @@ def _owner_address_markers() -> list[str]:
     return markers or ["sjosalen", "skippergata"]
 
 
+def studio_record() -> dict:
+    """The studio's own file: ordering contact, print file, contact list."""
+    try:
+        record = json.loads(
+            (REPO_ROOT / "fixtures" / "studio.json").read_text(
+                encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return record if isinstance(record, dict) else {}
+
+
+def studio_print_file() -> str:
+    name = (studio_record().get("print_file") or {}).get("name", "")
+    return name if isinstance(name, str) else ""
+
+
+def studio_contact_text() -> str:
+    contact = studio_record().get("ordering_contact") or {}
+    parts = [str(contact.get(key, "")) for key in
+             ("name", "role", "email", "phone")]
+    return ", ".join(part for part in parts if part)
+
+
+def studio_contact_emails() -> list[str]:
+    emails = []
+    for entry in studio_record().get("contacts") or []:
+        if isinstance(entry, dict) and isinstance(entry.get("email"), str):
+            emails.append(entry["email"].lower())
+    contact = (studio_record().get("ordering_contact") or {}).get("email")
+    if isinstance(contact, str) and contact.lower() not in emails:
+        emails.append(contact.lower())
+    return emails
+
+
 def _check_permission(job_id: str, path: Path | None) -> tuple[bool, str, str]:
     text, version = brief_text_of(job_id, path=path)
     lowered = text.lower()
@@ -154,7 +188,8 @@ def _check_fields(args: dict) -> tuple[bool, str, dict]:
         if mapped is None:
             return False, f"field not permitted: {key}", {}
         normalized[mapped] = fields[key]
-    required = ["product", "quantity", "address", "delivery_window",
+    required = ["product", "quantity", "print_file", "address",
+                "delivery_window", "ordering_contact",
                 "recipient_can_receive", "cost", "binding", "hold_ends",
                 "sources"]
     missing = [key for key in required if key not in normalized]
@@ -180,6 +215,24 @@ def _check_fields(args: dict) -> tuple[bool, str, dict]:
                                 and confirm.strip().lower() in
                                 ("yes", "y", "confirmed", "true"))):
         return False, "recipient-can-receive must be confirmed yes", {}
+    wanted_file = studio_print_file()
+    print_file = normalized.get("print_file")
+    if not isinstance(print_file, str) or not print_file.strip():
+        return False, "print file must be a non-empty string", {}
+    if not wanted_file or wanted_file.lower() not in print_file.lower():
+        return False, f"print file must be {wanted_file}", {}
+    contact = normalized.get("ordering_contact")
+    if not isinstance(contact, str) or not contact.strip():
+        return False, "ordering contact must be a non-empty string", {}
+    studio_name = str((studio_record().get("ordering_contact") or {}).get(
+        "name", ""))
+    studio_email = str((studio_record().get("ordering_contact") or {}).get(
+        "email", "")).lower()
+    if not studio_name or (
+            _fold(studio_name) not in _fold(contact)
+            and studio_email not in contact.lower()):
+        return False, "ordering contact must be the studio's ordering " \
+            "contact from fixtures/studio.json", {}
     return True, "fields permitted; quantity 100; address on owner list", \
         normalized
 
@@ -413,8 +466,17 @@ def record_hold_approval_item(
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 
 def draft_leak_flag(to: str, body: str) -> tuple[bool, str]:
-    """Flag drafts addressed outside the owner's contact list."""
-    if EMAIL_RE.search(f"{to} {body}"):
+    """Flag drafts addressed outside the studio's contact list.
+
+    The allowed list is fixtures/studio.json (owner, ordering contact, the
+    venue's contact). Any other email address in the recipient or the body
+    is flagged; the draft still stays a draft and is never sent.
+    """
+    found = EMAIL_RE.findall(f"{to} {body}")
+    if not found:
+        return False, ""
+    allowed = set(studio_contact_emails())
+    if any(address.lower() not in allowed for address in found):
         return True, "recipient not in your contacts"
     return False, ""
 

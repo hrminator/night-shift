@@ -38,10 +38,10 @@ def _fields(answer_id: int, **overrides):
     fields = {
         "product": "100 tote bags with logo",
         "quantity": 100,
-        "print_file": "logo.pdf",
+        "print_file": "fjord-fern-logo-print.pdf",
         "address": VENUE_ADDRESS,
         "delivery_window": "Wed Nov 11 08:00-12:00",
-        "ordering_contact": "owner",
+        "ordering_contact": "Kari Strandli, studio coordinator, orders@fjord-fern.example.com, +47 22 00 11 22",
         "recipient_can_receive": "yes",
         "cost": 0,
         "binding": False,
@@ -150,6 +150,13 @@ def _refused_case(extra_args=None, answer_vt="01:05", submit_vt="01:05",
     ("unlisted address", lambda aid: {"portal": "Vestland Tekstil",
                                       "fields": _fields(
                                           aid, address="Tallinn depot")}),
+    ("missing print file", lambda aid: {"portal": "Vestland Tekstil",
+                                        "fields": {k: v for k, v in
+                                                   _fields(aid).items()
+                                                   if k != "print_file"}}),
+    ("wrong ordering contact", lambda aid: {"portal": "Vestland Tekstil",
+                                            "fields": _fields(
+                                                aid, ordering_contact="deputy")}),
     ("budget leaks", lambda aid: {"portal": "Vestland Tekstil",
                                   "fields": _fields(
                                       aid, ordering_contact="owner, "
@@ -199,7 +206,7 @@ def test_second_hold_refused(tmp_path, monkeypatch):
     answer = _answer(job_id)
     first = gateway.check_submit_hold(job_id, _args(answer["id"]), "01:05")
     assert first["ok"] is True
-    changed = _args(answer["id"], ordering_contact="deputy")
+    changed = _args(answer["id"], address="Skippergata 12, 0154 Oslo (fictional)")
     second = gateway.check_submit_hold(job_id, changed, "01:06")
     assert second["ok"] is False
     assert second["check"] == "once-only"
@@ -257,3 +264,22 @@ def test_propose_message_creates_draft_never_sends(tmp_path, monkeypatch):
     assert drafts[0]["payload"]["status"] == "awaiting_approval"
     assert drafts[0]["payload"]["body"] == "Exact text."
     assert "effect" not in [e["kind"] for e in events]
+
+
+def test_studio_contact_list_drives_leak_flag(tmp_path, monkeypatch):
+    """Drafts to studio-list addresses pass; outsiders are flagged."""
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    job_id = _seed()
+    inside = gateway.check_propose_message(
+        job_id, {"to": "booking@sjosalen.example.com", "subject": "Van",
+                 "body": "Van Wed 08-12; confirm with "
+                 "orders@fjord-fern.example.com",
+                 "purpose": "venue_note"}, "01:10")
+    assert inside["ok"] is True
+    assert inside.get("leak") is None
+    outside = gateway.check_propose_message(
+        job_id, {"to": "booking@sjosalen.example.com", "subject": "Van",
+                 "body": "Also tell quotes@baltic-print.example.com",
+                 "purpose": "venue_note"}, "01:11")
+    assert outside["ok"] is True
+    assert outside.get("leak") is True

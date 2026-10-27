@@ -28,7 +28,8 @@ def wrapped(instructions, input_items, **kwargs):
 
 runner.respond = wrapped
 
-for variant in ("hero", "contrast"):
+VARIANTS = tuple(sys.argv[1:]) if len(sys.argv) > 1 else ("hero", "contrast")
+for variant in VARIANTS:
     CURRENT.update({"variant": variant, "phase": "night"})
     summary = runner.run_job(variant=variant)
     job_id = summary["job_id"]

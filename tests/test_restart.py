@@ -85,10 +85,10 @@ def _hold_args(answer_id: int) -> dict:
         "fields": {
             "product": "100 tote bags with logo",
             "quantity": 100,
-            "print_file": "logo.pdf",
+            "print_file": "fjord-fern-logo-print.pdf",
             "address": VENUE_ADDRESS,
             "delivery_window": "Wed Nov 11 08:00-12:00",
-            "ordering_contact": "owner",
+            "ordering_contact": "Kari Strandli, studio coordinator, orders@fjord-fern.example.com, +47 22 00 11 22",
             "recipient_can_receive": "yes",
             "cost": 0,
             "binding": False,
