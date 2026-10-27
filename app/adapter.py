@@ -154,6 +154,8 @@ def respond(
     result = {
         "model": payload.get("model"),
         "response_id": payload.get("id"),
+        "status": payload.get("status"),
+        "incomplete_details": payload.get("incomplete_details"),
         "output": output_items,
         "usage": payload.get("usage", {}),
         "text": output_text_of(output_items),

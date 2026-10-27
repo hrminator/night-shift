@@ -31,7 +31,7 @@ def main() -> int:
     saved = {}
     for effort in ("minimal", "low", "medium"):
         result = respond(
-            INSTRUCTION, USER_MESSAGE, tools=[], effort=effort, max_output_tokens=64
+            INSTRUCTION, USER_MESSAGE, tools=[], effort=effort, max_output_tokens=1024
         )
         if effort == "medium":
             saved = {
@@ -48,6 +48,8 @@ def main() -> int:
             "reasoning_tokens": (usage.get("reasoning_tokens")
                                  or (usage.get("output_tokens_details") or {}).get("reasoning_tokens")),
             "model": result.get("model"),
+            "status": result.get("status"),
+            "incomplete_details": result.get("incomplete_details"),
             "reasoning_items": len(reasoning_items_of(result["output"])),
             "text": result["text"][:200],
         }
