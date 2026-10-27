@@ -1,0 +1,355 @@
+{
+  "job_id": "ec6c95529667",
+  "exported": true,
+  "events": [
+    {
+      "id": 27,
+      "job_id": "ec6c95529667",
+      "seq": 1,
+      "virtual_time": "21:30",
+      "kind": "handoff",
+      "payload": {
+        "brief": "fixtures/brief.md",
+        "source": "owner"
+      },
+      "created_at": "2026-10-27T11:08:12+00:00"
+    },
+    {
+      "id": 28,
+      "job_id": "ec6c95529667",
+      "seq": 2,
+      "virtual_time": "00:38",
+      "kind": "revised_quote",
+      "payload": {
+        "quote": "Q-1187-B",
+        "replaces": "Q-1187",
+        "detail": "Baltic Print revised quote Q-1187-B arrives and replaces original quote Q-1187"
+      },
+      "created_at": "2026-10-27T11:08:12+00:00"
+    },
+    {
+      "id": 29,
+      "job_id": "ec6c95529667",
+      "seq": 3,
+      "virtual_time": "00:46",
+      "kind": "claim",
+      "payload": {
+        "claim": "Original Baltic quote Q-1187 promised arrival by Nov 9, but it is superseded by Q-1187-B",
+        "quote": "Delivery: delivered to your address by 9 November.",
+        "source": "Baltic original Q-1187",
+        "version_or_file_id": "Q-1187",
+        "call_id": "call_ddb64664-6c2e-4420-8108-c87c0bb6f42d"
+      },
+      "created_at": "2026-10-27T11:08:54+00:00"
+    },
+    {
+      "id": 30,
+      "job_id": "ec6c95529667",
+      "seq": 4,
+      "virtual_time": "00:46",
+      "kind": "claim",
+      "payload": {
+        "claim": "Revised quote Q-1187-B replaces Q-1187 and promises only warehouse dispatch by Nov 10, not arrival",
+        "quote": "Delivery: Goods will leave our warehouse by 10 November.",
+        "source": "Baltic revised Q-1187-B",
+        "version_or_file_id": "Q-1187-B",
+        "call_id": "call_f1b40579-e0ac-4747-8a2b-bbee4518d0f0"
+      },
+      "created_at": "2026-10-27T11:08:54+00:00"
+    },
+    {
+      "id": 31,
+      "job_id": "ec6c95529667",
+      "seq": 5,
+      "virtual_time": "00:46",
+      "kind": "claim",
+      "payload": {
+        "claim": "Vestland portal authoritative: Oslo freight for Nov 6 run is full, Bergen van to Bergen addresses in window Wed Nov 11 08:00-12:00 is guaranteed",
+        "quote": "\"bergen_van\": { \"destination\": \"Bergen addresses\", \"window\": \"Wed Nov 11 08:00-12:00\", \"guaranteed\": true }",
+        "source": "Vestland portal record",
+        "version_or_file_id": "vestland_portal.json v1",
+        "call_id": "call_cca0e51a-aa1b-4e0e-b16c-604bc72f8c73"
+      },
+      "created_at": "2026-10-27T11:08:54+00:00"
+    },
+    {
+      "id": 32,
+      "job_id": "ec6c95529667",
+      "seq": 6,
+      "virtual_time": "00:46",
+      "kind": "claim",
+      "payload": {
+        "claim": "Baltic shipping terms say transit times are estimates not guaranteed, and delivery dates mean dispatch unless guaranteed arrival stated",
+        "quote": "Transit times are estimates and are not guaranteed.",
+        "source": "Baltic shipping terms",
+        "version_or_file_id": "shipping terms page",
+        "call_id": "call_98d24836-0411-42a1-a0f4-2a4c8efd68f8"
+      },
+      "created_at": "2026-10-27T11:08:54+00:00"
+    },
+    {
+      "id": 33,
+      "job_id": "ec6c95529667",
+      "seq": 7,
+      "virtual_time": "00:46",
+      "kind": "claim",
+      "payload": {
+        "claim": "Venue confirmation covers Thursday event only and says nothing about deliveries on other days like Wed Nov 11",
+        "quote": "This confirmation covers the Thursday event only. It says nothing about deliveries on other days.",
+        "source": "Venue confirmation",
+        "version_or_file_id": "Sjosalen booking confirmation",
+        "call_id": "call_dd6e806e-f5d4-4a2e-8f40-d51d0e2124c9"
+      },
+      "created_at": "2026-10-27T11:08:54+00:00"
+    },
+    {
+      "id": 34,
+      "job_id": "ec6c95529667",
+      "seq": 8,
+      "virtual_time": "00:46",
+      "kind": "decision",
+      "payload": {
+        "evidence": [
+          29,
+          30,
+          31,
+          32,
+          33
+        ],
+        "outcome": "wake",
+        "reason": "At 00:38 Q-1187-B replaced Q-1187: Baltic now promises only dispatch by Nov 10 with transit not guaranteed, so no verified Baltic arrival. Vestland Oslo freight for Nov 6 run is full; last verified on-time route is Vestland Bergen van guaranteed Wed Nov 11 08:00-12:00. Venue confirms Thu only, says nothing about Wed deliveries. A hold must be before 02:00 cutoff and requires verified recipient-can-receive yes/no which only owner can supply, so cannot file valid hold yet. Waiting to 07:00 loses the hold. Owner answer is the only missing thing.",
+        "call_id": "call_93e502e2-387e-43bf-8d9f-a4bb6b5f57d7"
+      },
+      "created_at": "2026-10-27T11:09:00+00:00"
+    },
+    {
+      "id": 35,
+      "job_id": "ec6c95529667",
+      "seq": 9,
+      "virtual_time": "00:46",
+      "kind": "question",
+      "payload": {
+        "if_no": "No hold filed; I prepare 07:00 comparison showing no verified on-time delivery (Baltic is dispatch-only by Nov 10, Vestland Oslo is full).",
+        "if_yes": "I submit the one free non-binding Vestland hold for Bergen van Wed Nov 11 08:00-12:00 to Sjosalen before 02:00 cutoff (ends 09:00), then prepare comparison for 07:00.",
+        "options": [
+          "Yes - can receive",
+          "No - cannot"
+        ],
+        "question": "Can Sjosalen, Bergen receive 100 tote bags Wed Nov 11 08:00-12:00 with someone present to confirm receipt?",
+        "what_checked": "Baltic Q-1187 replaced by Q-1187-B dispatch by Nov 10 only; shipping terms say transit not guaranteed; Vestland Oslo freight full, Bergen van guaranteed Wed 08-12; venue confirms Thu only, nothing about Wed.",
+        "why_now": "Hold requests close at 02:00; latest safe notify 01:30 for answer by 01:50. Waiting until 07:00 loses the last verified on-time route.",
+        "call_id": "call_f0f0acb2-9b03-447a-a562-b93bd12302da"
+      },
+      "created_at": "2026-10-27T11:09:07+00:00"
+    },
+    {
+      "id": 36,
+      "job_id": "ec6c95529667",
+      "seq": 10,
+      "virtual_time": "00:46",
+      "kind": "turn_done",
+      "payload": {
+        "tool_calls": 7,
+        "text": "Woken for one fact — question sent and logged (Q35).\n\nSituation at 00:38:\n- Baltic Q-1187 (by Nov 9) replaced by Q-1187-B (leave warehouse by Nov 10 only). Transit not guaranteed → no verified arrival.\n- Vestland Oslo freight Nov 6 full. Last verified route: Bergen van guaranteed Wed Nov 11 08:00-12:00.\n- Venue covers Thu only, nothing about Wed.\n\nHold cutoff 02:00 — asked if Sjøsalen can receive Wed 08:00-12:00. Yes → I file the free hold; No → 07:00 pack shows no verified route."
+      },
+      "created_at": "2026-10-27T11:09:11+00:00"
+    },
+    {
+      "id": 37,
+      "job_id": "ec6c95529667",
+      "seq": 11,
+      "virtual_time": "00:47",
+      "kind": "checkpoint",
+      "payload": {
+        "question_event_id": 35,
+        "next_input": [
+          {
+            "type": "message",
+            "role": "user",
+            "content": [
+              {
+                "type": "input_file",
+                "file_id": "file-29293082046982605"
+              },
+              {
+                "type": "input_file",
+                "file_id": "file-28965004399774897"
+              },
+              {
+                "type": "input_text",
+                "text": "Baltic original quote Q-1187 (first file) and revised quote Q-1187-B (second file, replaces Q-1187). Record a claim for each."
+              },
+              {
+                "type": "input_text",
+                "text": "Vestland portal record (vestland_portal.json):\n{\n  \"supplier\": \"Vestland Tekstil (fictional)\",\n  \"portal\": \"order portal record — authoritative source for P2\",\n  \"version\": 1,\n  \"production_run\": {\n    \"date\": \"Fri Nov 6\",\n    \"note\": \"last production run before Nov 16\"\n  },\n  \"hold_rules\": {\n    \"requests_close\": \"02:00 (scenario clock, night of Tue Nov 3 to Wed Nov 4)\",\n    \"cost\": 0,\n    \"binding\": false,\n    \"binding_note\": \"no order, no payment, no price acceptance\",\n    \"ends\": \"09:00 unless an order is confirmed\"\n  },\n  \"routes\": {\n    \"oslo_freight\": {\n      \"status\": \"full\",\n      \"note\": \"Oslo freight for the Nov 6 run is full\"\n    },\n    \"bergen_van\": {\n      \"destination\": \"Bergen addresses\",\n      \"window\": \"Wed Nov 11 08:00-12:00\",\n      \"guaranteed\": true\n    }\n  },\n  \"prices\": {\n    \"per_bag_nok\": 24,\n    \"van_nok\": 400,\n    \"total_100_bags_nok\": 2800\n  },\n  \"hold_form_fields\": [\n    \"product\",\n    \"quantity\",\n    \"print file\",\n    \"delivery address (one address from the owner's list)\",\n    \"delivery window\",\n    \"ordering contact\",\n    \"recipient can receive in window (yes/no)\"\n  ]\n}\n"
+              },
+              {
+                "type": "input_text",
+                "text": "Baltic shipping terms page:\n<!DOCTYPE html>\n<!-- Fixture: fictional shipping terms page for the Night Shift test world. -->\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Baltic Print OÜ — Shipping terms</title>\n</head>\n<body>\n<h1>Shipping terms</h1>\n<p>Orders leave our Tallinn warehouse on the date stated in your quote.</p>\n<p><strong>Transit times are estimates and are not guaranteed.</strong></p>\n<p>Delivery dates in quotes refer to dispatch unless the quote states a\nguaranteed arrival date at your address.</p>\n</body>\n</html>\n"
+              },
+              {
+                "type": "input_text",
+                "text": "Venue booking confirmation:\n# Booking confirmation — Sjøsalen, Bergen (fictional venue)\n\n**Event:** Fjord & Fern customer day (fictional studio)\n**Date:** Thursday Nov 12\n**Room:** Sjøsalen, main hall\n**Event hours:** 09:00–16:00\n\nThe room is yours during event hours on Thursday Nov 12. Setup from 08:00\nthe same morning. Catering and AV as agreed in the booking.\n\n*This confirmation covers the Thursday event only. It says nothing about\ndeliveries on other days.*\n"
+              },
+              {
+                "type": "input_text",
+                "text": "Address list:\n{\n  \"default\": {\n    \"label\": \"Oslo office (default)\",\n    \"address\": \"Skippergata 12, 0154 Oslo (fictional)\"\n  },\n  \"venue\": {\n    \"label\": \"Customer-day venue, Sjøsalen, Bergen\",\n    \"address\": \"Sjøsalen, Sjøgaten 5, 5003 Bergen (fictional)\"\n  }\n}\n"
+              },
+              {
+                "type": "input_text",
+                "text": "Decision facts:\n{\n  \"_note\": \"The ONE file holding the decision-specific facts. Hero world below. The contrast run is a one-file edit: set venue_delivery_window to 'Wed Nov 11 08:00-16:00 goods entrance'.\",\n  \"venue_delivery_window\": null,\n  \"recipient_can_receive_in_window\": null,\n  \"_contrast_run\": {\n    \"venue_delivery_window\": \"Wed Nov 11 08:00-16:00 goods entrance\",\n    \"recipient_can_receive_in_window\": \"yes\"\n  }\n}\n"
+              },
+              {
+                "type": "input_text",
+                "text": "At 00:38 Baltic's revised quote Q-1187-B arrived and replaced Q-1187. Decide per the brief and record it now."
+              }
+            ]
+          },
+          {
+            "type": "reasoning",
+            "id": "rs_6ae08646e0a0c8b2faf0451d:rs_80496b1f-a3d0-4d81-877f-1eccd9c99367",
+            "encrypted_content": "Q-PaDgGDVVhq4QdEfZjidMXbXB-YQTFnNkFVvVscxwTdGzRc1E-4D7J_7G5MLOFq2wab30qNPU7PGH_hsZ4G_v9SR6lQzjxo8tr_rpFkJFsPk-tXT6OGfpcEihmpaldzPJm1lk1o9zY-H8s9s0JcGsV_6eZ0cB6ElApEt9DUoF6rmG3vf93S_cpOy7U60nHElRM6LRk4szEKC14nC6RaBa4v2JWPx0I-pqUeRCXF2oil5tZs7AmVMyiKoM52I61L-SZXc_eGRw75jvS1jhSDOcsM3g7-OxsVweqsTbLckVYQdVRl2SCRQq4hljHSZ1zt4J6xSsY-dk8XvriCkg5UajOHpJiJ_HnhbfKkj_R2jjKc5-qdEBHHtKWhp_fYNNoqKeRkNQ88fcUsYaNBVGcPLfkSf3FeRXMM6lNLAtL3nNNAdrVg5wV4Zwz2YeZCI39EZKyWbnXx0Os-QNdrSyJgx3VFzrVZEDVmrOqkXlBUmL77UsMzmMDZjoL2cNCLt6QIQzHdaWgZCAOD7_WbzoxcL9mdi_QU5gGRuQik7Hm5td6on42XTODJ4AoX6sJZNj5yuP_G6pTcprxis5zGkErqg721HUPCcQS26kS-udsHBBdaAwOTU7pVMVg5N50LtfE2ehLH9rN7BcIzCyxMKMMbL4ZD9g59fFGsf2C18U833dNFzmFLbS8dOMeJlzTpU6q0mUXvwzlZy8Q_vvH_RXgGdeFYAuuPaFRoVffItYKU-I2NgmDVb-qei1c-1Bw0-oHchpCls3ibiMwziJY6R2RLP0wQ-RH_MRjcJTOMsrrpTmyTNFEDky8pWK-vYsB_oqH9Br8VptiTtyzfBiWUV61tmuPtKFD5F0BlK5w-0GVG3Cxzu0NHXPSGan6J0ZihWwF75i-CO7RCaVp8DefiJKKjHS2-ZIfwYkoHARbdW3fyd0wW185TA8hl5KDbdFK2emyQZq804p66Z2mqR6CvCmTVAmAgbTj7lFKk9RKTQ4K51v3GAfBayKJ8yiT-_KAWX-SDqI8pXvA3lfKyrk3Ql-KjBSj2NvvUllnJVfdyeQiINFeu-Hg0G3tAZ-k3I4bfHMwQtjatGwnj2bv738THRsTpm_a6jiMTjlMsZ-FDrli-pwAs0NC9eG9TLjA2ERmnvmvkJhIh7ybwVlcAXDqTki0ikeP8rJVeSr5ju9Q4s0Ydkv1yK_oreLgkuajuEYU9WNpbCBts-dJxNeSE2KTs9X7NhTVfUsHbi9hOK2De9Ii_usFWOdhn2tJJuYtJx1rFTsTqU1XkEqXYKnrZb4x8TeW73LW388M7MVD8tB1tkQyzf3DikgMxxcan_yjy2Lrzi31qvAJyU9I3OEuapfGBlU-QAmof6kbBSiVMKh3K5OneDHzdhsHWBgnW0k9P2dAzaWLQFkaGKUEKQbt4oi1AZWoJzqs8lH5ai2LSJ8isxhj2lcBzYfrnonp5sQ4v-s0vi0LFHMwMzooEFqgOxJ5uloIaT2MxC746m1mWLNmn5-RcWsDUQOx7TwKMNDuQKy8z5-uM9ElTT5D-Oa1N4vdntRRHLzJN2FvJRiVmhQUuvXtBuTK0VeaHbcPSw_V0V-d3E5k7Xgr4cHvnzf4JGUBgdv7DuuiDhQerHYWmOmSk7DzoEr-LrvvR2Qke5Xe1NmjkkOMNneHEzaL9RD4tLE2iRdRoDqQE_PmojVRqinCWQMz0ZMgaYxxtHrLc_zTxqkV5vRyk_Yfbz5C4ddV_G_ldq5YsNxcEAUm24ANdDmxMOpczEh-tBsZYlRwlb_FWSaagyiHlIJUOjYNiEH-GkYg6f73WKlif8UoQ9wS37Q41F7Rpbv_U8d9LjGNycWcI7jikxOIY0Vf76v4sI74EMvkTkZI3rtA8k7R1i7Cf82ly5L0VEUlvwI4FLK3_-2LhNrnW6_5oJ_Fn5N_BqaoMGasAycB2OTPyCGuKuWQUBcIA6Y0RjOtmcvkOs-JFTjSyMr5Kfju8rG6L-x6-hY4X8OoCqrNVdSgcG5jdSP1W8MD8oWEXNoGDHPCqXY4Fuf1Lqg-CfAzHpNyTdGuWUfozEpOF0AjicydGmSSpbpPvIWoIKB554DSwvLKEnZKhIjXU8OtL0PAFzziN5JiOI-1BEXxCYgt7F6gurx7xEuNW--GHmqGxgprerHdSwSopFVgaizv33b_YPGF__j2CV4PxO1Fmj0JjZyAIQQOem7T6NO24YUW7XerJ8t55Iz5-fZc21TAeMGc1NxxhnMtNPuwuZVF7R-jFWpFVvoqSjUaRaCXODNrhHUe_fadvNZB9pHbxq7jT3dtWrdiAQ2lFzh-LL4x8m3nMdBmQpX6iTnpzskaC9O7jOnsdPwSXVITdgHzTdhwGlFUtJFbR4V0MRy0nT5mogish4nllg1v9VLM_ITZEbYH5yMWo9o7G94-GnODfCRzKXlw-a2x6J4N3jJAscAdkDxVmSgrQbIiBATdzwmntxusDyAtg9ieXRRJCLsebH_WiKqvhR_LBxG2zxoFwemVOmabB58bq1GutZ1HJUGPkaCQbxN3MAnJhtjsP7HtwQrwgtaqEa-2C3eZ2krrUesSOTmBI_LhC_UjTm_vFM9-_2WTHwYncVz5wY18qILTS-vE-YnLDySZrf-kvFfl8OKzHgcR94JNoYMHFeSF5noFxWha0jUCLXAmRcWxTFOa3K84_e1UwFCOdiY5EbKoTjeC_WHzN4CXWGfCRfJjciFuwBTGsJR64eBTAwvPosAQRqNx7Oqpmtp37Ue9uKZHVS1CY1Gzr3ADoklPsrSCEgi4rVXFi38GI9MK5tUKLsIsrM-iSPS5EFeAHsUVnapEDHiwU2s-EqCtw_r8RLFgSiJy43tJlB8n27aYxIzGxZLdK3IuofAdE1NwZnEUzYzTB6PBiAGOovanAdkpEWQrlriMFIrAtDMesg2wGDZhyKaFhSbIDs-yLaHaGA_qEkrsjZGaKeys6vqc_g7ZgwWUmCbcUhW4c59GxgqCBiO7KHktIPNkMLM6ZSQeRVTm169xKjugkZI68I-3rrnDOff_ladXKYdu_1l-1B8sFeVUMmiyRDKePRS3Zd1bkPCrjHRl1p_N1B0oEV-uPMDV-W-5ts2pJmPCc2WlyW0Y0IOgLiTjoZhxhqTszKSBW57l0BeFS6sJVsf07NOg7aaVvMv8z31ilxS3K-a0vpwUveDTPFJQs9QQgobDZd0YV6SnxzeJU9HhfceXWACW9eWZcDfsK2PYrpu8csYWnSVA0qLZqsKk6Ut9FPqQokbcyW0V_kFI-nwmcjCTIqNcdbE5Oi4_hlBydlgtWvIKrj-g_aFYYFSpG9dDr7s-_3Weag4Csx1cq_IOHy8Pm7i-2Gt_wZSSQVaeQGkVx7HUjGw2r9i95FwI14GdpNe-3ExIhlOV_-UepWcwc3Wic-4Uo5PgjLqg7ELIPnt3DGPvwPGKETVUxigh7Ws3OEgvAjodMFjpGgOR5FlfPTaMaXXTUHukqkASaVW08SaMcV6LR49sutobLNemyjn9aNKXHmjLp_NpygO0-ysb2Cs_KwAfHmu-xn63TuiI_K0SHpYciMcM8daNSCXDXYVaU5qnx1opPrBrQfvyPFI8jvezquY8M-Q20mKUPQgHtYC7edpyYayAXlFpqcAKwTcNNXQj4l48aAO3jH5IHO4FDgCityPbHBXoONUbC8QnMOIdCl23puyaombZdU1fLySCnkB7UiAoKHtTrts_ow50qgvXOtTD7HrGPN9TOMrNxfv1K6p5vUj_zJipK7viUiWsEvon95HqcuHSNsJ2DpwGVh6NbJmFHRPtx1d9iH4kg12e5yj3vXu6txvYPcuOINOm9mWgEmk4ThmK_GqU_jVhEaTsNZGfyDO5o1bkifldc2NfhF1xbl5AiYsP5Z47Dk40Dp__kl5NfpLZvHHqb7RaB76sn9JIvj8JZ_zqSVMCrsLx4PSboQHYtJnyoHRooOMwzHbmEZdQU5TCtylDoMYLYX-jkwMDuSsuXCUaFbFNOH5vZ8KX3sjaZH6N2HUO4lupzXGvQlJn5GOgTIhNaLTtR7LI4t_34BqPW2mlI6K6960q1RNG6H_RrX4eXRmWnN9Bglgs_7ZSWlTBpqbWsnXVDFloNLY1dD2ItnKLY5GRVnPGvZioa7HdIOsZCek4_3KClnTq-B0On275I4yF_ZZj8xWuc4UuDRY1aZmWT3F6nP84s2Rzp-4_bMEG489ccGNNkVF3eqSiw32sQ7A63mrOe0xonzETSSSNNoaDvaS0OTBdCwu6jr1rTu-Td7IPi31RL7UyMxiegISB0TNO45Z1VVNf76v1NJuMYzRscqTvmg5zlEcp5aE-OLn9HHOHg0SYuqpeWDt7yGK_X7pAGtos7ZKXLVxxdC950ujlYo-ATqsT2jx9pckJPq_IGztqzc5gVv_IugR6IMopY0RqZyl5akZfj3oSsJuBQZple9fP6U0eQ8Ig28rM-RW8m6ZweY6eOqI-FxMsu0g65kNdqBeDFlLPYV8CQLGBN94oXaWr6_J_HhST-Epi12cinrfY33FZ3_3S_8e24kCfUGVev5g2EtjZV6dIQojP7du1RvTkfvvZAop_8bNw384dHGPeoAJeSHdfIZU3u9BwvbHBMF4TK4sJrwQgJh6MaIlAQ9CMuFkoqbpYB-6VEbGjoemHGAuqGUZ7XDw9X568wJBRYn2MRhAr54ojfwrWqnSR4Ew2qVXa6zkJiZKKStTGgUYbtCCqHGz7GyjuNtf4LrxJJjTEQDX6RkECCoPXpa6mQxipnPFfStWsr2gHHgoyrhyLotPxpLgZfTgYJsZrn8ntA_WzrpoHaCt1ubQiONeb5RPdxPzUhPYYAKKRhGuqe-iYOnbpAzvXH-Xnqi42pcMwypF2NG4CW6yhfgIgJVuxTgjMyyJvURIUA9nHbP0y99C8-l5OF4QgYK7ZNcjzcudfAkaBmxUgFORW7sSAwNdWobtD4HaSj8V-pAYC39_Lot6Yc4GPC7JDro4-TvBBAj0beUXm1Ral2IJJbEZQhd8lHZzevhUnHz2OOPoQaJHvzyC0wAExe0U6apz6WHMVJVx6po6tTKLCgDp3y_hoRnJuoHG4m8RdAIyIyD-w6X5_MQlA3RucSrm4fXnB_UR9it3tr70yHeBmVFMejJpJmG657veYVB376QeRknK2jjUjujgwFUubb4Hg_Nk_Lb7w2Xj5nIUQvaVh1OZPV7I-qC0SgKrfhViYYnrLIQiavnyIqgst4fSKBPQgEGTIYrWqn-sGqUc6qwFyHFz_PgeTutEcjO3_i2tmeygPIM-bxg4MIJ6Gvi7ZaO0i6LNqZ68cx1fP7OnMeQNhW8BKZCm2yJMQmAdI37VMoMZ0otMnjJkBTzSlL1KP0XPTq5NEAQvpdN83KwtMNxPu_0IHVOnYTwFr9l0W3wUOwKwq8n7jFzD0wgyOY-yfACLT9xx17pinCXsJG5Rwsn3QOowY7NGzdCaf6Gqvp4diX9OtdWN11wM4RwH7Ybke03hhj90T8XRqrJLkcUeAb79gBXkfrj09v_8FhV6MMzpdE73QK0sjH_3WHep-jw-QKyCfc-fZTCG8lDKeb9RFAuVw86-hJgmllGgSdSi8cCGr05YB-VgfNavMcPr17lK2XJwLxEIS7tPzhOVDVOYt3719KQBfPr_GBkg-5G7tqG5yS5PEsOB_M6eEmNWVkRYaAVDtIByF0fy0Yrufa00Z8wv5NBV4yHc1tM1GI2japy1FlefahnAcZQXljHttUcUPuIlYO83LldYTU0aKBkeHan3Hg12C5YasTHVFYSIhwLXMbLfYPmjmeC5S-4Ug9reCT2vlm_7CXcxOUttaD9PB6PZ7A5dSF40lYxFWg76AVUwVFWrjbDNUt0EU3d5GgrFd3VnRfY4AWB0i8TE1n2eEf5lblO3zczzJcZSWHyskxRcJ6bkheMDF1fLHF02vfKtvPNDLakvHPmLsTkY3-2h6P3_FIfIxjay18fGdv3sE-mTIVeIzT_w9P6zDfJNhlk7axgTuYKuq9ImmCvI7l1bvaO87fX9ilgMtIL0dMZBlyjVoyrnLgGyFfVy9cAlS0WFvM91AOX9O8n1lQESoPc6neKtRI611T4d2wp5pFc-r-vy-SZtIqwed5PukgWrFEXXfDgql1CjUkMJuplG2NPzcnumz6EFuZe9Q48j8o7D0T4lAgPU0pzXh41bWlTYrMcuiafgKbvrrOWzkokc1CHpShOvHiqAcgzHDP1gs5q5IkQHz632qeKJ9-gxEkFRwXzTpacQsx9Wyz5f-fYfJatt4GxxVmIGhJ70whckkTyU5Ul_dhiyVDrdxMjqvHoQsLPvGO8uzt8_ZdG03rwDzOGImqZ_rx9x4T_bjCaJw4uV2rZkfgV61ZL9VJV4Ynz4_onRermtvUFXG4ng55s55gaIJ9Xfbsf2kxT8fPvTujaSngESIdUB0HZRKlXG4ejV6SiQdB0WkBfZiCxFlj9OD8u5zHQVGpLqOQOektmmCutdsxmcOBF1gFr9ZEYxmUK6orfHJqHK3bM3GTPMWL7JOrvQ277djf3levmKSy5W0txllqTcET0VKq2qtXPEqHAgc_HdoOg8H8rApQhFIKe7cCdSGdla0DhDoq3Zk6VcdhxYeV97g-ZfILKp4QpMCkQ-wukYurX2ubUi43dcP_j-MRPg42O6jXREmX9nAdUoN8DTHxMCZPKQ7SkPMUVT6TDqZwyqG3HAF6pECbvDFctHvTIj5_k3aGnpPGC9R0DLzmQCkPXtN0ke-HWpG_NUI1CzVpjjD8F0qpQSXlw5_mr-HtXARJ1SgQbBvoGAAj9dW7xfZxFR9N2RRCPYEZRNYgoJgBCKa2ELUa6zXEfyWrv__illm7OXt2tBG2VdM6HYEIpTnnFQ-T0hSRAe6opZxBE9LAxwLexpEmqr_XNC9yhm5d1LIOQtvS3IeEQda7m67vXviM9K9sVGU8ncvckLzrLFiiiV9nhFhzn5mLDTlVcoA4O0A0HwfaBS1l3dgVnklG9ROjqndtTtYjRDcRU7uR1g2Anao9SXHESfNGsfy4XoTAToY-n_qvOMNrQ68OqqF5dQb6uYaHu4Drrwyn8IvnH4UllZVRSBVlZhHjaXF6dQhxtpRCQpxoMPnh5ucKFHYLtjpt0ftVsntK_X5lLsI67yajOxGXRICKRZzee2OlXpZXwSHGzlz3m6y-trY5oXcH17AgDYxdWkTHGBb7nfIgP1S_nwj2a3QWyK2uwXdOY_eWi3h8Et6eg03Tf2tyhJRoYNQ7iZUU2EcyGoL6GNiNEhkqLRjGjG8dIeJePG_1_kNwXUtkolYSNwoq5B_p8ewyni2qIpek-0qupHAM5rG0ENziCezVjMWkDUCy0DqDHFdIkb_tyTCI4MAnkw_v7rTtn-VUIoKoWFZdDj-k9cmIyvoZ-t_HDACZcNOVoigzhRNKlmPNnkj5ikuuSLShZBzsHDHWBLpIP3Q9k1Dm-zczBVPd9Jr3SYbYpgxLHEyE-xiXTx9hLh6a3m1Y2yJPJ0Tkwcr7jNl5kkhBOd71jPBUtzAZxCD8XpwApGtK3_TmzBVwDlEH1gbdjQLpxXmnZ4aolXgSUqAZnQ_RNEfVL6Mee6sR1iVt2WWz8VtQ6wKKhXK6Zjw1vnr6U_oW5kweAsdslRPgOHceENcveKqxAyXMD3Iz8jT43kmS99A7GYYHFlekrd4I-UMqtOllFppcCUi1MTksg5fTUN3lxB0CbWO313-uPXZpqNtiQVQafFxBQw0L68tiD8NJ9BA2KJZRtZOqoMxuerI7XrA1uJRIIDB7kb-GfUfVx7ABuOBMJ-aSuNwTWQa06hem11in7EFkN5tT1t4WWZI28yCDUVFhyNT1Kkf49nRyRZz_ZHJKl4bfRq0Fcirjn-OcPPaR0i7wdvL7Ix-HO_ncWnjJQfvG2WP8At6_tyam45r8Y2tUPWrJ5BvXU1CngxQy7JIW80FRDGxVHxnv8LQA_pQb9qR9LqEKckNPHZWuYlgfleon721xcZJnyqhpCEzXSijA0Ef3fevA532ZlX9qQKCE9cVPaOYmOs0i6pWRVJtl75xVqNe1qheCdV3pmqFOFYN8bIaqW_Ca3Fu_fOdgvvMReErN1Kd_BLFdArciwV-OQwpti2135DRMUiyx4fiuQXXGPhG3Pg2paN9rbqBahkA7XNRxxE1ttU75gn6Q3_AO4l31gI31uRtjlTKZ9QQRV23mDXOQiojnKFVnaRzABzqOmAelqLJzeV28yZcktW5rnDN7lZ7BY_Uxw0COU_E4q7wZExfdKvrwEoXYag9_P59FiL8VJ3Vglxa-2JlMIpgNn6WGb3ulv1htmXYq0anj5nA2aEXVEku72cLT7BaYEF1qB7JFFrSvA27iBd6PhGrbXsT4vFjuLOGPksqJK4jsc8AgnrqS4jNHEKaThxeG9Ciyq-YAuuN41shv5MDHrbrd5dhzRFDe-_eC9KWzuW3kZxQrAgeX0KC_agGhZvQgBnxiICvbO8P5InYMRMm5I_Qkxtz51Z0c3xsdXgXzo0vVzTUUo4LtrwXKTQwxQegYcjM9sM5yApeb3jn_dtybPAr5Y6LHPApXit48Zz11F7jFXlRZQm132K25_F868wxK80qPkDJS8LLMOo85PVnWSYoZABSqBYSZg2laAj8bVmySiQrHv-shrLQRs_Sn-GWMX0pNjhlpUzTkDOb-hV1bTjM05OY_CUriunXeqBDxNl-GhkePS_h_edU3WnCKA2aOAHeyofRPp0u_Mh2o-BcxfbUJ5xESBrDqtiCX3F_RQWkLIu-y72yeTnaNLDdlnuFlDhIj1b-e0NJiLGIaps6VNaYz8ScwP8HG3xxHix5bbXF0RUBT8g2_vjyJTVZEwaGrr_SdgCfOuAOgTlVfQGsfQ6VcW1RZMDbqXXpAQWBeUz1BEjtaThMZDAwiIxrssRtToueNe7ye3FOvpIv1KCtAW4wnhDxekJncEvRQRGHYmbQXZfc2zNPvn5-1U_Gh8wOIya-zBP_Cli5DA93UnmeFF6HPxt2ub4K3OKW9bozv9SA5YJjB4I_x53bJdyOy4zrQgusgrjU7M2iaNlCiZXRNt2ub4q1Q4WxQt_QFEZFWjxaXiIPRF9yArLDBONIftfa6MyKYWpfXgcj-HdY7PtK--Amb_zw5orvC0zX70a2gza0gB4_2EiYnl_Nd7Gt8_U9j5wjvAkbOoXEZMGWN5qKVV5ieSIhHCuOg6J3EPsrOJSh30YTytKf7FwAzxr6-RsafExA1Sx7Ex9gUWCkoJhwcd2wtulhmJ7JTi5hLJae1dvQePBkrsWYjgC3QUm9hTAB2nMbNA6gAa_5CAxVsR6cxPBsa7M3ZQKDuNz8T38SHrLNkePlNK9LlouPU4lFLhdlydteQ5nUsAnFHLzdftjL9kHLC7AIRsH1lXM8GQe0KLhDYcllgUEVYt1yFu230-NAomL0tavIlDI_rhlyfxCk-ccpQxQ3MhvAAUtpo-kAIOXpSTHIJaE-52PrumvRcViYDePt00nygBRcmpQm0f8XJvGQD5mm_KIwNYPxOiJLNxc8LJChGYi-59H7mLgvrepumr0BZ0WK2yNdi9f35yFexCFcPYlNL1mFr52R5U5rUoMFSB2BiHZhMlS4t0bL64k6ydwRdL5Qb54l9-12O6uuPRv0dYAunaaS2NdwZR8tA0rKpObPGSq7UlkQo4FdzhCA3Y8NseZvzu7ieIt8rqjQYzXr4N3DJND5cKOwMS7Ad7NzQ-VBAuJcuakpMXBf0H2vGJ0TS5RT0yqCRZHTvb6MjAKJmamKIBK-XFoGvKu0u7lADaYcegy5KQu4IVmH20ODK5f_pziDRUpK7WC2wV-XJZKmU3J_EQ4dTXnoMuEtH5GbiQDd832acXtWdUBxcGZ3hqLrryfvDa443-9UO_zdQjQoKLPum8mqMqi6WRg2wAGp_bLppwXaOKc5J26BtwVdgnTG4KVJZsieiCs3f_YPAi-C2zKPRmY_VBmv2oVDcli3oxpb9IzvwPTZykDAFj_EgFLn194i3_LTTtOAPleVid41iLNfDkKqwVqMV0VdVYnuwfZGHG0Jmb9v9duUgK_z2sjqH0EAF3zu8sU5pp7F7XD_STXkKHfWcWFjgSz7WkccI0EJeMJ5F8KJIB-w9DTTdOKazEFBZrv1y4lrlYl0Sl4xdrBWV257wspA2Fvo-N_LFhPZ5otfqwoJ5r2I4lXJFf9gpD0yM0SaBT6S0nEudyg9RSxe0RDV-GOGHUTL9_xw1C8wzxoIIznwFp6mTxqO-Z33zAhuvVNIqznTwuCXk9FzqJuN8c_zhboLGMB69ECEzE1AmoNmqKeCXu6OARzOdld5jfZeXGBPDR64qQZnV3tH-GUT39aiHnKHLbdFONk0_zaZOeOscXXfkCJ5hmQ_tpEPv70E9saP0VtwjhEA7yUf-CWZlYmUQGYo0BQPkFdRTQZ7BFAoy-sAma7qB8SJ8YrdlR3mQFfuiBQni8S649o0NNYFH06HjxNikilhdf9XarTPSK-_k1vcnjbqdsv7aSPGWPPsesLTQs2RB57siBx6Q_SLU69xipqKwhU_c7mL3ARtk_rJyFCc1W4sM9KzD4TXJ9-PMNWfXg4vgUE1Z2IO0aJ_N1DCT3kUQJktqXHX5BlbQLkstE3iPeo037DHCA6l_keoQ7IQ8VvryV-DJmYWnL8hK_vRdw9bwkiODj7JCmRgDTlBV3dqRMlSl6g4iKuHTzkaj8-WG7yMVOGHbxq3G1zt5KLzLbUZH2h68p7ftSGL0rQuYvWcWJ1scJ31tIjaEe2FYq2Z9SKmeFs-gDLS1Ozw8s6Y1TdmWqQz63GK_uTKtrMdDOqC5ZmNUkmOnKmOIz3taeUWwHyv-4vQi8yEdz5cS0nwN-hcLIGIUmGv32A4EqD2vRl0egYd7ub9dXjHNSv6FbIRMKCM3eLwrQDp8Vu0UE7av1Sew_-A77BvfB-LH31RJgWCVhMAhhmSi99nIVDmAG81yHVAMEM3CSOjx6yaNvp4Kp01LfjqF4N1QsJs7XV2-FGth9rqDzNe6lcYUPhkFpMee2kj_KdSi40OSLm91N9FTYFRwYUJtmxmxQhEK-2Xli_tqtlbC1HoHE8Dc9pG1ElvrVIOsNjpUJRllRKHfCK7gHMQ2U-9GuWY5lMQelBEjXVoqv6oFiF9U8RbYs1yrX6-xvnPCzbutGJFZ0YcbdmttIRJESmH1IgdcpzCBzHF_Fjm3tKSXujRT1TDaNeR7mUdwIZucV-M53Hc8_PiGYAiM3lQsLEpRmerpHwqgpFFL4yXQaJZm_m4KpRjy_DpHm5BdTKPbmih9JNF3DDuPMVxIwAn5sRUef65A7M5DaSzNBaJ7M3lL_kUHQB9RdT190j_IAugLRamFaNHRmF7Dcz1eB349jmQOhMBmUUI-AIQGFwucATJE-19QCWQC4wD-PPv0qGs1w85zi91rBAK8UrfX4ut8CnAY9_8t0G3CMkHdHR69Sv1YEwlgvXfvueAqB0ZRpirkmYgS9DkbwUT3ZvOfElwdU-qLIKggnMMb3dtv_VswagOC9LFj1Ue8ESsY4Dhtf1Hzvh6rbERO3E58LtQYZS1J4fcQrKruztqJx0TZ0ms8fG0VT3iSKNUfvSwn55fEWUXDdhLkgS0tnXHfKOWB1jYK8xFa6MJu3zQXHkNsip8djE_FI2t8zoEchOfFst8k51sMGv95SuAG3UbvQX3cltK3Bnn6AFMy-yvo9AZIcHKwdJyd_VCi17vQqTUGIesSD03dNc0oY9MAmSaO-YOGdcKLeoC5_24BjXvyN77oTKiewhL18_BSmIdWzyYhfJRmx_VKDJKGTE1XiM4wKqPAUVVr96Z4Mf5kUoM3tkWOV4YxnympMPSKDvFWSVCByAD1ctA7Gx5MwZiQLiCIT03k4qMDZJ5_VqF96-bDKrIB6ZuCnQA3zwX_BKcCzAAnQ2SPU6e2wDh24uI2nvfB6MVp7ESXOA221YMbBB1DqWHmJFBC2GyusM98rXs7r0K8Rd1Zkfw4oR9klurcMisgG8UzEUCPj4j_i87DOFbHPEIFs4Qe5HCy55__7gEjSTy59u5nMGGakrsH5Ll66sLEpyWA2_ij-4LDD16FW_KkVSIywGSbhhmnia8AHP_o2QTBHQBimq7FobFWt41Yqvjhmn7pbiYJ6GBsHbq6TpWsLg2-roBrc_n0ikafRUA2c0g2XPWSFaSFzcfe9go466KdN_S2aOumlp8y585_uzFTIz9uZ-7g0gHT4-ALBX-UQVxjmIKF3l092X2V9pN66foEuc2IAEgZ_HD51kZuuxpJWInZc084CTHWvW7vL298Tiqt-LTYlNLPAQe_-mSQbfi3UGCtc7yCwdKL2ij0BhHj3GngAl79tbxGCJ0MBcyOgkFiAVDRzla1ATHHLZNnD4DAdsQzWYHQwwDBlhm5vLvPIWe-za-zOUW9geh5CHIwKMNRMSP4aRLi9XfV27dHUvR15FshScD9nlE9IdWyyc-RnvuR4LiedHVg2g5Y6qJjOSf6518HenzV_AK8uZAMFngvmZnsHlygpyxXqv4Y3ssWyUUPLdZB9XISpb9MUXW9o74IJtACJNJiJdXO8tP-tggJ183DfUym0sc62eeXMbjoUe9OJQBrFpsEaehbOQYIh_Ll6z4vtD9xkTOWiJhgmsQ5mVBNGCqh98lHtYcRq79a2mCaidCSgztAf1cYkRHKi2PUp93fPwRpuoQU5C1p_2uO-F-Cawpldv2_Jm_RNiHQBPRtfqWH_jfXUyct4vgRMNWQXw6E9gEhuC_qRofyhDCZjCDAuYWIzrkRG1VypUnLLl6w2tvZ-ss083hzL1S_-svvy7nyZ4LZSz-FOn-c9g0DaVF1TizVAyeKwwaRAt536v2-Lr288TCAFYat80XsW1BPWNVn4KfJwJhfBu4w8-l9BrYxofXuDcReyPdIuQ4g2pk4l17l8IhqUCOHK0KuJIJNG994qCzkIeEu_urlFCXAWYNjzS-ZCi5-U-G56rl5P0O-RPewUUnaQDIu2nER-SBrZMNCE3DV6o6sb-mr2RZQQQC-pIb4oJ_zv5VV1r5jbAKdyUrXOC0iVA39NqQB-EcHh1r_XOREAuKomnPWfWRUZ32YVQlrutbc3p1B421UgK9-rhh8HN0jcujSUi-34AIES9B96cseVDuxfNk2RNTNvaRoVrAsD3opuzAHmEq88kp7w585g5VqX_5dNHgoykZwtRhi2D0u1qq2oedU3Rp11zHb2JpJmRW86P-ZyzepclTJitN3CrHUrN9IYMGg_0IEUzqyfQmgC6vrotmVovzwO76hJYBXXm0Lk_RtYkjFZZC8Iy4YCx-RhL2NHf4LcG23wVpjOHGkYMsLg-pqE4DNyBJG31IE9wMvTnJGAG86wA_mDEbXpt-J4ApUzdFJCjG9-Og0qyudMYdaiaJA1MFl--dlujhGvQi5hdqwM3P3Pm-MZi114AizWUXIkyrMSGEY1EE1-UeTGcNZrDxERswBd6ec_E1P-p1JyJee1qdznIUC5Vk8QB5ux1aGXDm4mpzajTTtwKEwUkOaLGEuBiRY0SpwMgKwrcY18n6X-oMICWcVzk05U5xUW5ZviF9aZjv0_aA63prZW7bWQnDiMvXQoJCiu6TcV4-01nXiO0ABSinv0wn8hTwmxRCmR6egQgQ_2QAROF1McdiEKkhCQWWJN6Ok11lRYugWp_nsZ0qMOsthU0ygrvdr75UswHTEEVNxD6Pr_i5pWGF7MfqE2vCsjGsdzs49SKbVMt32x0xXmHjdqnjnw_TPrPYP6ECAqGw0YzjMbgQxe-YvB6VDCusiuGy7BoA94tclZKo-GZ7cf2O7WrHpXJRrbqwnu0CMbXa1t8glJaMZI-Ggt4ph6Nc8yK2Suz0lcJ46LKcgzoQSzT1FFhyg05lXQ8oqp7NNRWkfN_hvaGN9M66Et8r4lQAR4HepTu__XwDFDKu_syR6Fn7YYsZ5Q6g2lujsZnM-5yzVn5acLVDAcNlM5XDeZlq2BCKT2k8IWhQ7wROKrdJyeGsIEBFCgND3jI3Lq5TzkW611fPK5h5J2tcHkMxnla4yYiPHLgJnlTdMR_2XjUoeiy8JmVonQ5renx2najP9aATqclcEpJ9r3PsnWkajni-4C7u_jmUgmDgFyrg1eSFFZ4XG7-TWVqNpLzzN9gMzwubp8mx44Rf_w9AGoRqaPBx6F4FGwNWzQUwtxSwLH6jwcTriCJMbH_NL86ptmPgPFNYLCv-3thkuM7IrABtc1HtDlIe00b-iqy7V9cWKMdJu3yDIsFuke32QcbctUGyHAa1TRJZg1D2nJ79vlj4TlPRnt7YnQFQ4yJZGnFnIFF4ypz6PKGHY6lkRcvVk9OFe5QzMMMDJmj0NcZfWny54pl3D7a0Ku7SJ3Nqs5913sPcsgNo04hIusrtTPEdmV14whXNdWYNNwdAFvp5kfgaNiOgx7vvDt_ua-C9UHFPCdPWrSyyUg2Lz7agtR2O8y2Id6ixz6f6nfpRijp-NFC7iAUEEfMbCw1q85w1Mu8_a5hbmBcnnpMG5emv54fbtRuvKufjJ1NvSs9YvLCxrq853amQH1rZDC39d4j6sr9_wJpZxos6AR3veUkIWsZqUeKgcSPOJvn0BPGPaylkN8vAjRt9tUOf9gjVElLkCWvsdN-i3bGbcYD5UxnP2VDJElepGJwWLJnGXR4tVqUXgeaWra4ZsCd9QK44WVxRQtB6YwR44pqp4zqabMiDjj3Zx_WIFuRYP-maE5rRCC-fEQGx4sC9qYLe8hYRwwQNMwQsSO91zYpjsmk7B2ZwjZh1K5YHRBmhDJxrIOs7SgPeTB2D0JK0nUd_gmA4UfiDphnkrZyXkYHX4P4ZzSY_BtJPTIDMXfivI_FetzhiFme9WyisvFBldnnaxQUIJeU_WS2_4swKSt9Jy-7wnaU2Ib9Ta9Ee-CeCfXGkblomd9pQ2DKH-N6JXgS5SNe4CoFnQg2o9i3b9UXbKMZN-0fp70mMF46oy0Ksklv06rHMzkuxrVHfWKqebZ46S-M5Q-wfFxqXnAIOYmCA8bu4zTiNQkE-0-QtEl6ZGQ3hSwOF9rLV6VrtR01nAj7w2GxDfXAm2uTG06o8VoYVvDX9-OWkHg6dqvkiax0J088F01f3rBemIMFjhu-Ys_pK13445N1xfUsF08RP9A8iixu4Mm0N61xlPdPlznt5juvCXINrXhC35TProdEpufMkIaF472qabO331Pg_3gf5wNaIUkRxFa02H8-1b9bX1_OaGxJGdOvuwriOMG_bsIBsmjJuGtuaFDtbli7c2SCfO-UYDyQWcfS6rv2yC-VsLd2jMQOM1dO2yi1E7fma55_ytwDeY_u_um02f62aCvT_vTeOCAUdJutXk7Hdg8MkHWX4N-51IWDFe_tT1LOCJCLnYyYG1bZEG_tRlHDFZM2EV1F9YW_PsefvmuGS9buGY1oWmPYEJJ_kmtmY4ZgzK9Upn-V3dHIj1ypcK0xo5OydaBuia25Sg2NSKkLeSEGEwTDcBjw9ZAIeNnPBXFk5LN1kzaDQV1CYtvLOsTXj1FakbDz0Aa-9NGmtI4WBMddAV_HTfNp2mBh9QP0QLFq1by-OkEh7naqRkZFYYovqvRZR-rWNoWVd9leChDPD4P-eZ-P_nCWwAcfsg8JG_GyHxmKOVh4gudsz5MnpuYyZj6pxtM7DhdjbxSyLRSe_lYgq7hl8cnvnnpHQkk8_oMfHoEM_DqKNusc6QC6NJB6SdMSxkOdWXrsLgDBUnKf-R4PGOvdPPRzj_b9-gXDq5nm1OEh6IGROxYY9BlCNuph1V1krrppmtcpquER9YFETLQrw70LLYEDMfgsX-i2NuNWtsoZ_zvPMetX_PWb96tl2bBCh_7BLBmNTcOMeM9xz3w1Q3GmVF_a8IE0Y-xwuE2vBh84fhP6G8fc4E2CWuW9nePdmCt4FXFu1klndWkZaBWPrvU5vcMHXnvALMJ22h--AtvBLuLmcAT0dlqxqthLU40KKTZY152p9K8olExYSlFX9fMS860s_fkSotssuzA8xthAWrvEHnAy25WEhzQ1gZbdEqScQhJoKJUh2EMSvyzvHEvmUFd9JjClWdxkg80C0d7GfpGagTgv42fHSHMpTdfljy9-WI5urSIUKCxSdGJ412YUGFi76RC2SxgYKuJL3XI3msoG6aZ-xc-P_hLD7RWpf-VC4xKIxcQck95kvd7DsidcD4RqYpbM0bnJ5vZ-yC08RtZi2N0_RP7beoFXKIuOQ446FMPQaFyrgGv4TNQwX4aDeMI7kwdoDLTgTylxSV0BfGNYIBQgN31pri53HebC5-Ykrl1wOlEWsBv9Risq9YZ_k6RW_gJ1im5x7uhcDjlWi_IATIataThVja0j_6R-lGZfdMfbhhdLsTuIg5AEKy9wjB4B8KBLkKJDSpiBRoZCQMJLQavS4SfYbpLsrR2_Hwxx0I7BSo5lP7Wzz8lgHjxugPBey_qjrnty0d46wwNf5DRT8S5T3HrjSOjvJaOgkFhfp2cEzLMKazp9ZTByRgWMKB4URqPZHkIMmez7EijwuJzszoEGpVmZISXVmwfMScZL15COOTLcC_BALpsgcnXz5-1pCwZbjiSnPXtZrgqVUdcMw9C9GepfNA0w6B1_761kWOdc2u26dQYuTZhxh_RxuP6k11XmiCjQJKVouKSHyamlG6D7-UCXqU_YQ-EGMA_1gqIfSdXgfmG7wcFm_Y4qBRYIBlyvB8OQNcHN_jtL0Y4In8Bs4Lc_V7dvbY42oZXxNjDunRygq4Mj49kMZPjhIWF_zZJG2Gy9696iaoWJObdo2SqzLLTdaMcBciwueWFkzeymBFX4fh8tHeIxXsTdmGRG4sHLbcjZledB186lJAUOoinefcG9Dqhvd4LYerwhAFMw9gnulyui-sZ0YpLaSjwvxkH_tMMx3swyl2ojFVcRS1Wac1BnCWiqjULWofS52cZj7rNLfoQNCKeUuK2eoDTTog5Av3L2caMyLxZ6BvAdnjC-Jr2WicqfHsDa0yKNpoj9LzCP04eMQjVIR0RnuoalIbzG9rPe1V_ld-d-XstUf-nbFjzz4zZvpILxpPP4k9HiyZcMiFIThdd2_upg-u8AbamD85fjRqIntI11I1GY_77hheevl0K2mcPwJfsveqCYRTYzYsGR7YpbaKQUNs5tGuk0xiphLD4acqzOEWNQYd9i3JjmdGyyKFq17EdqRWx3BE0EO58s4sfjnvGF2gZ2K3JNo1-QhjrRGhKVResW2xQpJ36zPQGM0ekpVMhVWK10oY4lpU17jQZNCvhYET6rFun23ug_j9_XOmYl_m48DyPQKPG2TbaIE7zQYHUmnhYTfjfpT6qiLToldEQkhqmkF6ot_0RdhZ_MWgd_dcisuyXg0sEXr4wXB-nm2kbnMe84j3DXPiIUgpoX6rfgHbhfiztwxGxmhBpkK97wTJgA2dh1Pm00WTRkYBIBxgAUI8WBUS9QqPlDNhrSPrLRACJ_xEsBQPx4tD8MRW53YpnsmEd90f140kmplET8G-K9sxOsPmr4rN9p6RbSk33v7w0NFBCd99FDYBredxK9E3XHSrjSjoypVtV6XgIxSIQ__SbUXk2wK4eBALt-opBIE3-8SgZctg-CkfiXfy2mFXsISE5JwKg77VcUgrswE9E0Vu_tnNLsz4QTxUYyIiarWdRIveCili157e9SPobzIvzaoaUteRyQswLro5FvEeod9gVqN5QFImQC8JJpXZR6jJb3Dpd_pjCJLqpccC4JbfPBGph2h0NNAnlG9JBHc_XOYLgMCqHlOap92ZDppx8A1CuAAgi1lfHalMA6ZC-JWbRIEPtTwNGMeNUF3wc33fToO2Gdm0rdYy3zkLoMGSMqTtpW2c0jqzNm5K-ZvvLFwJHB3xmF48fgG7EUYCsEZycHolNOC5HUErUy4lBbsElH3hoSStftPeWhOmSosqIZI8G_rmC3emFKXZjafyNBBxyb2RZUu7gWoOlBSmKGkJkKbUMtsuz7xok_fvc3CCiiE0zQ73_2ZpkRopNM-q-W8BzlJZeRGbOLIf39Gf8y2evop5lrr0FkpHGiaV9bc_53DDak2QEFz6MNtjYolUFXzmZJ56tCe3hUVvmSKGGpqXuFUvooHngF9HReLgogxPYkyGJ29yXRE-hdQgKhxawqkpxF43ZQgXqO9FO_QMjGRue_OHyq6f1tUyzYd_OqA3hfhEIQiDeySmlyoYpHrLFxoyQCc3whhbXXfftsbsFaQwgXqXnBiA2J4qM_Qc5FH-sMEm-Oz4QIRdHYT9WLXdR5NU2YmPfCC9Df1oo4GK934Xz6PAelAhRFaVu3RHG4yDy6QcEduVVfI8iIxjGbJbyNX0Dt74rkjDA7D0JJ2_Da6a5byDHTzq2q-iusTKHCrXtZ2SSOWguzzr7OFiawh83kJnJ6me4SLFI9nqXot7nE6b-vLTUXtcQx_xS3Ed7Y3GHvQCGLa3Wx5YXEV6PgcAG5XDsbvf4aPjC_rRzV71IHRTLRmhFf16MoOqyaoNZiNnX41W_rnpJyiUbvqZbUHV4LjxR34tA5iI6hSIzNWp20FBgt0sXmTOjOinFh0l3G1jULb1SnOUmwbN--ZUrYB4Uc_JtKPDjc7kS8b8BO1lDLTFgrZ8f64lO--LyRBQiEQsK9InRhuURxgZ5x8rMsH2SFIh-zlx3YqUJw8EPeHBkm7S1GmDn0SherNzw8Z4ChSPM8np2g3_-6U11CZQW-YLPVFdce_JMLA7utnCV2c0IGQXbVvZwxu_jGe2n8AKHvvaGzdmc4bE6R-weN9utmalUMj9aOnJmhZM1NU0LHN2oh3Z0cPyEQjvxBg8u8KFL0PM09Icm7Hun5NTZBe0Fn4DztaP7KuusWWaQnQBN53xhDm_2rLvuEJ3aACrmi8V7DkVH3CLatEsZVZ6kZeYn85rX-YmNIlM0l3d2PDaQH-NzkyfHRPirImNbdU-5eAz5m6fOX1W4XH8sRAes5ATa7VfceUqv1tfE8_1RgtF-mMSXdCFMRZOUGPLWejj70iWggDlkwERF7SVYnS3b27-_gJyb3x88QWtqkE2SsFARCeZMm6wqM3JP0v-LGaeIj0WlWPwa_T87R4sGEEXtqqTpIdMn9yR4chkECSLf9p2dlRiNz_wbOP4aR-20nW-KqpNLFmfVovHh4wL-7U60xN7ZtXRAAiWsNjdDiYQapSVhirvGiN0bUAxAuLajno_qv9qoAZK3L-Ua1k1Z3uhvlOzrnTl9lWp7wCcsQ1TJ3K3GoNcyNejqA1BhntA9hZGZoOscH5hk5brZmDkNicWRhh5LDnxG5RM5HnSXIF2wZlQCLGYqK4oIHkOFUbg7iW1jZE8MxAskUvJYZV24nIy1YYkACqsfuQuCPv45s5obLRLecdYVRE4sUnaOGqGemi_ZIHwyQzS_YnCVtFF2KyyetQkHvuvaJfzLjgFmqYpFw2KPes9Ws5kTDYxp-7oyVRhEKxh-6Rg0vbq-SW85z_sE7kwCmHt3b7xhpfB8NvDIeVri8kqtAOpJe9hyxb639vNrPdjx-ZPGeA9dFcISI7UfVBtaSepArk7GKismoeixwdDN4UWW6C8DCGY4D1Z5n0qlqYFYY94IDYrY2kNAkjoMak75V9nKV9RoHE5CTmGfynlf4NkFg0meJdx4zBO1dUfHRJYwhUA8s6fq4k--KCuorTV-xyAjS56R3WudmOExfohrVjm5ujAYS22dDL6bwhVFEl3J9JzTVqQR91w5Fp4ok8OPxkgbb3kK_nMgeYZLHbAcUd_s9jtQt0R0kNL-S4tX-zhaJ-ZltGSj9GriaZSKOqffW2HNgbbFIEU1EHBcpPb49X3t1OkIMlwU7YlCYhVa9gSa2qv1OXo7H_c8CV8JDA0fNwO47Xa68BRaTvM9BaiLpZnouqbdEIwUScKdVfI4OyFqG2EMk2qWCwNst7nW3sEMvv-l7FzC7y8cOiSg3B36dG6FUJb3PC_bWMa0ac_dGmkW0Aw1nbAilenaLsRnMou9PveGCqm_93epwxUFd1RkDScSg4jRb4izTM6fRLF9qSDcY2_kSXsxkcnIuW2SF7biYq7UGmqEueOicVqMYfrIcBXxaCQsftnSF4XGi9Ie7VfObzBfcNSlCHQ1qlvJt8WwZvNzdG2NLDjNe6rckOsGY4DM5o4Vm9Gsny_sxP50E-i8cdKAORYS-c-hHkKQhvOlfXFA_aGDa3iqcti-8Tjnf-d7OCdW45NDt0Tyf6zyqdpBN-DyA4M_8l_Ou4e0Eqn55sgtqwHsiq8RA68VK-4xVUW4ZBvtQq-9JEaD17r3u_2wAbCyfN6upCPfspaggD9BjFhII7KIFiGm6Q712PLX3Gv2dlFmmQ8ALWA7_QFOIhNKqdMcd-3xETNVyXYDD6beg7oNfv7nFGgnxxD1jsExVULtW1ywwtAH9Zv0sBHGlqc-Uk_KLksPgwt5kSiNP2oasiyxPGA-CBBIJpWzOKleGwSX4WQYSGXv4Pfp13unNoIx-vC78BGkHU1xFcJA7dZjJPoMuEYKVzk9qmczuJaBEdv9tOccKbwByVdWE18Lu1EXdsgIcMeF1TZxRKws9_H2ACx6FJHTK9mA9CPwJi4p1ByIbVX8ASX8bQ5T2GHoyURNg55K1eXB8jU21bFv8Tjj1M2b5iOfucnBR1BRgVmFfQ8M7udujSni7emZ2dAv2oY-Wb8wa6T3_OUpk2IBV7PgoLD0S8FzUFrQot1Du4gxeUxZNX_YVVF5RSJu2UqIgPNMHgR8rKrYF-yOFwM-c4pwzItfJaneV08BEvYjH5fmUqQGo3B6HSi9nx_mGoeafooLABo7IZh8cry-mbgWEA3nycXmthfkctVspmcWpEmjYUNEkEeThJ7OZIYmoyYvP02ikNmcF61DnkJNu1G0BdUNTYI_voF8LAnl05Cvi7g-_9BjfxkGhKmE60OePt_qmYzksNIq28oYWB9QeD6VdZOCm8Z53I4KWtNGnwHKHY6Nk0_-vmzScI5Q0sjaKMupsG_20Nb0_Pe2tLx5wxyCdPS2CkKgRoXOIYMMcfglnFsP-IBeDVVuLl9KDNMgTdS9vlr2S02ji1O8iuWW4B_pWnbfSnxt3SLVYnzNE3wy0WnLNVZ3E6Xya0cY2pPIdPxjQbffcnZdGRLTA0jnv79qHpIL7wkol3YVg2d1EfRgu5WTFGwipOwDht8Wpoaz4fZi5okTeuC0IvqBG6YFaI7t9-KhR267qFlnt3OODbJ6nZnM1doZIy6RZqHlaPh1_7RHp6WS7ZpDLkDoUN5EgEOO_bd4xvWWKgAtoA_XDGvXbdkKZEsDSL-konwU7pE-O-0EgVuTxidLABzTUM52THwLYL4VmO8MlkahJrGi-VA2FWShWcH0jZBgCtrM3hQchjARsdiN8rex_sPaV9tL8LZu8Aajewlmw0YBTSbbL5sjYiFbrM3hspXK7B6D9JeXOrpnwW6On3JV7JefE1xD1tflA0OUh2PdBK_oGw_yJmsRIlRiqeczjFjm6WqIIbZFy0gLAcsuqzCYvWFqw2XvRW6rQhr-1Id4FtqvYf7PJC-m49T4GDyu7c3zkKJsmZiJg9qFFvk3F9MqWT8p9jEV0IT3pxBlbbB-5O6qvHGe7tVJFHjefRq3WT1VLtX4F1diPMY3io0VznbW9zC8ecBtwmMZA_CCaMb6HoSIAQ3IMERzKLFJ1MW8o5KwDpTTczMm336JEBWNiYIA3QqhiOC7fUTpEmI8Byvr71a8Q8CyyihFLzcfcvxiwB9ELpAC9PGP_cIfB38Ww8QzUTL1odEqrwmUrDWr5DI7kRdPjde3uRlhmwTcvkGyI6_bhnmCe8D8GcH16f8GO5uTwD_YJJOBDVLPA",
+            "summary": [],
+            "status": "completed"
+          },
+          {
+            "type": "message",
+            "id": "rs_1404c818-72f3-4d1f-85aa-591f2fb22732",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Night Shift check — Baltic revised its delivery promise. I'll log each source claim to verify what still arrives on time.",
+                "annotations": [],
+                "logprobs": []
+              }
+            ],
+            "phase": "commentary",
+            "status": "completed"
+          },
+          {
+            "type": "function_call",
+            "id": "fc_ddb64664-6c2e-4420-8108-c87c0bb6f42d",
+            "call_id": "call_ddb64664-6c2e-4420-8108-c87c0bb6f42d",
+            "name": "record_claim",
+            "arguments": "{\"claim\":\"Original Baltic quote Q-1187 promised arrival by Nov 9, but it is superseded by Q-1187-B\",\"quote\":\"Delivery: delivered to your address by 9 November.\",\"source\":\"Baltic original Q-1187\",\"version_or_file_id\":\"Q-1187\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call",
+            "id": "fc_f1b40579-e0ac-4747-8a2b-bbee4518d0f0",
+            "call_id": "call_f1b40579-e0ac-4747-8a2b-bbee4518d0f0",
+            "name": "record_claim",
+            "arguments": "{\"claim\":\"Revised quote Q-1187-B replaces Q-1187 and promises only warehouse dispatch by Nov 10, not arrival\",\"quote\":\"Delivery: Goods will leave our warehouse by 10 November.\",\"source\":\"Baltic revised Q-1187-B\",\"version_or_file_id\":\"Q-1187-B\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call",
+            "id": "fc_cca0e51a-aa1b-4e0e-b16c-604bc72f8c73",
+            "call_id": "call_cca0e51a-aa1b-4e0e-b16c-604bc72f8c73",
+            "name": "record_claim",
+            "arguments": "{\"claim\":\"Vestland portal authoritative: Oslo freight for Nov 6 run is full, Bergen van to Bergen addresses in window Wed Nov 11 08:00-12:00 is guaranteed\",\"quote\":\"\\\"bergen_van\\\": { \\\"destination\\\": \\\"Bergen addresses\\\", \\\"window\\\": \\\"Wed Nov 11 08:00-12:00\\\", \\\"guaranteed\\\": true }\",\"source\":\"Vestland portal record\",\"version_or_file_id\":\"vestland_portal.json v1\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call",
+            "id": "fc_98d24836-0411-42a1-a0f4-2a4c8efd68f8",
+            "call_id": "call_98d24836-0411-42a1-a0f4-2a4c8efd68f8",
+            "name": "record_claim",
+            "arguments": "{\"claim\":\"Baltic shipping terms say transit times are estimates not guaranteed, and delivery dates mean dispatch unless guaranteed arrival stated\",\"quote\":\"Transit times are estimates and are not guaranteed.\",\"source\":\"Baltic shipping terms\",\"version_or_file_id\":\"shipping terms page\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call",
+            "id": "fc_dd6e806e-f5d4-4a2e-8f40-d51d0e2124c9",
+            "call_id": "call_dd6e806e-f5d4-4a2e-8f40-d51d0e2124c9",
+            "name": "record_claim",
+            "arguments": "{\"claim\":\"Venue confirmation covers Thursday event only and says nothing about deliveries on other days like Wed Nov 11\",\"quote\":\"This confirmation covers the Thursday event only. It says nothing about deliveries on other days.\",\"source\":\"Venue confirmation\",\"version_or_file_id\":\"Sjosalen booking confirmation\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_ddb64664-6c2e-4420-8108-c87c0bb6f42d",
+            "output": "{\"stored\": true, \"claim_id\": 29}"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_f1b40579-e0ac-4747-8a2b-bbee4518d0f0",
+            "output": "{\"stored\": true, \"claim_id\": 30}"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_cca0e51a-aa1b-4e0e-b16c-604bc72f8c73",
+            "output": "{\"stored\": true, \"claim_id\": 31}"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_98d24836-0411-42a1-a0f4-2a4c8efd68f8",
+            "output": "{\"stored\": true, \"claim_id\": 32}"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_dd6e806e-f5d4-4a2e-8f40-d51d0e2124c9",
+            "output": "{\"stored\": true, \"claim_id\": 33}"
+          },
+          {
+            "type": "reasoning",
+            "id": "rs_6ae0864c691504fb759848ad:rs_13c0a5ab-cbca-4030-8557-811f8c928dd7",
+            "encrypted_content": "Q-PaDgE9PsEoCiaQ91EJCBfo9Obf7Ljl_cxnCFERMMzyJmAGbyaCFsKZdrXYvzFDOEa6u1UcYF6jwG_QUqcfaXIA5JKUZ8tj-JTAdy5pB2xu_KGz2dD8_rQFSlBsO4kexpDngU6YEINaWetnw2_ZNQ7gHzdypgrdSHzDyrNYAnq5nW707asABI7seu-0M6vVgBe7EOBF3I4KGhVkAvsEYIcBmiby6zVJ9nvHuLXUMIlQuPWTp7dFYe-zsmBkddEHMg4b5zTFxOxjszLChuCrLEEpvAbyv1biumZaGUyYSaCGey4Bq2RPi-n6F6tXiUyeBHD_BgRcSL7zvMMSbkNPzWXkbuL_Jw7HRqkAl8uTeVuLaMrutKR3t7NUdGnDeEfq6PF-1Evmitnx9Z9BvGB2EBH09nUcBezF3a9DEL_mEwYiK7lcbxafd3Lnxjdg6DJCYt9CmblvGqMUPNAvgTV4u4ccQ-Si-_5Q28z-aVZw3vyyrYvjGVyFzpLV3M4TFKzAQjohXPkeFSNPusAKitvAA-2w2pyTIZrR8V2yJ2EThBSJC7dZofb4ulCKYQqfVpuDskfRS9xJuRCh7n4xE3gzBD52frFwU2gPBTohIbc62O0i7E_vte4b5VlVnxkvO8lkiNQTahRaDHL8JlOtrueytzG-BIrFZVOQfL0BalXt--RULcfUxuyV4wN-YrovP8oKceLqgYRiwl6aywhznghaRJdncyzsZLO7-3H79vy9o7cpaBMVBacpsQLaNPWDk_0YX9Hhe-FKNWJFcyEBz8yqbLwF9NwyJcIqhWZLM0iHpXIGhkahUb19dv5k_fPSfA3LAedWB3D6qPYrtdf7po6tzY5QRE2NUbQA3mw-wHM8upZiH2lqdiQs6uj7tHWwEaNtMV-rhWPGZdLH5OqVgnRk1Dj4JKglV4_JWGWsRxAHOtWignvjmaS5Fit7std4unB74p3TmyjrUfE4B3nH53WjthhAAsWGl6E9BuBtGbDJVsLUs7b2EBABkg4AjZcdZzXKn4EvD2x4pAO8LBRo_WtiCtLQteJexuQmBxorz36vwMydY04oDRDPlGpmPnNLxne28e28tGzNd-w6RflnqHIdQa_s9UwqyNO44NcCnR3kLO4wd3DzVjbZfXOEFMK5XIy7L2XFgHAWpp2MU6TkFVyyb0886LaYcRKUofoBrz3GsRTQy-t-6KtLNckvXXDLTcnB2---B1U_D2DzJLdvZBMtT7DgPCrcfYEgudS3P8vWLkJe5AnDtO1DPObYvFBNnMpWAfw39JsRiP0EWkAiJCSY27jhZr5D4MqF63XZMBc8U7RZXyCi2rGJ_ujxeEDohYbBIHV7Yc8DA3jcNIWiNEV5NGWiScX26VS99BmkUcdDHpGchMh1kSu6QGIDQnDdvvcTb7Nfpj5vqqejJhQb5Q",
+            "summary": [],
+            "status": "completed"
+          },
+          {
+            "type": "message",
+            "id": "rs_6eb3d819-da07-4192-a3d9-6956c9018a65",
+            "role": "assistant",
+            "content": [
+              {
+                "type": "output_text",
+                "text": "Sources logged. The last verified on-time route needs one missing receipt fact — I'll record the wake decision.",
+                "annotations": [],
+                "logprobs": []
+              }
+            ],
+            "phase": "commentary",
+            "status": "completed"
+          },
+          {
+            "type": "function_call",
+            "id": "fc_93e502e2-387e-43bf-8d9f-a4bb6b5f57d7",
+            "call_id": "call_93e502e2-387e-43bf-8d9f-a4bb6b5f57d7",
+            "name": "record_decision",
+            "arguments": "{\"evidence\":[29,30,31,32,33],\"outcome\":\"wake\",\"reason\":\"At 00:38 Q-1187-B replaced Q-1187: Baltic now promises only dispatch by Nov 10 with transit not guaranteed, so no verified Baltic arrival. Vestland Oslo freight for Nov 6 run is full; last verified on-time route is Vestland Bergen van guaranteed Wed Nov 11 08:00-12:00. Venue confirms Thu only, says nothing about Wed deliveries. A hold must be before 02:00 cutoff and requires verified recipient-can-receive yes/no which only owner can supply, so cannot file valid hold yet. Waiting to 07:00 loses the hold. Owner answer is the only missing thing.\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_93e502e2-387e-43bf-8d9f-a4bb6b5f57d7",
+            "output": "{\"stored\": true, \"decision_id\": 34}"
+          },
+          {
+            "type": "reasoning",
+            "id": "rs_6ae08653c0a80cf1fdb14206:rs_01201c54-3754-4854-98da-1034d1067aaa",
+            "encrypted_content": "Q-PaDgHGo8eHSUO97vTGxb8maCF6qNo6zJX6XBzBZRKfZG2E_04LoOv57NOamSt2fT8xTluEQv8uNaD_O24K9kettFxmAzxD95NKBHb2LPa0gWiLiAblcqq4IB3QkMlF68yqv3RufCkV4r8K7dcgqQ4c8LnnC1o9qTaCMiL-JSq7iq9eQ0Dvbbva2Dy50qP7H629qFg9j03YUosDhxNyfBj08nkNz22SZUMBozFgCBGnPHQNGCxcoLwp0TVsjN1FI0NdYkFQyt4RwRSHkwWKQ6w-27m_Cgz-w_zxsv8QxYu50An09J43lTT73IzfM4IDHjUM-oufaIrWV2c1TXPgdSNk9kmw6gYIkA82xmk2-zKOQBMHttGUkOo2ObCTYsXzezV7sKF4jcn2GPTRO3aKb5px08Qo4FMVe0Hb4UmEGUS91MV_TcMvNwRoTZXdsnAoF-mfMYHFcf1zWtdoyeVB2xV4PXmpi0EpHtDNwgmMSi0n7_s28A47i5V3c8Pmn-LnIpG20fvJNPC4-r9q7PbqyK0NhsKFxLyAUD3A0pHN1_42dgT2zM68UnA79SznRWvB7e4HgPwYr6EhHkuvVyF4Ca37ERELd_eoKbkjEcObT0w8m1rPykdf_MrhARXTeDRK002Na1SirVwn1HUAAPOw-KIFPwcCy3oMmlvZFen8oV5sVMV_ZRSxLlifBAJrmqwuur8O_RO9yNZXCsXGYK5jkcI23QojT6GBVcI-5hcKs_3CbO5r5Mk1EoixEHTn46rvWPAfejPmGOo2AvPSjVgHxovz3LzeDiDJFTFIUAze9gmhdKhfKa9svY66LGwtVMGqxi7gMTe0pzdnUKJKTitVGiH-YUmZvAplDnRX6pfnRIcrIp0rVB8tP9b9EIfp2JtqRDLsG2q_XzaDoYM9wMJMD4dlqzihwCecRhbUoDfiqZvTYMoBeBgMEsrbLFchl6SENe6vA5OT50MXay-p5XCFMOXRp1OFElQUzdlPSszOgzRUD2mj1YmNeXIg_fJ_FevOm-t5LoOYeqPX5MuSa821PBuzYSI5hA9v6aHlz0044hT_8NAx5FGDL21pFQECG3Q9285WkFxaylib38l7GwYIUb3OxVDkDH-ADFLSQQkXIyZIfigMQWagVbJEHfXnbKTkXqmYSIdyIvxciM1B7xcoheqMmirKgF_NS37qX21Zm20mfJLZE5_HxbRNtWm_zBqOiS2Hg8WrJwg4Gc-buZE8hAJvcc3tvFiZ8vj1-xSGZtN1i7Ag9HbJbjY7KNwVrAr0__xzwBB2TBL1LGBkJsltpAQHL5OUxCOfFPoBA8jjE6KWnXZoB0A_pT-zvJ5UpIlVUI1xRCZ5DNXD0tSY9ekrwBwWQ2FfD-oVZyqPvhZmG4GMx-ci2qMi69kBk3BiyapCBIVYfvxxDfS_221cb9WA0eLp86896zGmWQQzLtvNNaMLLLW6-0TAykWqPLkYT6hie_fcEQkA-ZK3RD0nzFYRL1MiVQiUE3SYAg0liGfIh1cH8g07MZ0oVwsvdcvXftOjkf_gi21YiTOqSR-DrYb1rPkC3DN6-eilotehb7fYDpOsXC88VYB3QhAExfqM19VUwyd7JzkAO2ddz5YW8sNuHp9L6EsLa-61rHxkexx2hv9nx0lqv3M8yw2N-p8Fj74WmbP8tYNd6XJ2wFj1Ba1dNjzDMtv-S-f4iK9__xm0L20ntLBgEk3q5FRGFUL9pMMngBE2-HZE6xFQ2qDFwJx_TcWjcaA5lsI6RyrLIQ_HOXf3SQyEcPFtiGndqUS3_s7rPWT8E_v1Q0bUH1gOSfziL79YYQtJqETllke0ID_vdXOPWitcPnn2K4C_DBkqs-V6kkbOLa2nyGweJrBwZXt2va-1ZZIwZlhtd1BFWRRc01_sYluX24cTuA38VXQAQWYRjCytTK8Pk2JMpp5x0JKpg-U1hUDyqOd1jZJBSeGAqA2HxOPeunPEIDMt2nexflJoPLGK7BvUfd-enNAKwG8zuw1bkUcPAtZ2uG2u7Fc4HZWH44e7mtG2Dp5X7645un55oaZmneIpSTk3tay7FaQAA6n2s8ho2HrVtmCBLV319-e91Kmei9vAvPGCo8n4qg6XKdrY2VuT-47WjuwQeSU4HxuLxBzHX0R4x_WarUgoAl4pIlLRUxF-Irypwm_T_BH2ROPC9LzG3r0LpUlBJ7yG-J_mbq41wjVgfBsi-CzLbtD4UmmEolMslgrhWXT8h0n-gtkXQpm1IAvY4yhc1aXGyp00PdXubp-5g3Actir47jgUEiDWVgZ-NVF-DFjyDE-I40MDMmc8XWciQ6LqB_BvhMhWBvSZH-sA7MuPTMxFc2pMf8to3h1CCgJ9tiMqyIxBHlOuw_sjx-zywqZv8D6UWMDNxYxUP3dFBNSgxZhBQCSXczg_TDMLTj14D4xwNpQANuy4k5wG3eOfQyavC9ErhbCF0oeFQHk1kZ_QKOzrDEGaJV4BzAqzo5OBSw4bdBYz2S4hOcY-eLNHVz5lpXrNUB588akmTXaw7Kv6v1ZTKJuDjCTFBSe21e1VCsBN27soOwtG_mR4GT5QoOHW6ZYyGH5VatWv0BXFF1f1V8Rd4EHmLl8RtJ0Z1ozq4r6Bg98dZ1pMUkIBxdBKmIwXc-2DCP8yJR6uhJyjq2S0pfo_Mj6GUSA6nGYCqfrX0n8TC7k2v6Bqsu6K1BO099UHt58exWTqjj3HgqWkUUM7IwDzs16tzgm-uVpEfmURueRRZpCSOK_RPTkLHxza-DNjObTVQ2MwpVaTlUTzWsB_Jxn272FmoQEP47Tx-l13sBgNvzIX_2wU9pw2QcNEJi-Fh_32Px9lMKFGwtDVDWPh83A3YXBUcQAVaRDHAPgYTPFxwAPzm3fzL26ZxpFUlhL5C_oKgK1wpyWHtR7JJHxymZ_jEur2UHRnzfeK7qeyKdJLwPlpGB808IMntmjmhW5m6ZvKuLKgp_eTv0RfZr1LEEUICNksZRYMWwofSQGi1r6sqUDYQEtaJIcHq2j-4MTMbudmyDGjSNdlVNdqCbD9vQl1iiUfLkanoAn6_4P0kPdRNcLvXn92BcGudHVIFRBBGfxn8l-F0GzoyMH5_o-JR2bDX2MaOrPBbTw2WrxH6E36rcCXDM975oBU2QGpoRcJoNirfZ8x_XhYiKEAWXzp7la3DEM0XKoiLeDowlhFDZ9LvjWAmXapiWZ0_8745mjUUiXqzsD2CLt1V5_gOLtnLN-MHGf5srO-YW7qZuQOrk05CBmmJ2r4kBiuMURoQDE4kJc6q9gypazrhZ1wZMnQH1MXNbj_j2BpBq3ZOlKGbAfNs8Or7xs-4RYxX2s3EyrRdf5nwOpuRStFqtFYyEuanV4afT8rsmJQtXi1KgD9mLRDhiPQkUN17aPHh4iHDYPtUvxHBp6uwBn-BYFtT_K_T-wC9WZax_n8cSCO3lT5wueEx6HO-3NkFQ1Mfb0TkpZRhn67vMNMHENVPwiLyE7UTFbApwjqrH5i3q9xooHpellptRoJpgdW27In3KD8m3sSPzsCbpSxqAwFbpaBVBp7KX11TiwG-zdUlTjp54EbUjWUac25MmNBnGykeaUQIoUqKz2yrDtLM2PJYuP-tHAwgC1HPtRZ3N8VXNagVC-Y2b1qkh32XfNYlAPlVEaGBPVYrgiE-oG-VEwRROyoMGIpsUfL9tL5HmjbJi92jlKKXckfuH8QUe4TonTCXT1wwcWRFJ7HmKJmJQNaU6B0ZRJYz26FsUhdRG1yyJjT5peJ5nevuRwgWmIepEs4Mt039oBMhFpsb_ngCc0DJBRkjTumeuHRjRs1zo0eXPyBl9dW666l9yWZetqlyzo7uqZEFFpJDaRKHYWU1pC-ykYZA-T2tUbfVTOa_QDkgnIrTCLPQFLrJ_IU4bKAEYspk-WN6wM6dNMlJ_njYlu0mBQc9t72_va-VplPBEgoEx0ZuWoJse7FTez25sR1D2FLJHDMZS13Pg47lVo726yieZ6i9VtP38S4QyfnHMND6CVXdVCoVXkWiRgJQjRRqXU-bMDB-nJXHBqIHZrsp-7K1HE_9sQELDrpssJGKIbhWwNNrpDd0tRS5xjhfceEwt1BQZ9TsxcOSwwjh-DS7fOuYuGMHCl-Pon5wYWYudnhyhpXJNWyVU8kHgpjwXX1PTxHwC8MkqyJDKSPzxKsJB1-4_tuHPff1cF16U9gOYf8fj57U88YKim-xbnsMV9xrAcn6M9N7zl6SfCKG1nariQo_SwCJvts_8eJwgTHfGJHoG8Gc01O7yb3pO_ngkX4x4zE5dJXBnL0Sx6N7FfkYGC4MtTBN58szIshdocGkJXTW-Po-y61UY1ClE1yDBLqyXHV01RXrbx3tSkDvOAAoAxpw5HAmTfuN3u0HfHFmi4YyUmH94w8FaNnVhuf1R3MNOO26HSZsszoy7xKUzvwoWA-vG58XtiGLytsHHueQRNte7LLIXUI5uwi0RP_WHNUOPKCfhhsAbLg1TGsN-jfksw-QEuzbL-ccdMfUi2qrNsaK9KhVGnAfhfTjRYPcSllAsKoHI3ZxrTtDmJ9oG9tSg4HIZK8v993FcpT0ck-DitOSsPTpBphjgHTo9l1yOAMxiRHdZtSzVjwvLYJ26iRGUAxeOhg9a_ESGcpzUD4mYNA8TDwSSTU5QWOwKAt3l4y8GP1qaJFMdnVSbnwD1cAps04l2PY0HQsphYoHQk1STglVVlEQ78xvZqCQwofuZckgf9ti8puMVPDK--rRIT0BeAvbfp__60cMx1Rq_vl_7XOy3suzNEcTHIBpxg0oFYx2Z-Era3utXo_majIUuJYsp_tsHHWFUrp1mGX-FovbeiiudzRuv__3W4FZ0MpqtmjY-RYG0fjTnSTdQNQOQ0OvY2wExS38POGeiUWWJCdB1dXv-Inlp9lYA5CWwUYtnVNHeaGmwtg6QqfWxdYyTZx67v7Gct2gX3gsbfHXoUcIjH_Jia-g89LHmxTBCcQFbKryj6iu3A7a9NgteQigM9HRpUwmEonu5rjgTy4Jg0VGDF73vzfS2s18BdMBaiGVRVClv66M-QpC9CrWVr-LtaeAzsrryrKDSyJS202YyD3Pc76htIXR5wu6AWxq7-X0AsAF6a-bVXrjoBmUzLzFGiGNBPxTAhGw0iISnFZdc6EWQB6CLcPVnHK6Sc-comKp-PwTeUsq7NyAmdp-F6xHijywicCa2AN0hwHr2S2fL5gEdb-Z4l6m68ugtkDGC3MPudi-BDDZDOJOALKrWYgZr_mrywlYaaXOoNxYvEkLbw0DfDn_WWm7J7zWTVsqYdNN97HoPwCIkh3_pV6igS0yynwoFYA7Tx2_0Ja2w4bWc-P_fdadYboJ3KSyk0Kae3pq2etteIVzI-KeLpehXDekRqFnHQdpaeQbzS1x8pawq6UII9x44yl6KAN-RVxCAVudz2htxB8BuPx4bP-jUG3QVzXTuDIe8tbZO8yHBEWyWmP6DTcDQtvZ9bB8LrmaD_e3AkecleYQ6vriPmEWw",
+            "summary": [],
+            "status": "completed"
+          },
+          {
+            "type": "function_call",
+            "id": "fc_f0f0acb2-9b03-447a-a562-b93bd12302da",
+            "call_id": "call_f0f0acb2-9b03-447a-a562-b93bd12302da",
+            "name": "ask_owner",
+            "arguments": "{\"if_no\":\"No hold filed; I prepare 07:00 comparison showing no verified on-time delivery (Baltic is dispatch-only by Nov 10, Vestland Oslo is full).\",\"if_yes\":\"I submit the one free non-binding Vestland hold for Bergen van Wed Nov 11 08:00-12:00 to Sjosalen before 02:00 cutoff (ends 09:00), then prepare comparison for 07:00.\",\"options\":[\"Yes - can receive\",\"No - cannot\"],\"question\":\"Can Sjosalen, Bergen receive 100 tote bags Wed Nov 11 08:00-12:00 with someone present to confirm receipt?\",\"what_checked\":\"Baltic Q-1187 replaced by Q-1187-B dispatch by Nov 10 only; shipping terms say transit not guaranteed; Vestland Oslo freight full, Bergen van guaranteed Wed 08-12; venue confirms Thu only, nothing about Wed.\",\"why_now\":\"Hold requests close at 02:00; latest safe notify 01:30 for answer by 01:50. Waiting until 07:00 loses the last verified on-time route.\"}",
+            "status": "completed"
+          },
+          {
+            "type": "function_call_output",
+            "call_id": "call_f0f0acb2-9b03-447a-a562-b93bd12302da",
+            "output": "{\"stored\": true, \"question_id\": 35}"
+          }
+        ]
+      },
+      "created_at": "2026-10-27T11:09:11+00:00"
+    }
+  ]
+}
