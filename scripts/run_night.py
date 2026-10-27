@@ -1,58 +1,44 @@
-"""Day 2 step A: run one real night job against Spark and export its log.
-
-Run: uv run python scripts/run_night.py
-Key: NIGHT_SHIFT_API_KEY_EVAL (never printed). Bodies logged by app.adapter.
-"""
-
-from __future__ import annotations
-
+"""Run hero + contrast nights for real, once each. Prints per-call stats."""
 import json
 import sys
-
 sys.path.insert(0, ".")
+import time
+from datetime import datetime, timezone
 
-from app import runner
-from app.store import list_events
+import app.runner as runner
+from app.adapter import respond as real_respond
+
+CALLS: list[dict] = []
+CURRENT = {"variant": "?"}
 
 
-def main() -> int:
-    summary = runner.run_job()
-    job_id = summary["job_id"]
-    out_path = runner.export_job(job_id)
-    print(f"job: {job_id} status={summary['status']} export={out_path}")
-
-    result = summary.get("result") or {}
+def wrapped(instructions, input_items, **kwargs):
+    t0 = time.time()
+    result = real_respond(instructions, input_items, **kwargs)
+    dt = time.time() - t0
     usage = result.get("usage") or {}
-    print(json.dumps({
-        "seconds": round(result.get("seconds", 0), 2),
-        "input_tokens": usage.get("input_tokens"),
-        "output_tokens": usage.get("output_tokens"),
-        "reasoning_tokens": (
-            usage.get("reasoning_tokens")
-            or (usage.get("output_tokens_details") or {}).get("reasoning_tokens")
-        ),
-        "model": result.get("model"),
-        "status": result.get("status"),
-    }))
-
-    for event in list_events(job_id):
-        kind = event["kind"]
-        payload = event["payload"] or {}
-        if kind == "claim":
-            print(f"claim {event['id']}: {payload.get('source')!r} -> "
-                  f"{str(payload.get('quote'))[:120]!r}")
-        elif kind == "decision":
-            print(f"decision {event['id']}: {payload.get('outcome')!r} "
-                  f"reason={str(payload.get('reason'))[:300]!r}")
-        elif kind == "question":
-            print(f"QUESTION {event['id']}: {payload.get('question')!r}")
-            print(f"  options: {payload.get('options')!r}")
-        elif kind in ("tool_refused", "tool_malformed", "tool_limit",
-                      "model_plain_text", "step_failed", "checkpoint"):
-            print(f"{kind} {event['id']}: "
-                  f"{json.dumps(payload)[:300]}")
-    return 0
+    CALLS.append({"variant": CURRENT["variant"], "phase": CURRENT.get("phase", "?"),
+                  "seconds": round(dt, 1),
+                  "in": usage.get("input_tokens"), "out": usage.get("output_tokens"),
+                  "reasoning": (usage.get("reasoning_tokens") or (usage.get("output_tokens_details") or {}).get("reasoning_tokens")),
+                  "model": result.get("model"), "status": result.get("status")})
+    print(f"[{CURRENT['variant']}/{CURRENT.get('phase')}] {dt:.1f}s in={usage.get('input_tokens')} out={usage.get('output_tokens')} status={result.get('status')}", flush=True)
+    return result
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
+runner.respond = wrapped
+
+for variant in ("hero", "contrast"):
+    CURRENT.update({"variant": variant, "phase": "night"})
+    summary = runner.run_job(variant=variant)
+    job_id = summary["job_id"]
+    print(f"VARIANT={variant} JOB={job_id} STATUS={summary['status']}")
+    if variant == "hero" and summary["status"] == "waiting_for_owner":
+        runner.store_answer(job_id, "Bergen: the venue can receive it")
+        CURRENT["phase"] = "resume"
+        res = runner.resume_job(job_id)
+        print(f"HERO RESUME STATUS={res['status']}")
+    out = runner.export_job(job_id)
+    print(f"EXPORT={out}")
+
+print(json.dumps(CALLS, indent=1))
