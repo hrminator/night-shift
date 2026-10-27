@@ -41,6 +41,22 @@ def _export_files() -> list[Path]:
     return files
 
 
+def find_run_file(name: str) -> Path | None:
+    """Find one run export by job id, file name, or file stem.
+
+    Looks in the live DATA_DIR/runs first, then falls back to the records
+    baked into the image under data/runs, so the recorded replay works even
+    when the mounted volume does not hold the file yet.
+    """
+    for directory in runs_dirs():
+        for candidate in (directory / f"job-{name}.json",
+                          directory / name,
+                          directory / f"{name}.json"):
+            if candidate.is_file():
+                return candidate
+    return None
+
+
 def _is_hero_with_wake_and_hold(record: dict) -> bool:
     try:
         events = record["events"]
@@ -90,18 +106,15 @@ def resolve_recorded_job() -> dict | None:
     """
     want = (os.environ.get(RECORDED_ENV_VAR) or "").strip()
     if want:
-        for directory in runs_dirs():
-            for candidate in (directory / f"job-{want}.json",
-                              directory / want,
-                              directory / f"{want}.json"):
-                if candidate.is_file():
-                    record = _load_record(candidate)
-                    if record is not None:
-                        job_id = str(record.get("job_id") or candidate.stem
-                                     .removeprefix("job-"))
-                        return {"job_id": job_id, "record": record,
-                                "path": candidate,
-                                "date": _recorded_date(record, candidate)}
+        candidate = find_run_file(want)
+        if candidate is not None:
+            record = _load_record(candidate)
+            if record is not None:
+                job_id = str(record.get("job_id") or candidate.stem
+                             .removeprefix("job-"))
+                return {"job_id": job_id, "record": record,
+                        "path": candidate,
+                        "date": _recorded_date(record, candidate)}
         direct = Path(want)
         if direct.is_file():
             record = _load_record(direct)

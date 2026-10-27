@@ -18,11 +18,14 @@ def bundled_runs_dir() -> Path:
 
 
 def seed_bundled_runs(target: Path | None = None, source: Path | None = None) -> list[Path]:
-    """Copy bundled read-sources-*.json records into the runtime DATA_DIR."""
+    """Copy bundled run records into the runtime DATA_DIR.
+
+    Copies every file under the bundled data/runs that does not already
+    exist in DATA_DIR/runs. Existing files are never overwritten, so live
+    exports on the volume always win over the baked-in copies.
+    """
     dest = target if target is not None else data_dir() / "runs"
     src = source if source is not None else bundled_runs_dir()
-    if sorted(dest.glob("read-sources-*.json")):
-        return []
     try:
         if src.resolve() == dest.resolve():
             return []
@@ -32,7 +35,9 @@ def seed_bundled_runs(target: Path | None = None, source: Path | None = None) ->
         return []
     dest.mkdir(parents=True, exist_ok=True)
     copied: list[Path] = []
-    for item in sorted(src.glob("read-sources-*.json")):
+    for item in sorted(src.glob("*")):
+        if not item.is_file():
+            continue
         out = dest / item.name
         if out.exists():
             continue
