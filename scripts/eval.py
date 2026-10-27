@@ -119,8 +119,8 @@ def run_once(arm: str, case: dict, run: int, out_dir: Path,
         night = eval_night.run_case(
             case, arm, wrapped, data_dir, work_dir,
             case_dir / f"job-{case['id']}-{run}.json")
-        from app.store import list_events
-        events = list_events(night["job_id"])
+        exported = json.loads(Path(night["export"]).read_text(encoding="utf-8"))
+        events = exported["events"]
         scored = eval_score.evaluate(events, case)
         record.update({
             "job_id": night["job_id"],
