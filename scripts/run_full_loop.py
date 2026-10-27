@@ -8,6 +8,7 @@ check exactly one hold effect -> GET morning page. Uses the live database
 from __future__ import annotations
 
 import json
+import os
 import sys
 import urllib.parse
 from datetime import datetime, timezone
@@ -54,7 +55,9 @@ def main() -> None:
         if log_path_for().exists() else [])
     started = datetime.now(timezone.utc)
 
-    response = client.post("/jobs/run", follow_redirects=False)
+    token = os.environ.get("RUN_TOKEN", "")
+    response = client.post("/jobs/run", headers={"X-Run-Token": token},
+                           follow_redirects=False)
     assert response.status_code == 303, response.status_code
     job_id = response.headers["location"].rsplit("/", 1)[-1]
     print("job_id:", job_id)

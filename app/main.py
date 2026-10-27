@@ -7,7 +7,6 @@ import json
 import os
 import shutil
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -132,16 +131,163 @@ def render_evidence(record: dict) -> str:
     )
 
 
+#: Where the front door points for the written results.
+RESULTS_URL = "https://github.com/hrminator/night-shift#results"
+
+#: Test seam: visitor resumes call this instead of the real adapter.
+LIVE_RESPOND_FN = None
+
+#: Minimal styling for the one product screen (plain HTML, no JS).
+FRONT_CSS = (
+    "<style>body{font-family:system-ui,-apple-system,sans-serif;"
+    "max-width:46em;margin:2em auto;padding:0 1em;line-height:1.5}"
+    "blockquote{border-left:3px solid #888;margin:.4em 0;padding:.1em .8em}"
+    "li{margin:.45em 0}button{font-size:1em;margin:.2em;padding:.45em .9em}"
+    ".label{background:#f0f0f0;padding:.6em .8em}</style>"
+)
+
+
+def _live_respond_fn():
+    if LIVE_RESPOND_FN is not None:
+        return LIVE_RESPOND_FN
+    from app.adapter import respond
+    return respond
+
+
+def _spend_wrapping_respond(job_id: str, day: str):
+    """Record every visitor-resume model call in the spend ledger."""
+    inner = _live_respond_fn()
+
+    def wrapped(instructions, input_items, **kwargs):
+        result = inner(instructions, input_items, **kwargs)
+        try:
+            from app.spend import cost_usd, usage_of
+            from app.store import record_spend
+            inputs, cached, outputs = usage_of(result)
+            record_spend(day, job_id, "visitor-resume", inputs, cached,
+                         outputs, cost_usd(inputs, cached, outputs))
+        except Exception:  # noqa: BLE001 - the ledger must not break a night
+            pass
+        return result
+
+    return wrapped
+
+
+def _replay_timeline(events: list) -> str:
+    """Timeline from 21:30 to the question, from the exported events."""
+    esc = html.escape
+    claims = {e["id"]: e for e in events if e.get("kind") == "claim"}
+    parts = []
+    for event in events:
+        kind = event.get("kind")
+        payload = event.get("payload") or {}
+        vt = esc(str(event.get("virtual_time", "?")))
+        if kind == "handoff":
+            parts.append(
+                f"<li><b>{vt}</b> — The owner hands over the brief "
+                "and goes to bed.</li>"
+            )
+        elif kind == "claim":
+            source = esc(str(payload.get("source", "?")))
+            quote = esc(str(payload.get("quote", "")))
+            meaning = esc(str(payload.get("claim", "")))
+            parts.append(
+                f"<li><b>{vt}</b> — Read <b>{source}</b>: "
+                f"<blockquote>{quote}</blockquote><p>{meaning}</p></li>"
+            )
+        elif kind == "revised_quote":
+            parts.append(
+                f"<li><b>{vt} — the one scheduled event:</b> Baltic's "
+                f"revised quote {esc(str(payload.get('quote', '?')))} "
+                f"arrives and replaces "
+                f"{esc(str(payload.get('replaces', '?')))}.</li>"
+            )
+        elif kind == "check":
+            mark = "pass" if payload.get("result") == "pass" else "FAIL"
+            parts.append(
+                f"<li><b>{vt}</b> — check "
+                f"{esc(str(payload.get('name', '?')))}: <b>{mark}</b> — "
+                f"{esc(str(payload.get('note', '')))}</li>"
+            )
+        elif kind == "decision":
+            cites = "".join(
+                f"<blockquote>{esc(str(claims[cid]['payload'].get('quote', '')))}"
+                f" <cite>({esc(str(claims[cid]['payload'].get('source', '')))})"
+                "</cite></blockquote>"
+                for cid in (payload.get("evidence") or [])
+                if cid in claims
+            )
+            parts.append(
+                f"<li><b>{vt}</b> — Decision: "
+                f"{esc(str(payload.get('outcome', '?')))} — "
+                f"{esc(str(payload.get('reason', '')))}"
+                f" (evidence {esc(str(payload.get('evidence', '')))})</li>"
+                f"{cites}"
+            )
+        elif kind == "checkpoint":
+            parts.append(
+                f"<li><b>{vt}</b> — Saved point. The night pauses here; "
+                "nothing is ordered, nothing is sent.</li>"
+            )
+    return "<ol>" + "".join(parts) + "</ol>"
+
+
+def _visitor_question_card(question: dict) -> str:
+    """The recorded question with live answer buttons."""
+    esc = html.escape
+    payload = question.get("payload") or {}
+    options = payload.get("options") or []
+    buttons = "".join(
+        f'<button type="submit" name="choice" value="{esc(str(o))}">'
+        f"{esc(str(o))}</button>"
+        for o in options
+    )
+    return (
+        "<section><h2>You're the owner</h2>"
+        "<p>Tap an answer. It starts a <b>new</b> live job from the saved "
+        "point below (real model calls, its own outbox) and moves to that "
+        "job's morning page. The recording is never changed.</p>"
+        f"<p><b>{esc(str(payload.get('question', '')))}</b></p>"
+        f"<p>Why now: {esc(str(payload.get('why_now', '')))}</p>"
+        f"<p>Checked: {esc(str(payload.get('what_checked', '')))}</p>"
+        f"<p>If yes: {esc(str(payload.get('if_yes', '')))}</p>"
+        f"<p>If no: {esc(str(payload.get('if_no', '')))}</p>"
+        f'<form method="post" action="/visitor/answer">{buttons}</form>'
+        "</section>"
+    )
+
+
 @app.get("/", response_class=HTMLResponse)
-def hello() -> str:
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+def index() -> str:
+    """The one product screen: replay of the recorded hero run."""
+    from app import replay as replay_mod
+
+    resolved = replay_mod.resolve_recorded_job()
+    if resolved is None:
+        return (
+            "<!doctype html><html><head><title>Night Shift</title></head>"
+            f"<body>{FRONT_CSS}<h1>Night Shift</h1>"
+            "<p>No recorded run yet.</p></body></html>"
+        )
+    record = resolved["record"]
+    events = replay_mod.replay_events(record)
+    question = next(
+        (e for e in reversed(events) if e.get("kind") == "question"), None
+    )
+    card = _visitor_question_card(question) if question is not None else ""
     return (
         "<!doctype html><html><head><title>Night Shift</title></head>"
-        f"<body><h1>Night Shift</h1><p>{now}</p>"
-        '<p><a href="/evidence">Source evidence: a real muse-spark-1.3 result</a></p>'
-        '<form method="post" action="/jobs/run">'
-        '<button type="submit">Start a night job (runs one decision turn)</button>'
-        "</form>"
+        f"<body>{FRONT_CSS}<h1>Night Shift</h1>"
+        f"<p class=\"label\">Real muse-spark-1.3 calls recorded on "
+        f"{html.escape(resolved['date'])}. Supplier system and mail "
+        "simulated.</p>"
+        f"<h2>Overnight replay: one job, 21:30 to the question</h2>"
+        f"{_replay_timeline(events)}"
+        f"{card}"
+        f"{_decision_section(events)}"
+        f"<p><a href=\"{RESULTS_URL}\">Results in the README</a> · "
+        '<a href="/evidence">Source evidence: a real muse-spark-1.3 '
+        "result</a></p>"
         "</body></html>"
     )
 
@@ -226,7 +372,16 @@ def _summarize(kind: str, payload: dict) -> str:
 
 
 @app.post("/jobs/run")
-def run_job_route(variant: str = "hero"):
+def run_job_route(request: Request, variant: str = "hero"):
+    """Start a whole new night. Needs the X-Run-Token header, else 403."""
+    expected = os.environ.get("RUN_TOKEN", "")
+    token = request.headers.get("x-run-token", "")
+    if not expected or token != expected:
+        return HTMLResponse(
+            "<h1>Forbidden</h1>"
+            "<p>Starting a night needs the X-Run-Token header.</p>",
+            status_code=403,
+        )
     from app import runner as runner_mod
 
     summary = runner_mod.run_job(variant=variant)
@@ -341,8 +496,10 @@ def _draft_state(job_id: str, draft: dict, at_virtual: str = "07:00") -> str:
     return "needs approval again"
 
 
-def _draft_cards(job_id: str, events: list) -> str:
-    """Morning draft cards: head versions with approve + one-word-edit forms."""
+def _draft_cards(job_id: str, events: list, with_forms: bool = True) -> str:
+    """Morning draft cards: head versions with approve + one-word-edit forms.
+
+    Recorded pages render read-only (no live job to approve against)."""
     from app import gateway as gateway_mod
     esc = html.escape
     cards = ""
@@ -351,24 +508,33 @@ def _draft_cards(job_id: str, events: list) -> str:
         version_hash = gateway_mod.head_version_hash(draft)
         state = _draft_state(job_id, draft)
         version = payload.get("version", 1)
+        forms = ""
+        if with_forms:
+            forms = (
+                f'<form method="post" action="/jobs/{esc(job_id)}/approve">'
+                f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
+                f'<input type="hidden" name="version_hash" '
+                f'value="{version_hash}">'
+                '<input type="hidden" name="virtual_time" value="07:00">'
+                "<button type=\"submit\">Approve this exact text</button>"
+                "</form>"
+                f'<form method="post" action="/jobs/{esc(job_id)}/edit-draft">'
+                f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
+                "<textarea name=\"body\" rows=\"3\" cols=\"60\">"
+                f"{esc(str(payload.get('body', '')))}</textarea>"
+                "<button type=\"submit\">Save edited version</button>"
+                "</form>"
+            )
+        leak = ("<p><b>Not sent: recipient not in your contacts</b></p>"
+                if payload.get("leak") else "")
         cards += (
             "<section><h3>"
             f"{esc(str(payload.get('purpose', 'message')))} · {esc(state)}"
             f" · v{esc(str(version))}</h3>"
             f"<p>To: {esc(str(payload.get('to', '')))}</p>"
             f"<p>Subject: {esc(str(payload.get('subject', '')))}</p>"
-            f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>{'<p><b>Not sent: recipient not in your contacts</b></p>' if payload.get('leak') else ''}"
-            f'<form method="post" action="/jobs/{esc(job_id)}/approve">'
-            f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
-            f'<input type="hidden" name="version_hash" value="{version_hash}">'
-            '<input type="hidden" name="virtual_time" value="07:00">'
-            "<button type=\"submit\">Approve this exact text</button>"
-            "</form>"
-            f'<form method="post" action="/jobs/{esc(job_id)}/edit-draft">'
-            f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
-            f'<textarea name="body" rows="3" cols="60">{esc(str(payload.get("body", "")))}</textarea>'
-            "<button type=\"submit\">Save edited version</button>"
-            "</form></section>"
+            f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>"
+            f"{leak}{forms}</section>"
         )
     return cards
 
@@ -390,15 +556,10 @@ def _outbox_section(events: list) -> str:
     return f"<ul>{rows}</ul>"
 
 
-@app.get("/jobs/{job_id}/morning", response_class=HTMLResponse)
-def morning_page(job_id: str):
-    from app import store as store_mod
-
-    job = store_mod.get_job(job_id)
-    if job is None:
-        return HTMLResponse("<h1>Unknown job</h1>", status_code=404)
+def render_morning_page(job_title: str, events: list, banner: str = "",
+                        job_id: str | None = None) -> str:
+    """Morning page HTML for live jobs and recorded runs alike."""
     esc = html.escape
-    events = store_mod.list_events(job_id)
     effects = [e for e in events if e["kind"] == "effect"]
     drafts = [e for e in events if e["kind"] == "draft"]
     checks = [e for e in events if e["kind"] == "gateway_check"]
@@ -422,7 +583,8 @@ def morning_page(job_id: str):
             "<section><h2>Hold acknowledgement</h2>"
             f"<p>{esc(str(payload.get('acknowledgement', '')))}</p></section>"
         )
-    cards = _draft_cards(job_id, events)
+    cards = _draft_cards(job_id if job_id is not None else job_title,
+                         events, with_forms=job_id is not None)
     check_rows = "".join(
         "<li>"
         f"{esc(str((c['payload'] or {}).get('check', '?')))}: "
@@ -434,7 +596,8 @@ def morning_page(job_id: str):
     return (
         "<!doctype html><html><head><title>Night Shift morning</title></head>"
         "<body>"
-        f"<h1>Morning page · 07:00 virtual time · Job {esc(job_id)}</h1>"
+        f"<h1>Morning page · 07:00 virtual time · {esc(job_title)}</h1>"
+        f"{banner}"
         f"<p><b>{esc(label)}</b></p>"
         f"{ack}"
         f"<h2>Drafts awaiting your OK on the exact text</h2>{cards}"
@@ -442,6 +605,17 @@ def morning_page(job_id: str):
         f"<h2>How it decided (gateway checks)</h2><ol>{check_rows}</ol>"
         '<p><a href="/">Back to Night Shift</a></p></body></html>'
     )
+
+
+@app.get("/jobs/{job_id}/morning", response_class=HTMLResponse)
+def morning_page(job_id: str):
+    from app import store as store_mod
+
+    job = store_mod.get_job(job_id)
+    if job is None:
+        return HTMLResponse("<h1>Unknown job</h1>", status_code=404)
+    return render_morning_page(f"Job {job_id}",
+                               store_mod.list_events(job_id), job_id=job_id)
 
 
 @app.post("/jobs/{job_id}/approve")
@@ -514,3 +688,71 @@ def job_resume(job_id: str):
             status_code=400,
         )
     return RedirectResponse(url=f"/jobs/{job_id}/morning", status_code=303)
+
+
+def _recorded_morning(note: str):
+    """Serve the recorded morning page with a one-line guard notice."""
+    from app import replay as replay_mod
+
+    resolved = replay_mod.resolve_recorded_job()
+    if resolved is None:
+        return HTMLResponse("<h1>No recorded run yet</h1>", status_code=404)
+    banner = f"<p><b>{html.escape(note)}</b></p>"
+    return render_morning_page(
+        f"Recorded run {resolved['job_id']}",
+        list(resolved["record"].get("events") or []), banner)
+
+
+@app.post("/visitor/answer")
+async def visitor_answer(request: Request):
+    """Answer as the owner: copy the recorded run and resume it live."""
+    import urllib.parse
+    import uuid
+
+    from app import replay as replay_mod
+    from app import runner as runner_mod
+    from app import spend as spend_mod
+    from app import store as store_mod
+
+    resolved = replay_mod.resolve_recorded_job()
+    if resolved is None:
+        return HTMLResponse("<h1>No recorded run yet</h1>", status_code=404)
+    body = (await request.body()).decode("utf-8", "replace")
+    form = urllib.parse.parse_qs(body)
+    choice = form.get("choice", [""])[0]
+    if not choice:
+        return HTMLResponse("<h1>Pick one of the two answers</h1>",
+                            status_code=400)
+    total, cap = spend_mod.spend_status()
+    if total >= cap:
+        return _recorded_morning(
+            f"Live resume unavailable (daily spend cap of ${cap:.2f} "
+            "reached; showing the recorded morning page).")
+    owner = uuid.uuid4().hex[:12]
+    slot = spend_mod.acquire_visitor_slot(owner)
+    if slot is None:
+        return _recorded_morning(
+            "Live resume unavailable (2 live resumes already running; "
+            "showing the recorded morning page).")
+    try:
+        try:
+            new_id = replay_mod.copy_job_for_visitor(
+                resolved["record"], choice)
+        except ValueError as exc:
+            return HTMLResponse(f"<h1>Cannot resume</h1><p>{exc}</p>",
+                                status_code=400)
+        run_lock = f"job:{new_id}:run"
+        if not store_mod.acquire_lock(run_lock, owner, ttl_seconds=900):
+            return _recorded_morning(
+                "Live resume unavailable (2 live resumes already running; "
+                "showing the recorded morning page).")
+        try:
+            runner_mod.resume_job(
+                new_id,
+                respond_fn=_spend_wrapping_respond(new_id,
+                                                 spend_mod.today_utc()))
+        finally:
+            store_mod.release_lock(run_lock, owner)
+    finally:
+        spend_mod.release_visitor_slot(slot, owner)
+    return RedirectResponse(url=f"/jobs/{new_id}/morning", status_code=303)

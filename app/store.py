@@ -51,6 +51,18 @@ CREATE TABLE IF NOT EXISTS locks (
   owner TEXT,
   expires_at TEXT
 );
+CREATE TABLE IF NOT EXISTS spend (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  day TEXT NOT NULL,
+  job_id TEXT NOT NULL,
+  label TEXT NOT NULL,
+  input_tokens INTEGER NOT NULL,
+  cached_tokens INTEGER NOT NULL,
+  output_tokens INTEGER NOT NULL,
+  usd REAL NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_spend_day ON spend (day);
 CREATE TABLE IF NOT EXISTS operations (
   operation_id TEXT PRIMARY KEY,
   job_id TEXT NOT NULL,
@@ -285,6 +297,42 @@ def release_lock(name: str, owner: str,
             "DELETE FROM locks WHERE name = ? AND owner = ?", (name, owner))
         conn.commit()
         return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
+def record_spend(day: str, job_id: str, label: str, input_tokens: int,
+                 cached_tokens: int, output_tokens: int, usd: float,
+                 path: Path | None = None) -> dict:
+    """Append one model-call spend row. Derived ledger, not an event."""
+    conn = connect(path)
+    try:
+        _ensure_init(conn)
+        created = _now_utc()
+        cur = conn.execute(
+            "INSERT INTO spend (day, job_id, label, input_tokens,"
+            " cached_tokens, output_tokens, usd, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (day, job_id, label, input_tokens, cached_tokens,
+             output_tokens, usd, created),
+        )
+        conn.commit()
+        return {"id": cur.lastrowid, "day": day, "job_id": job_id,
+                "usd": usd}
+    finally:
+        conn.close()
+
+
+def day_spend_usd(day: str, path: Path | None = None) -> float:
+    """Total recorded model spend for one UTC day, in USD."""
+    conn = connect(path)
+    try:
+        _ensure_init(conn)
+        row = conn.execute(
+            "SELECT COALESCE(SUM(usd), 0) AS total FROM spend WHERE day = ?",
+            (day,),
+        ).fetchone()
+        return float(row["total"])
     finally:
         conn.close()
 
