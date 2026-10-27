@@ -173,6 +173,10 @@ PROPOSE_MESSAGE_TOOL = {
 RESUME_TOOLS = [SUBMIT_HOLD_TOOL, PROPOSE_MESSAGE_TOOL]
 READ_TOOLS = [RECORD_CLAIM_TOOL, RECORD_DECISION_TOOL, PROPOSE_MESSAGE_TOOL]
 REASSESS_TOOLS = [RECORD_CLAIM_TOOL, RUN_CHECK_TOOL, RECORD_DECISION_TOOL, ASK_OWNER_TOOL, SUBMIT_HOLD_TOOL, PROPOSE_MESSAGE_TOOL]
+NIGHT_TOOLS = list(REASSESS_TOOLS)
+READ_TOOLS = NIGHT_TOOLS
+REASSESS_TOOLS = NIGHT_TOOLS
+DECISION_TOOLS = NIGHT_TOOLS
 
 WAKE_NUDGE_MESSAGE = "You recorded wake but asked nothing. Either call ask_owner now or record a different decision."
 ACT_NUDGE_MESSAGE = "You recorded act_under_permission but placed no hold. Either call submit_hold now or record a different decision."
@@ -313,6 +317,19 @@ def ask_owner_allowed(job_id: str) -> tuple[bool, list[str]]:
             missing.append(f"run_check {name}")
     return (True, []) if not missing else (False, missing)
 
+def normalise_tool_name(name: object) -> tuple[object, bool]:
+    """Strip one namespace prefix (``default.submit_hold`` -> ``submit_hold``).
+
+    Returns ``(dispatch_name, was_normalised)``. Anything still unknown
+    after normalisation is refused by the dispatchers as before.
+    """
+    if isinstance(name, str) and "." in name:
+        short = name.rsplit(".", 1)[1]
+        if short:
+            return short, True
+    return name, False
+
+
 def function_calls_of(output_items: list) -> list:
     return [i for i in output_items if i.get("type") == "function_call"]
 
@@ -369,6 +386,11 @@ def execute_tool_call(
             ),
         }
 
+    _requested_name = name
+    name, _was_normalised = normalise_tool_name(name)
+    if _was_normalised:
+        item = dict(item, name=name)
+        append_event(job_id, virtual_time or VT_DECISION, "tool_name_normalised", {"requested": _requested_name, "normalised": name, "call_id": call_id})
     if name == "record_claim":
         missing = _missing_fields(args, ["source", "quote"])
         if missing or not isinstance(args.get("source"), str) or not isinstance(
@@ -668,7 +690,7 @@ def run_turn(
                 _payload = json.loads(_out.get("output") or "{}")
             except ValueError:
                 _payload = {}
-            _name = _item.get("name")
+            _name, _ = normalise_tool_name(_item.get("name"))
             if _name == "record_decision" and _payload.get("stored"):
                 try:
                     _args = json.loads(_item.get("arguments") or "{}")
@@ -758,6 +780,11 @@ def execute_resume_tool_call(
     from app import gateway as gateway_mod
 
     vt = virtual_time or VT_RESUME
+    _requested_name = item.get("name")
+    _dispatch_name, _was_normalised = normalise_tool_name(_requested_name)
+    if _was_normalised:
+        item = dict(item, name=_dispatch_name)
+        append_event(job_id, vt, "tool_name_normalised", {"requested": _requested_name, "normalised": _dispatch_name, "call_id": item.get("call_id")})
     call_id = item.get("call_id")
     name = item.get("name")
     raw_args = item.get("arguments") or "{}"

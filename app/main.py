@@ -367,6 +367,8 @@ def _summarize(kind: str, payload: dict) -> str:
         return f"approval for draft {payload.get('draft_id', '?')} at {payload.get('approved_at', '?')}"
     if kind == "delivered":
         return f"delivered to {payload.get('to', '?')}: {payload.get('outbox', '')}"
+    if kind == "tool_name_normalised":
+        return f"tool renamed {payload.get('requested', '?')} -> {payload.get('normalised', '?')}"
     if kind in ("tool_refused", "tool_malformed", "tool_limit"):
         return f"{kind}: {payload.get('error', payload.get('tool', ''))}"
     if kind == "model_plain_text":
