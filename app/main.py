@@ -1,4 +1,4 @@
-"""Night Shift pages: hello at / and the source-evidence page at /evidence."""
+"""Night Shift pages: hello at /, source evidence, and plain job pages."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 def bundled_runs_dir() -> Path:
     """Bundled records baked into the image under the repo's data/runs."""
@@ -133,6 +133,9 @@ def hello() -> str:
         "<!doctype html><html><head><title>Night Shift</title></head>"
         f"<body><h1>Night Shift</h1><p>{now}</p>"
         '<p><a href="/evidence">Source evidence: a real muse-spark-1.3 result</a></p>'
+        '<form method="post" action="/jobs/run">'
+        '<button type="submit">Start a night job (runs one decision turn)</button>'
+        "</form>"
         "</body></html>"
     )
 
@@ -147,3 +150,105 @@ def evidence():
             status_code=404,
         )
     return render_evidence(record)
+
+
+def _summarize(kind: str, payload: dict) -> str:
+    if kind == "handoff":
+        return "Owner hands over the brief at 21:30 and goes offline."
+    if kind == "revised_quote":
+        return (
+            f"{payload.get('quote', '?')} arrived; replaces {payload.get('replaces', '?')}."
+        )
+    if kind == "claim":
+        quote = str(payload.get("quote", ""))[:160]
+        return f"{payload.get('source', '?')}: {quote}"
+    if kind == "decision":
+        return f"{payload.get('outcome', '?')}: {str(payload.get('reason', ''))[:200]}"
+    if kind == "question":
+        return str(payload.get("question", ""))[:200]
+    if kind == "checkpoint":
+        return "Saved point for resume (full next-call input stored)."
+    if kind == "owner_answer":
+        return f"Owner answered: {payload.get('choice', '?')} (source: owner)."
+    if kind in ("tool_refused", "tool_malformed", "tool_limit"):
+        return f"{kind}: {payload.get('error', payload.get('tool', ''))}"
+    if kind == "model_plain_text":
+        return "Model answered in plain text; nudged once."
+    if kind == "step_failed":
+        return f"Step failed: {payload.get('reason', '')}"
+    return kind
+
+
+@app.post("/jobs/run")
+def run_job_route():
+    from app import runner as runner_mod
+
+    summary = runner_mod.run_job()
+    return RedirectResponse(url=f"/jobs/{summary['job_id']}", status_code=303)
+
+
+@app.get("/jobs/{job_id}", response_class=HTMLResponse)
+def job_page(job_id: str):
+    from app import store as store_mod
+
+    job = store_mod.get_job(job_id)
+    if job is None:
+        return HTMLResponse("<h1>Unknown job</h1>", status_code=404)
+    esc = html.escape
+    events = store_mod.list_events(job_id)
+    rows = "".join(
+        f"<li><b>{esc(str(e['kind']))}</b> @{esc(str(e['virtual_time']))}"
+        f" — {esc(_summarize(e['kind'], e['payload'] or {}))}</li>"
+        for e in events
+    )
+    question = next(
+        (e for e in reversed(events) if e["kind"] == "question"), None
+    )
+    card = ""
+    if job.get("status") == "waiting_for_owner" and question is not None:
+        payload = question["payload"] or {}
+        options = payload.get("options") or []
+        buttons = "".join(
+            f'<button type="submit" name="choice" value="{esc(str(o))}">'
+            f"{esc(str(o))}</button>"
+            for o in options
+        )
+        card = (
+            "<section><h2>Question for the owner</h2>"
+            f"<p><b>{esc(str(payload.get('question', '')))}</b></p>"
+            f"<p>Why now: {esc(str(payload.get('why_now', '')))}</p>"
+            f"<p>Checked: {esc(str(payload.get('what_checked', '')))}</p>"
+            f"<p>If yes: {esc(str(payload.get('if_yes', '')))}</p>"
+            f"<p>If no: {esc(str(payload.get('if_no', '')))}</p>"
+            f'<form method="post" action="/jobs/{esc(job_id)}/answer">'
+            f"{buttons}</form></section>"
+        )
+    return (
+        "<!doctype html><html><head><title>Night Shift job</title></head><body>"
+        f"<h1>Job {esc(job_id)}</h1>"
+        f"<p>Status: {esc(str(job.get('status', '?')))} · "
+        f"clock: {esc(str(job.get('virtual_time', '?')))} · "
+        f"step: {esc(str(job.get('current_step', '')))}</p>"
+        f"{card}<h2>Events in order</h2><ol>{rows}</ol>"
+        '<p><a href="/">Back to Night Shift</a></p></body></html>'
+    )
+
+
+@app.post("/jobs/{job_id}/answer")
+async def job_answer(job_id: str, request: Request):
+    import urllib.parse
+
+    from app import store as store_mod
+
+    job = store_mod.get_job(job_id)
+    if job is None:
+        return HTMLResponse("<h1>Unknown job</h1>", status_code=404)
+    body = (await request.body()).decode("utf-8", "replace")
+    choice = urllib.parse.parse_qs(body).get("choice", [""])[0]
+    store_mod.append_event(
+        job_id, job.get("virtual_time") or "00:47", "owner_answer",
+        {"choice": choice, "source": "owner"},
+    )
+    store_mod.set_job_status(job_id, status="answered",
+                             current_step="answered")
+    return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
