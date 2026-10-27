@@ -13,6 +13,20 @@ Built solo for the Meta Global AI Developer Hackathon 2026, Indie track, theme "
 
 Day 1. Everything below this line is filled in as it is built.
 
+## Deploy (Fly.io, app `night-shift-demo`, region Stockholm)
+
+The app reads its run records (and later its SQLite file) from `DATA_DIR`,
+default `./data` locally; on Fly `DATA_DIR=/data`, a 1 GB volume. The image
+already contains `data/` and `fixtures/` as seed content. The live site key
+stays a Fly secret; it is never written into files. From this folder, once the
+hosting account exists, run these three commands (do not run them before then):
+
+```powershell
+fly launch --copy-config --no-deploy
+fly secrets set NIGHT_SHIFT_API_KEY_LIVE=$env:NIGHT_SHIFT_API_KEY_LIVE
+fly deploy
+```
+
 ## Disclosure
 
 Personal project, built on my own time with no company code, data or resources. All code, tests and fixtures were written by Muse Code. A general AI assistant helped with planning, the written brief, the prompts given to Muse Code, this README and the video script. Details in `PROVENANCE.md`.
