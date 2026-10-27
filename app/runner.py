@@ -822,7 +822,8 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
         " code and refuses anything outside the permission; if it refuses,"
         " read the reason and fix exactly that.\n\n"
         "Then call propose_message three times for the 07:00 review (exact"
-        " texts, nothing is sent): 1. order confirmation to Vestland quoting"
+        " texts, nothing is sent, with purposes exactly order, venue_note,"
+        " baltic_note: 1. order confirmation to Vestland quoting"
         " the hold id from the acknowledgement and the portal total; 2. note"
         " to the venue that a van comes Wed 08-12; 3. note to Baltic Print"
         " declining for now and asking about arrival. When the hold is placed"
@@ -978,6 +979,124 @@ def build_reassess_content(revised_file_id: str, variant: str = "hero") -> list[
     portal = fixture_text("vestland_portal.json")
     venue = venue_text(variant)
     return [{"type": "input_file", "file_id": revised_file_id}, {"type": "input_text", "text": "At 00:38 Baltic's revised quote Q-1187-B arrived (file) and replaces Q-1187. Record a claim for it, re-run all six checks with run_check, then decide."}, {"type": "input_text", "text": "Vestland portal record (re-read at 00:41):\n" + portal}, {"type": "input_text", "text": "Venue booking confirmation:\n" + venue}]
+
+OPEN_STATUSES = ("running", "resuming", "answered", "waiting_for_owner")
+
+
+def _settle_after_turn(job_id: str, turn_result: dict) -> dict:
+    """Shared postamble after a reassess turn: checkpoint, hold, or done."""
+    if turn_result["status"] == "failed":
+        return {"job_id": job_id, "status": "failed",
+                "result": turn_result["result"]}
+    asked = question_event_id_of(job_id)
+    if asked is not None:
+        save_checkpoint(job_id, turn_result["input"], asked)
+        return {"job_id": job_id, "status": "waiting_for_owner",
+                "result": turn_result["result"]}
+    effects = [e for e in list_events(job_id) if e["kind"] == "effect"]
+    if effects:
+        set_job_status(job_id, status="done", current_step="done",
+                       virtual_time=VT_MORNING)
+        return {"job_id": job_id, "status": "done",
+                "result": turn_result["result"]}
+    set_job_status(job_id, status="decision_done",
+                   current_step="decision_done", virtual_time=VT_DECISION)
+    return {"job_id": job_id, "status": "decision_done",
+            "result": turn_result["result"]}
+
+
+def _job_variant(job_id: str) -> str:
+    handoffs = [e for e in list_events(job_id) if e["kind"] == "handoff"]
+    variant = (handoffs[0]["payload"] or {}).get("variant", "hero")
+    return variant if variant in ("hero", "contrast") else "hero"
+
+
+def _crash_reassess(job_id: str, respond_fn) -> dict:
+    """Re-run the 00:39 reassess after a mid-night restart.
+
+    The in-memory next-call input is gone with the crashed process (and the
+    uploaded files were deleted), so the turn is rebuilt from the fixtures
+    and settled from the last durable event. A partial pre-crash turn may
+    leave duplicate claims; checks dedupe by name and the hold gateway
+    refuses a second hold, so re-running is safe.
+    """
+    set_job_status(job_id, status="running", current_step="reassess",
+                   virtual_time=VT_REVISED)
+    revised_meta = upload_pdf(REVISED_PDF)
+    try:
+        first = [{"type": "message", "role": "user",
+                  "content": build_reassess_content(revised_meta["id"],
+                                                   _job_variant(job_id))}]
+        turn = run_turn(job_id, build_reassess_instructions(), first,
+                        REASSESS_TOOLS, respond_fn, VT_REASSESS)
+        return _settle_after_turn(job_id, turn)
+    finally:
+        try:
+            delete_file(revised_meta["id"])
+        except Exception:  # noqa: BLE001 - cleanup must not fail the resume
+            pass
+
+
+def resume_open_jobs(respond_fn=None, reassess_fn=None,
+                     lock_ttl_seconds: int = 600) -> dict:
+    """Startup routine: find open jobs and continue each from its last
+    durable event — the reassess turn after a 00:38 crash, a fresh resume
+    after an answer, or still waiting_for_owner after a checkpoint.
+
+    Each job runs under its own run lock in the locks table so two
+    processes never run the same job; a locked job is reported, not run.
+    """
+    from app.store import acquire_lock as _acquire
+    from app.store import list_jobs as _list_jobs
+    from app.store import release_lock as _release
+    import uuid as _uuid
+
+    if respond_fn is None:
+        respond_fn = respond  # late binding so a patched wrapper applies
+    if reassess_fn is None:
+        reassess_fn = _crash_reassess
+    owner = _uuid.uuid4().hex[:12]
+    results: dict = {}
+    for job in _list_jobs(list(OPEN_STATUSES)):
+        job_id = job["id"]
+        lock = f"job:{job_id}:run"
+        if not _acquire(lock, owner, ttl_seconds=lock_ttl_seconds):
+            results[job_id] = {"status": "locked"}
+            continue
+        try:
+            results[job_id] = _continue_open_job(job_id, job, respond_fn,
+                                                 reassess_fn)
+        finally:
+            _release(lock, owner)
+    return results
+
+
+def _continue_open_job(job_id: str, job: dict, respond_fn,
+                       reassess_fn) -> dict:
+    from app.store import set_job_status as _set_status
+    events = list_events(job_id)
+    kinds = {e["kind"] for e in events}
+    checkpoints = [e for e in events if e["kind"] == "checkpoint"]
+    answers = [e for e in events if e["kind"] == "owner_answer"]
+    if checkpoints and answers:
+        if job.get("status") != "answered":
+            _set_status(job_id, status="answered", current_step="answered",
+                        virtual_time=answers[-1]["virtual_time"])
+        summary = resume_job(job_id, respond_fn=respond_fn)
+        if summary["status"] == "done":
+            return {"status": "resumed", "job_id": job_id}
+        return {"status": summary["status"], "job_id": job_id,
+                "reason": summary.get("reason", "")}
+    if checkpoints:
+        _set_status(job_id, status="waiting_for_owner",
+                    current_step="waiting_for_owner",
+                    virtual_time=VT_CHECKPOINT)
+        return {"status": "waiting_for_owner", "job_id": job_id}
+    if "revised_quote" in kinds:
+        summary = reassess_fn(job_id, respond_fn)
+        return {"status": summary.get("status", "reassess"), "job_id": job_id}
+    return {"status": "noop", "job_id": job_id}
+
 
 def run_job(variant: str = "hero") -> dict:
     """Run the evidence-driven night: 21:30 handoff, 21:35 read turn, 00:38 event, 00:39 re-assess."""

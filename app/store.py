@@ -207,6 +207,88 @@ def append_event(
         conn.close()
 
 
+def list_jobs(statuses: list[str] | None = None, path: Path | None = None) -> list[dict]:
+    """List jobs, optionally filtered to open statuses, oldest first."""
+    conn = connect(path)
+    try:
+        _ensure_init(conn)
+        if statuses:
+            marks = ",".join("?" for _ in statuses)
+            rows = conn.execute(
+                f"SELECT * FROM jobs WHERE status IN ({marks})"
+                " ORDER BY updated_at ASC",
+                tuple(statuses),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM jobs ORDER BY updated_at ASC").fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def acquire_lock(name: str, owner: str, ttl_seconds: int = 600,
+                 path: Path | None = None) -> bool:
+    """Take a named run lock. True when this owner now holds it.
+
+    A lock held by another live owner blocks; an expired lock or one already
+    owned by this owner is (re)taken. Locks live in the locks table so two
+    processes never run the same job.
+    """
+    from datetime import timedelta
+    conn = connect(path)
+    try:
+        _ensure_init(conn)
+        now = datetime.now(timezone.utc)
+        row = conn.execute("SELECT * FROM locks WHERE name = ?",
+                           (name,)).fetchone()
+        if row is None:
+            conn.execute(
+                "INSERT INTO locks (name, owner, expires_at)"
+                " VALUES (?, ?, ?)",
+                (name, owner,
+                 (now + timedelta(seconds=ttl_seconds)).isoformat()),
+            )
+            conn.commit()
+            return True
+        if row["owner"] == owner:
+            conn.execute(
+                "UPDATE locks SET expires_at = ? WHERE name = ?",
+                ((now + timedelta(seconds=ttl_seconds)).isoformat(), name),
+            )
+            conn.commit()
+            return True
+        try:
+            expires = datetime.fromisoformat(str(row["expires_at"]))
+        except ValueError:
+            expires = now
+        if expires <= now:
+            conn.execute(
+                "UPDATE locks SET owner = ?, expires_at = ? WHERE name = ?",
+                (owner,
+                 (now + timedelta(seconds=ttl_seconds)).isoformat(), name),
+            )
+            conn.commit()
+            return True
+        return False
+    finally:
+        conn.close()
+
+
+def release_lock(name: str, owner: str,
+                 path: Path | None = None) -> bool:
+    """Release a lock held by this owner. True when a row was removed."""
+    conn = connect(path)
+    try:
+        _ensure_init(conn)
+        cur = conn.execute(
+            "DELETE FROM locks WHERE name = ? AND owner = ?", (name, owner))
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
 def list_events(job_id: str, path: Path | None = None) -> list[dict]:
     conn = connect(path)
     try:

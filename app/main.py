@@ -45,6 +45,12 @@ def seed_bundled_runs(target: Path | None = None, source: Path | None = None) ->
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     seed_bundled_runs()
+    if os.environ.get("NIGHT_SHIFT_AUTO_RESUME") == "1":
+        try:
+            from app import runner as _runner
+            _runner.resume_open_jobs()
+        except Exception as exc:  # noqa: BLE001 - startup must not fail
+            print(f"startup resume skipped: {exc}", flush=True)
     yield
 
 
@@ -204,6 +210,12 @@ def _summarize(kind: str, payload: dict) -> str:
         return f"approval requested for draft {payload.get('draft_id', '?')}"
     if kind == "resume_pruned_files":
         return f"resume pruned {payload.get('pruned_input_files', '?')} file items"
+    if kind == "nudge":
+        return f"nudge ({payload.get('rule', '?')}): {str(payload.get('message', ''))[:120]}"
+    if kind == "approval":
+        return f"approval for draft {payload.get('draft_id', '?')} at {payload.get('approved_at', '?')}"
+    if kind == "delivered":
+        return f"delivered to {payload.get('to', '?')}: {payload.get('outbox', '')}"
     if kind in ("tool_refused", "tool_malformed", "tool_limit"):
         return f"{kind}: {payload.get('error', payload.get('tool', ''))}"
     if kind == "model_plain_text":
@@ -301,6 +313,83 @@ async def job_answer(job_id: str, request: Request):
     return RedirectResponse(url=f"/jobs/{job_id}", status_code=303)
 
 
+def _draft_head_events(events: list) -> list:
+    """One head event per draft key (latest version only)."""
+    from app import gateway as gateway_mod
+    heads: dict = {}
+    for event in events:
+        if event["kind"] != "draft":
+            continue
+        key = gateway_mod.draft_key_of(event)
+        if key not in heads or event["id"] > heads[key]["id"]:
+            heads[key] = event
+    return [heads[key] for key in sorted(heads)]
+
+
+def _draft_state(job_id: str, draft: dict, at_virtual: str = "07:00") -> str:
+    """Approval state of one draft head: approved / needs approval again."""
+    from app import gateway as gateway_mod
+    key = gateway_mod.draft_key_of(draft)
+    approvals = gateway_mod.approvals_for_key(job_id, key)
+    if not approvals:
+        return "awaiting approval"
+    for approval in approvals:
+        valid, _ = gateway_mod.approval_valid_at(job_id, approval["id"],
+                                                 at_virtual)
+        if valid and approval["payload"].get("draft_id") == draft["id"]:
+            return "approved"
+    return "needs approval again"
+
+
+def _draft_cards(job_id: str, events: list) -> str:
+    """Morning draft cards: head versions with approve + one-word-edit forms."""
+    from app import gateway as gateway_mod
+    esc = html.escape
+    cards = ""
+    for draft in _draft_head_events(events):
+        payload = draft["payload"] or {}
+        version_hash = gateway_mod.head_version_hash(draft)
+        state = _draft_state(job_id, draft)
+        version = payload.get("version", 1)
+        cards += (
+            "<section><h3>"
+            f"{esc(str(payload.get('purpose', 'message')))} · {esc(state)}"
+            f" · v{esc(str(version))}</h3>"
+            f"<p>To: {esc(str(payload.get('to', '')))}</p>"
+            f"<p>Subject: {esc(str(payload.get('subject', '')))}</p>"
+            f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>{'<p><b>Not sent: recipient not in your contacts</b></p>' if payload.get('leak') else ''}"
+            f'<form method="post" action="/jobs/{esc(job_id)}/approve">'
+            f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
+            f'<input type="hidden" name="version_hash" value="{version_hash}">'
+            '<input type="hidden" name="virtual_time" value="07:00">'
+            "<button type=\"submit\">Approve this exact text</button>"
+            "</form>"
+            f'<form method="post" action="/jobs/{esc(job_id)}/edit-draft">'
+            f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
+            f'<textarea name="body" rows="3" cols="60">{esc(str(payload.get("body", "")))}</textarea>'
+            "<button type=\"submit\">Save edited version</button>"
+            "</form></section>"
+        )
+    return cards
+
+
+def _outbox_section(events: list) -> str:
+    """Simulated outbox: approved drafts moved here as delivered events."""
+    esc = html.escape
+    delivered = [e for e in events if e["kind"] == "delivered"]
+    if not delivered:
+        return "<p>Outbox empty.</p>"
+    rows = "".join(
+        "<li>"
+        f"To {esc(str((d['payload'] or {}).get('to', '?')))}: "
+        f"{esc(str((d['payload'] or {}).get('subject', '')))} — "
+        f"{esc(str((d['payload'] or {}).get('outbox', '')))}"
+        "</li>"
+        for d in delivered
+    )
+    return f"<ul>{rows}</ul>"
+
+
 @app.get("/jobs/{job_id}/morning", response_class=HTMLResponse)
 def morning_page(job_id: str):
     from app import store as store_mod
@@ -333,21 +422,7 @@ def morning_page(job_id: str):
             "<section><h2>Hold acknowledgement</h2>"
             f"<p>{esc(str(payload.get('acknowledgement', '')))}</p></section>"
         )
-    cards = ""
-    for draft in drafts:
-        payload = draft["payload"] or {}
-        cards += (
-            "<section><h3>"
-            f"{esc(str(payload.get('purpose', 'message')))} · "
-            f"{esc(str(payload.get('status', '')))}</h3>"
-            f"<p>To: {esc(str(payload.get('to', '')))}</p>"
-            f"<p>Subject: {esc(str(payload.get('subject', '')))}</p>"
-            f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>{'<p><b>Not sent: recipient not in your contacts</b></p>' if payload.get('leak') else ''}"
-            f'<form method="post" action="/jobs/{esc(job_id)}/approve">'
-            f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
-            "<button type=\"submit\">Approve this exact text</button>"
-            "</form></section>"
-        )
+    cards = _draft_cards(job_id, events)
     check_rows = "".join(
         "<li>"
         f"{esc(str((c['payload'] or {}).get('check', '?')))}: "
@@ -363,6 +438,7 @@ def morning_page(job_id: str):
         f"<p><b>{esc(label)}</b></p>"
         f"{ack}"
         f"<h2>Drafts awaiting your OK on the exact text</h2>{cards}"
+        f"<h2>Outbox (Simulated delivery)</h2>{_outbox_section(events)}"
         f"<h2>How it decided (gateway checks)</h2><ol>{check_rows}</ol>"
         '<p><a href="/">Back to Night Shift</a></p></body></html>'
     )
@@ -377,10 +453,50 @@ async def job_approve(job_id: str, request: Request):
     if store_mod.get_job(job_id) is None:
         return HTMLResponse("<h1>Unknown job</h1>", status_code=404)
     body = (await request.body()).decode("utf-8", "replace")
-    draft_id = urllib.parse.parse_qs(body).get("draft_id", [""])[0]
-    store_mod.append_event(
-        job_id, "07:00", "approval_requested", {"draft_id": draft_id},
-    )
+    form = urllib.parse.parse_qs(body)
+    try:
+        draft_id = int(form.get("draft_id", [""])[0])
+    except ValueError:
+        return HTMLResponse("<h1>Unknown draft</h1>", status_code=400)
+    version_hash = form.get("version_hash", [""])[0]
+    virtual_time = form.get("virtual_time", ["07:00"])[0] or "07:00"
+    from app import gateway as gateway_mod
+    approved = gateway_mod.approve_draft(job_id, draft_id, version_hash,
+                                         virtual_time)
+    if not approved.get("ok"):
+        return HTMLResponse(
+            "<h1>Approval refused</h1>"
+            f"<p>{html.escape(str(approved.get('reason', '')))}</p>",
+            status_code=400,
+        )
+    gateway_mod.deliver_approved(job_id, approved["approval_id"], virtual_time)
+    return RedirectResponse(url=f"/jobs/{job_id}/morning", status_code=303)
+
+
+@app.post("/jobs/{job_id}/edit-draft")
+async def job_edit_draft(job_id: str, request: Request):
+    import urllib.parse
+
+    from app import store as store_mod
+
+    if store_mod.get_job(job_id) is None:
+        return HTMLResponse("<h1>Unknown job</h1>", status_code=404)
+    body = (await request.body()).decode("utf-8", "replace")
+    form = urllib.parse.parse_qs(body)
+    try:
+        draft_id = int(form.get("draft_id", [""])[0])
+    except ValueError:
+        return HTMLResponse("<h1>Unknown draft</h1>", status_code=400)
+    new_body = form.get("body", [""])[0]
+    virtual_time = form.get("virtual_time", ["07:00"])[0] or "07:00"
+    from app import gateway as gateway_mod
+    edited = gateway_mod.edit_draft(job_id, draft_id, new_body, virtual_time)
+    if not edited.get("ok"):
+        return HTMLResponse(
+            "<h1>Edit refused</h1>"
+            f"<p>{html.escape(str(edited.get('reason', '')))}</p>",
+            status_code=400,
+        )
     return RedirectResponse(url=f"/jobs/{job_id}/morning", status_code=303)
 
 

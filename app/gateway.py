@@ -452,3 +452,197 @@ def check_propose_message(
     if leak:
         out["leak"] = True
     return out
+
+
+ORDER_PURPOSE = "order"
+ORDER_DEADLINE = "09:00"
+APPROVAL_VALID_MINUTES = 30
+OUTBOX_LABEL = "Simulated delivery"
+
+
+def draft_version_hash(to: str, subject: str, body: str) -> str:
+    """Hash one exact draft version: its content plus its recipient."""
+    return hashlib.sha256(
+        canonical_payload({"to": to, "subject": subject,
+                           "body": body}).encode("utf-8")
+    ).hexdigest()
+
+
+def _draft_events(job_id: str, path: Path | None = None) -> list[dict]:
+    return [e for e in list_events(job_id, path=path)
+            if e["kind"] == "draft"]
+
+
+def draft_key_of(event: dict) -> int:
+    """Stable key across versions of one draft (first event id)."""
+    payload = event["payload"] or {}
+    key = payload.get("draft_key")
+    return int(key) if isinstance(key, int) else int(event["id"])
+
+
+def draft_head(job_id: str, draft_key: int,
+               path: Path | None = None) -> dict | None:
+    """Latest version event for one draft key, or None."""
+    versions = [e for e in _draft_events(job_id, path=path)
+                if draft_key_of(e) == draft_key]
+    if not versions:
+        return None
+    return max(versions, key=lambda e: int(e["id"]))
+
+
+def head_version_hash(head: dict) -> str:
+    payload = head["payload"] or {}
+    return draft_version_hash(str(payload.get("to", "")),
+                              str(payload.get("subject", "")),
+                              str(payload.get("body", "")))
+
+
+def draft_deadline(head: dict) -> str | None:
+    """The Vestland order draft lapses with the hold at 09:00."""
+    payload = head["payload"] or {}
+    if payload.get("purpose") == ORDER_PURPOSE:
+        return ORDER_DEADLINE
+    return None
+
+
+def edit_draft(job_id: str, draft_event_id: int, new_body: str,
+               virtual_time: str,
+               path: Path | None = None) -> dict:
+    """Append a new version of a draft. The old approval (if any) is void:
+    approvals bind to one exact version hash."""
+    if not isinstance(new_body, str) or not new_body.strip():
+        return {"ok": False, "malformed": True,
+                "reason": "edit_draft needs a non-empty body"}
+    current = next((e for e in _draft_events(job_id, path=path)
+                    if e["id"] == draft_event_id), None)
+    if current is None:
+        return {"ok": False, "reason": "unknown draft"}
+    key = draft_key_of(current)
+    head = draft_head(job_id, key, path=path)
+    payload = (head or current)["payload"] or {}
+    try:
+        prior_version = int(payload.get("version", 1))
+    except (TypeError, ValueError):
+        prior_version = 1
+    event = append_event(
+        job_id, virtual_time, "draft",
+        {"to": payload.get("to"), "subject": payload.get("subject"),
+         "body": new_body, "purpose": payload.get("purpose"),
+         "status": "awaiting_approval", "draft_key": key,
+         "version": prior_version + 1, "supersedes": (head or current)["id"]},
+        path=path)
+    return {"ok": True, "draft_id": event["id"], "draft_key": key,
+            "version": prior_version + 1,
+            "version_hash": head_version_hash(event)}
+
+
+def approve_draft(job_id: str, draft_event_id: int, version_hash: str,
+                  virtual_time: str,
+                  path: Path | None = None) -> dict:
+    """Approve one exact draft version (content + recipient), once.
+
+    Refuses an outdated hash (the draft was edited) and, for the Vestland
+    order draft, any approval after 09:00 with "hold lapsed".
+    """
+    head_event = next((e for e in _draft_events(job_id, path=path)
+                       if e["id"] == draft_event_id), None)
+    if head_event is None:
+        return {"ok": False, "reason": "unknown draft"}
+    if (head_event["payload"] or {}).get("purpose") == "hold_request":
+        return {"ok": False,
+                "reason": "a hold request needs the standing permission,"
+                " not an approval"}
+    key = draft_key_of(head_event)
+    head = draft_head(job_id, key, path=path)
+    if head is None or head["id"] != draft_event_id:
+        return {"ok": False,
+                "reason": "outdated: a newer draft version exists;"
+                " approve the current version"}
+    if head_version_hash(head) != version_hash:
+        return {"ok": False,
+                "reason": "outdated: version hash mismatch;"
+                " the draft was edited"}
+    deadline = draft_deadline(head)
+    if deadline is not None:
+        try:
+            late = clock.at(virtual_time) > clock.at(deadline)
+        except (ValueError, KeyError):
+            return {"ok": False, "malformed": True,
+                    "reason": "unparseable virtual time"}
+        if late:
+            return {"ok": False, "reason": "hold lapsed"}
+    event = append_event(
+        job_id, virtual_time, "approval",
+        {"draft_id": head["id"], "draft_key": key,
+         "version_hash": version_hash, "approved_at": virtual_time,
+         "deadline": deadline},
+        path=path)
+    return {"ok": True, "approval_id": event["id"], "draft_key": key,
+            "version_hash": version_hash}
+
+
+def approvals_for_key(job_id: str, draft_key: int,
+                      path: Path | None = None) -> list[dict]:
+    return [e for e in list_events(job_id, path=path)
+            if e["kind"] == "approval"
+            and (e["payload"] or {}).get("draft_key") == draft_key]
+
+
+def approval_valid_at(job_id: str, approval_id: int, virtual_time: str,
+                      path: Path | None = None) -> tuple[bool, str]:
+    """An approval is valid 30 minutes after it is given on the virtual
+    clock, or until the item's own deadline, whichever is first. Any later
+    edit of the draft voids it."""
+    approval = next((e for e in list_events(job_id, path=path)
+                     if e["kind"] == "approval" and e["id"] == approval_id),
+                    None)
+    if approval is None:
+        return False, "unknown approval"
+    payload = approval["payload"] or {}
+    head = draft_head(job_id, int(payload.get("draft_key", -1)), path=path)
+    if head is None or head_version_hash(head) != payload.get("version_hash"):
+        return False, "draft edited"
+    try:
+        moment = clock.at(virtual_time)
+        given = clock.at(str(payload.get("approved_at", "07:00")))
+    except (ValueError, KeyError):
+        return False, "unparseable virtual time"
+    from datetime import timedelta
+    if moment > given + timedelta(minutes=APPROVAL_VALID_MINUTES):
+        return False, "approval expired"
+    deadline = payload.get("deadline")
+    if deadline is not None:
+        try:
+            late = moment > clock.at(deadline)
+        except (ValueError, KeyError):
+            return False, "unparseable virtual time"
+        if late:
+            return False, "hold lapsed"
+    return True, "approval covers this exact version"
+
+
+def deliver_approved(job_id: str, approval_id: int, virtual_time: str,
+                     path: Path | None = None) -> dict:
+    """Move an approved draft to the simulated outbox, once. Refuses stale,
+    expired, lapsed or already-used approvals."""
+    valid, reason = approval_valid_at(job_id, approval_id, virtual_time,
+                                      path=path)
+    if not valid:
+        return {"ok": False, "reason": reason}
+    used = [e for e in list_events(job_id, path=path)
+            if e["kind"] == "delivered"
+            and (e["payload"] or {}).get("approval_id") == approval_id]
+    if used:
+        return {"ok": False, "reason": "already delivered"}
+    approval = next(e for e in list_events(job_id, path=path)
+                    if e["id"] == approval_id)
+    head = draft_head(job_id, int((approval["payload"] or {}).get(
+        "draft_key", -1)), path=path)
+    payload = (head["payload"] or {}) if head else {}
+    event = append_event(
+        job_id, virtual_time, "delivered",
+        {"approval_id": approval_id, "draft_id": (head or {}).get("id"),
+         "to": payload.get("to"), "subject": payload.get("subject"),
+         "body": payload.get("body"), "outbox": OUTBOX_LABEL},
+        path=path)
+    return {"ok": True, "delivered_id": event["id"]}

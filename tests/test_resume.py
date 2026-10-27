@@ -178,20 +178,26 @@ def test_morning_page_renders_label_ack_drafts_checks(tmp_path, monkeypatch):
     assert "permission" in body and "once-only" in body
 
 
-def test_approve_stub_records_event(tmp_path, monkeypatch):
+def test_approve_exact_version_delivers_to_outbox(tmp_path, monkeypatch):
+    from app import gateway as gateway_mod
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
     job_id = _seed_answered()
     runner.resume_job(job_id, respond_fn=_resume_stub(job_id))
+    head = next(e for e in list_events(job_id) if e["kind"] == "draft")
+    version_hash = gateway_mod.head_version_hash(head)
     client = TestClient(main_mod.app, raise_server_exceptions=False)
     response = client.post(
         f"/jobs/{job_id}/approve",
-        content="draft_id=3",
+        content=f"draft_id={head['id']}&version_hash={version_hash}",
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         follow_redirects=False,
     )
     assert response.status_code == 303
     kinds = [e["kind"] for e in list_events(job_id)]
-    assert "approval_requested" in kinds
+    assert "approval" in kinds
+    delivered = [e for e in list_events(job_id) if e["kind"] == "delivered"]
+    assert len(delivered) == 1
+    assert delivered[0]["payload"]["outbox"] == "Simulated delivery"
 
 
 def test_answer_endpoint_default_and_override(tmp_path, monkeypatch):
