@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import httpx
@@ -28,6 +30,11 @@ import httpx
 sys.path.insert(0, ".")
 
 from app.adapter import BASE_URL, MODEL, api_key, reasoning_items_of, respond
+
+
+def runs_dir() -> Path:
+    """Run records live under DATA_DIR/runs (default ./data locally)."""
+    return Path(os.environ.get("DATA_DIR", "data")) / "runs"
 
 SCAN_PDF = Path("fixtures/baltic_quote_Q-1187-B.pdf")
 TEXT_PDF = Path("fixtures/baltic_quote_Q-1187-B_text.pdf")
@@ -116,7 +123,74 @@ def usage_line(result: dict) -> dict:
     }
 
 
+def build_record(
+    run_at_utc: str,
+    effort: str,
+    max_output_tokens: int,
+    file_send_mode: str,
+    scan_file_id: str | None,
+    text_file_id: str | None,
+    portal_version: int,
+    call1: dict,
+    call2: dict,
+    claims: list,
+) -> dict:
+    """Assemble the JSON-serialisable run record (no secrets)."""
+    file_ids = {SCAN_PDF.name: scan_file_id, TEXT_PDF.name: text_file_id}
+    record_claims = []
+    for claim in claims:
+        source = claim.get("source")
+        record_claims.append(
+            {
+                "source": source,
+                "version": claim.get("version"),
+                "file_id": file_ids.get(source),
+                "quote": claim.get("delivery_commitment"),
+            }
+        )
+    # The portal record travels inline, so it has a version, not a file id.
+    for entry in record_claims:
+        if entry["source"] == PORTAL_JSON.name:
+            entry["version"] = entry["version"] or str(portal_version)
+
+    def call_entry(name: str, result: dict) -> dict:
+        usage = result.get("usage") or {}
+        return {
+            "name": name,
+            "model": result.get("model"),
+            "effort": effort,
+            "seconds": round(result["seconds"], 2),
+            "input_tokens": usage.get("input_tokens"),
+            "output_tokens": usage.get("output_tokens"),
+            "reasoning_tokens": (
+                usage.get("reasoning_tokens")
+                or (usage.get("output_tokens_details") or {}).get("reasoning_tokens")
+            ),
+            "status": result.get("status"),
+        }
+
+    in1 = (call1.get("usage") or {}).get("input_tokens")
+    in2 = (call2.get("usage") or {}).get("input_tokens")
+    return {
+        "record_version": 1,
+        "script": "scripts/read_sources.py",
+        "model_requested": MODEL,
+        "model_reported": call1.get("model"),
+        "run_at_utc": run_at_utc,
+        "effort": effort,
+        "max_output_tokens": max_output_tokens,
+        "file_send_mode": file_send_mode,
+        "calls": [call_entry("first", call1), call_entry("replay", call2)],
+        "replay_input_tokens": in2,
+        "first_call_input_tokens": in1,
+        "claims": record_claims,
+    }
+
+
 def main() -> int:
+    run_at_utc = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    effort = "low"
+    max_output_tokens = 2048
     base = BASE_URL
     print(f"files base: {base}/files (purpose=user_data; no expiry supported)")
     scan_meta = upload_pdf(SCAN_PDF)
@@ -143,7 +217,7 @@ def main() -> int:
     try:
         call1 = respond(
             INSTRUCTIONS, first_input, tools=[RECORD_CLAIM_TOOL],
-            effort="low", max_output_tokens=2048,
+            effort=effort, max_output_tokens=max_output_tokens,
         )
         file_send_mode = "file_id"
     except Exception as exc:  # noqa: BLE001 — probe fallback path
@@ -160,7 +234,7 @@ def main() -> int:
             )
         call1 = respond(
             INSTRUCTIONS, first_input, tools=[RECORD_CLAIM_TOOL],
-            effort="low", max_output_tokens=2048,
+            effort=effort, max_output_tokens=max_output_tokens,
         )
         file_send_mode = "base64-inline"
     print(f"send mode: {file_send_mode}")
@@ -195,7 +269,7 @@ def main() -> int:
     )
     call2 = respond(
         INSTRUCTIONS, replay_input, tools=[RECORD_CLAIM_TOOL],
-        effort="low", max_output_tokens=2048,
+        effort=effort, max_output_tokens=max_output_tokens,
     )
     print("call2 usage: " + json.dumps(usage_line(call2)))
     print(f"call2 text: {call2['text'][:200]!r}")
@@ -203,6 +277,18 @@ def main() -> int:
     in1 = (call1.get("usage") or {}).get("input_tokens")
     in2 = (call2.get("usage") or {}).get("input_tokens")
     print(f"replay billing: call1 input {in1} vs call2 input {in2}")
+
+    record = build_record(
+        run_at_utc, effort, max_output_tokens, file_send_mode,
+        scan_meta["id"], text_meta["id"], portal_record.get("version", 1),
+        call1, call2, claims,
+    )
+    out_dir = runs_dir()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out_path = out_dir / f"read-sources-{stamp}.json"
+    out_path.write_text(json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"record written: {out_path}")
 
     delete_file(scan_meta["id"])
     delete_file(text_meta["id"])
