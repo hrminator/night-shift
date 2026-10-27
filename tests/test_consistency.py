@@ -52,24 +52,29 @@ def _seed_hold_job(answer_vt="01:05"):
     answer = append_event(job_id, answer_vt, "owner_answer",
                           {"choice": "Bergen: the venue can receive it",
                            "source": "owner"})
-    fields = {
+    hold_args = {
+        "portal": "vestland_portal",
+        "action": "capacity_hold",
         "product": "100 tote bags with logo",
         "quantity": 100,
         "print_file": "fjord-fern-logo-print.pdf",
         "address": VENUE_ADDRESS,
         "delivery_window": "Wed Nov 11 08:00-12:00",
         "ordering_contact": "Kari Strandli, studio coordinator, orders@fjord-fern.example.com, +47 22 00 11 22",
-        "recipient_can_receive": "yes",
+        "recipient_can_receive": True,
         "cost": 0,
         "binding": False,
         "hold_ends": "09:00",
         "sources": {
-            "recipient_can_receive": answer["id"],
-            "route": "vestland_portal.json v1",
-            "window": "vestland_portal.json v1",
+            "recipient_can_receive": {"kind": "owner_answer",
+                                      "id": answer["id"]},
+            "route": {"kind": "portal", "version": 1},
+            "window": {"kind": "portal", "version": 1},
+            "ordering_contact": {"kind": "studio_file"},
+            "print_file": {"kind": "studio_file"},
         },
     }
-    return job_id, {"portal": "Vestland Tekstil", "fields": fields}
+    return job_id, hold_args
 
 
 def _decision_args(outcome):

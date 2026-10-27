@@ -22,6 +22,7 @@ import re
 from pathlib import Path
 
 from app import clock
+from app import hold_schema as _hold_schema
 from app import portal as portal_mod
 from app.store import append_event, list_events
 
@@ -169,12 +170,14 @@ def _check_permission(job_id: str, path: Path | None) -> tuple[bool, str, str]:
 def _check_target(args: dict) -> tuple[bool, str]:
     portal = args.get("portal")
     if not isinstance(portal, str) or "vestland" not in portal.lower():
-        return False, "target must be Vestland Tekstil's order portal"
+        return (False, "target must be Vestland Tekstil's order portal;"
+                f' expected {_hold_schema.HOLD_SHAPE["portal"]}')
     fields = args.get("fields", {})
     action = fields.get("action", "capacity hold")
     if isinstance(action, str) and "order" in action.lower() \
             and "hold" not in action.lower():
-        return False, "action must be a capacity hold, not an order"
+        return (False, "action must be a capacity hold, not an order;"
+                f' expected {_hold_schema.HOLD_SHAPE["action"]}')
     return True, "Vestland portal, action = capacity hold"
 
 
@@ -186,7 +189,10 @@ def _check_fields(args: dict) -> tuple[bool, str, dict]:
     for key in fields:
         mapped = _normalize_key(str(key))
         if mapped is None:
-            return False, f"field not permitted: {key}", {}
+            return (False, f"field not permitted: {key}; allowed fields are"
+                    " product, quantity, print_file, address, delivery_window,"
+                    " ordering_contact, recipient_can_receive, cost, binding,"
+                    " hold_ends, sources", {})
         normalized[mapped] = fields[key]
     required = ["product", "quantity", "print_file", "address",
                 "delivery_window", "ordering_contact",
@@ -194,36 +200,46 @@ def _check_fields(args: dict) -> tuple[bool, str, dict]:
                 "sources"]
     missing = [key for key in required if key not in normalized]
     if missing:
-        return False, f"missing required fields: {missing}", {}
+        hints = "; ".join(
+            f'missing "{key}": expected {_hold_schema.HOLD_SHAPE[key]}'
+            for key in missing)
+        return False, hints, {}
     if not isinstance(normalized["product"], str) \
             or not normalized["product"].strip():
-        return False, "product must be a non-empty string", {}
+        return (False, "product must be a non-empty string;"
+                f' expected {_hold_schema.HOLD_SHAPE["product"]}', {})
     quantity = normalized["quantity"]
     if str(quantity).strip() != "100":
-        return False, "quantity must be 100", {}
+        return (False, "quantity must be 100;"
+                f' expected {_hold_schema.HOLD_SHAPE["quantity"]}', {})
     address = normalized["address"]
     if not isinstance(address, str) or not any(
             marker in _fold(address)
             for marker in _owner_address_markers()):
-        return False, "address must be one address from the owner's list", {}
+        return (False, "address must be one address from the owner's list;"
+                f' expected {_hold_schema.HOLD_SHAPE["address"]}', {})
     window = normalized["delivery_window"]
     if not isinstance(window, str) or "08:00-12:00" not in \
             window.replace(" ", ""):
-        return False, "delivery window must be Wed Nov 11 08:00-12:00", {}
+        return (False, "delivery window must be Wed Nov 11 08:00-12:00;"
+                f' expected {_hold_schema.HOLD_SHAPE["delivery_window"]}', {})
     confirm = normalized["recipient_can_receive"]
     if not (confirm is True or (isinstance(confirm, str)
                                 and confirm.strip().lower() in
                                 ("yes", "y", "confirmed", "true"))):
-        return False, "recipient-can-receive must be confirmed yes", {}
+        return (False, "recipient-can-receive must be confirmed yes;"
+                f' expected {_hold_schema.HOLD_SHAPE["recipient_can_receive"]}', {})
     wanted_file = studio_print_file()
     print_file = normalized.get("print_file")
     if not isinstance(print_file, str) or not print_file.strip():
-        return False, "print file must be a non-empty string", {}
+        return (False, "print file must be a non-empty string;"
+                f' expected {_hold_schema.HOLD_SHAPE["print_file"]}', {})
     if not wanted_file or wanted_file.lower() not in print_file.lower():
         return False, f"print file must be {wanted_file}", {}
     contact = normalized.get("ordering_contact")
     if not isinstance(contact, str) or not contact.strip():
-        return False, "ordering contact must be a non-empty string", {}
+        return (False, "ordering contact must be a non-empty string;"
+                f' expected {_hold_schema.HOLD_SHAPE["ordering_contact"]}', {})
     studio_name = str((studio_record().get("ordering_contact") or {}).get(
         "name", ""))
     studio_email = str((studio_record().get("ordering_contact") or {}).get(
@@ -231,8 +247,9 @@ def _check_fields(args: dict) -> tuple[bool, str, dict]:
     if not studio_name or (
             _fold(studio_name) not in _fold(contact)
             and studio_email not in contact.lower()):
-        return False, "ordering contact must be the studio's ordering " \
-            "contact from fixtures/studio.json", {}
+        return (False, "ordering contact must be the studio's ordering "
+                "contact from fixtures/studio.json;"
+                f' expected {_hold_schema.HOLD_SHAPE["ordering_contact"]}', {})
     return True, "fields permitted; quantity 100; address on owner list", \
         normalized
 
@@ -243,22 +260,27 @@ def _check_terms(normalized: dict) -> tuple[bool, str]:
         isinstance(cost, str) and cost.strip().lower()
         in ("0", "nok 0", "free", "no cost", "nothing", "0 nok"))
     if not cost_ok:
-        return False, "hold must cost 0"
+        return (False, "hold must cost 0;"
+                f' expected {_hold_schema.HOLD_SHAPE["cost"]}')
     binding = normalized["binding"]
     binding_ok = binding is False or (
         isinstance(binding, str) and binding.strip().lower()
         in ("false", "no", "non-binding", "nonbinding", "not binding"))
     if not binding_ok:
-        return False, "hold must be non-binding"
+        return (False, "hold must be non-binding;"
+                f' expected {_hold_schema.HOLD_SHAPE["binding"]}')
     ends = normalized["hold_ends"]
     if not isinstance(ends, str):
-        return False, "hold end must state a time at or before 09:00"
+        return (False, "hold end must state a time at or before 09:00;"
+                f' expected {_hold_schema.HOLD_SHAPE["hold_ends"]}')
     match = re.search(r"(\d{1,2}):(\d{2})", ends)
     if match is None:
-        return False, "hold end must state a time at or before 09:00"
+        return (False, "hold end must state a time at or before 09:00;"
+                f' expected {_hold_schema.HOLD_SHAPE["hold_ends"]}')
     minutes = int(match.group(1)) * 60 + int(match.group(2))
     if minutes > 9 * 60:
-        return False, "hold must end at or before 09:00"
+        return (False, "hold must end at or before 09:00;"
+                f' expected {_hold_schema.HOLD_SHAPE["hold_ends"]}')
     return True, "cost 0, non-binding, ends at or before 09:00"
 
 
@@ -298,7 +320,8 @@ def _check_sources(job_id: str, normalized: dict,
                    path: Path | None) -> tuple[bool, str]:
     sources = normalized.get("sources")
     if not isinstance(sources, dict):
-        return False, "sources must map each stated fact to its source"
+        return (False, "sources must map each stated fact to its source;"
+                f' expected {_hold_schema.HOLD_SHAPE["sources"]}')
     flat = {_normalize_source_key(str(key)): value
             for key, value in sources.items()}
     answer_ids = {e["id"] for e in owner_answers(job_id, path=path)}
@@ -312,16 +335,19 @@ def _check_sources(job_id: str, normalized: dict,
     elif recipient_source in claim_by_id and "venue" in str(claim_by_id[recipient_source].get("source", "")).lower():
         pass
     else:
-        return False, "'recipient can receive' must cite the owner_answer" \
-            f" event id; got {recipient_source!r}"
+        return (False, "'recipient can receive' must cite the owner_answer"
+                f" event id; got {recipient_source!r};"
+                f' expected {_hold_schema.HOLD_SHAPE["sources"]}')
     for key in ("route", "window"):
         pointer = flat.get(key)
         if not isinstance(pointer, str):
-            return False, f"{key} must cite the portal record version"
+            return (False, f'"{key}" must cite the portal record version;'
+                    f' expected {_hold_schema.HOLD_SHAPE["sources"]}')
         lowered = pointer.lower()
         if not ("v1" in lowered or ("1" in lowered and (
                 "vestland" in lowered or "portal" in lowered))):
-            return False, f"{key} must cite the portal record version"
+            return (False, f'"{key}" must cite the portal record version;'
+                    f' expected {_hold_schema.HOLD_SHAPE["sources"]}')
     if recipient_source in answer_ids:
         how = "owner answer"
     else:
@@ -350,11 +376,20 @@ def check_submit_hold(
     attempt_refused event. A retry with a known operation id returns the
     stored acknowledgement and appends nothing.
     """
-    if not isinstance(args, dict) or not isinstance(args.get("portal"), str) \
-            or not isinstance(args.get("fields"), dict):
+    normalized_args = _hold_schema.normalize_hold_args(args)
+    if normalized_args is None \
+            or not isinstance(normalized_args.get("portal"), str) \
+            or not isinstance(normalized_args.get("fields"), dict):
         return {"ok": False, "malformed": True,
-                "reason": "submit_hold needs portal (string) and fields "
-                "(object)"}
+                "reason": "submit_hold needs a hold payload with portal,"
+                " action, product, quantity, print_file, address,"
+                " delivery_window, ordering_contact, recipient_can_receive,"
+                " cost, binding, hold_ends and sources"}
+    fields = dict(normalized_args["fields"])
+    if isinstance(fields.get("sources"), dict):
+        fields["sources"] = _hold_schema.normalize_hold_sources(
+            fields["sources"])
+    args = {"portal": normalized_args["portal"], "fields": fields}
     operation_id = operation_id_for(job_id, "submit_hold", args)
     existing = portal_mod.get_operation(operation_id, path=path)
     if existing is not None:

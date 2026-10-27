@@ -10,8 +10,8 @@ import sys
 sys.path.insert(0, ".")
 
 KINDS = ("decision", "question", "check", "effect", "step_failed",
-         "nudge", "model_plain_text", "tool_limit", "claim",
-         "owner_answer")
+         "nudge", "model_plain_text", "tool_limit", "turn_budget", "claim",
+         "owner_answer", "attempt_refused", "tool_malformed", "tool_refused")
 
 
 def main() -> int:

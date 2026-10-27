@@ -19,6 +19,7 @@ from collections.abc import Callable
 import httpx
 
 from app import clock
+from app import hold_schema as _hold_schema
 from app.adapter import BASE_URL, api_key, respond
 from app.store import append_event, create_job, list_events, set_job_status
 
@@ -28,8 +29,8 @@ REVISED_PDF = FIXTURES / "baltic_quote_Q-1187-B.pdf"
 
 EFFORT = "medium"
 MAX_OUTPUT_TOKENS = 8192
-MAX_MODEL_CALLS = 12
-TOOL_BUDGET = 12
+MAX_MODEL_CALLS = 16
+TOOL_BUDGET = 16
 MAX_TOOL_CALLS = TOOL_BUDGET
 
 VT_READ = "22:30"
@@ -139,18 +140,14 @@ SUBMIT_HOLD_TOOL = {
     "type": "function",
     "name": "submit_hold",
     "description": (
-        "Submit one capacity-hold request to the supplier portal."
+        "Submit one capacity-hold request to the supplier portal. Fill every"
+        " property exactly as its one-line description says: portal is"
+        " vestland_portal, action is capacity_hold, quantity is 100, cost"
+        " is 0, binding is false, hold_ends is 09:00, sources points at"
+        " your evidence ids."
         " Checked in code against the standing permission."
     ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "portal": {"type": "string"},
-            "fields": {"type": "object"},
-        },
-        "required": ["portal", "fields"],
-        "additionalProperties": False,
-    },
+    "parameters": _hold_schema.SUBMIT_HOLD_PARAMETERS,
 }
 
 PROPOSE_MESSAGE_TOOL = {
@@ -488,6 +485,17 @@ def execute_tool_call(
         return {"type": "function_call_output", "call_id": call_id, "output": json.dumps({"stored": True, "check_id": event["id"]})}
     if name == "submit_hold":
         from app import gateway as _gw
+        schema_errors = _hold_schema.hold_schema_errors(args)
+        if schema_errors:
+            event = append_event(
+                job_id, virtual_time or VT_REASSESS, "tool_malformed",
+                {"tool": name, "call_id": call_id,
+                 "errors": schema_errors})
+            return {"type": "function_call_output", "call_id": call_id,
+                    "output": json.dumps(
+                        {"error": "submit_hold payload failed the schema: "
+                         + "; ".join(schema_errors),
+                         "event_id": event["id"]})}
         outcome = _gw.check_submit_hold(job_id, args, virtual_time or VT_REASSESS)
         if outcome.get("malformed"):
             event = append_event(job_id, virtual_time or VT_REASSESS, "tool_malformed", {"tool": name, "call_id": call_id})
@@ -702,6 +710,13 @@ def run_turn(
                 {"calls": tool_calls_made, "kept": tool_budget,
                  "note": "turn tool budget reached"},
             )
+            append_event(
+                job_id, virtual_time, "turn_budget",
+                {"tool_calls": tool_calls_made,
+                 "tool_budget": _effective,
+                 "max_model_calls": max_model_calls,
+                 "note": "turn ended on its tool-call budget"},
+            )
             return {
                 "status": "complete", "result": result,
                 "input": pending_input, "tool_calls": tool_calls_made,
@@ -710,6 +725,12 @@ def run_turn(
         job_id, virtual_time, "tool_limit",
         {"note": f"turn stopped after {max_model_calls} model calls",
          "tool_calls": tool_calls_made},
+    )
+    append_event(
+        job_id, virtual_time, "turn_budget",
+        {"tool_calls": tool_calls_made,
+         "max_model_calls": max_model_calls,
+         "note": "turn ended on its model-call budget"},
     )
     return {
         "status": "complete", "result": result,
@@ -755,6 +776,17 @@ def execute_resume_tool_call(
                  "event_id": event["id"]}),
         }
     if name == "submit_hold":
+        schema_errors = _hold_schema.hold_schema_errors(args)
+        if schema_errors:
+            event = append_event(
+                job_id, vt, "tool_malformed",
+                {"tool": name, "call_id": call_id,
+                 "errors": schema_errors})
+            return {"type": "function_call_output", "call_id": call_id,
+                    "output": json.dumps(
+                        {"error": "submit_hold payload failed the schema: "
+                         + "; ".join(schema_errors),
+                         "event_id": event["id"]})}
         outcome = gateway_mod.check_submit_hold(job_id, args, vt)
         if outcome.get("malformed"):
             event = append_event(
@@ -822,20 +854,25 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
         f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}."
         f" The answer arrived at {answer_vt}; the hold must be submitted"
         " before 02:00.\n\n"
-        "To place the hold, call submit_hold once with EXACTLY this shape."
-        " Use these exact field names, no extra fields. cost is the number 0,"
-        " binding is boolean false, and sources.recipient can receive is the"
-        " NUMBER of the owner_answer event (not the answer text):\n"
-        "{\"portal\": \"Vestland Tekstil\", \"fields\": {\"product\": \"100 tote"
-        " bags with logo\", \"quantity\": 100, \"print file\": \"" + print_file + "\","
+        "To place the hold, call submit_hold once with EXACTLY this shape"
+        " (every property is required, no extra properties). cost is the"
+        " number 0, binding is boolean false, recipient_can_receive is"
+        " boolean true, and sources.recipient_can_receive is the evidence"
+        " pointer to the owner_answer event below:\n"
+        "{\"portal\": \"vestland_portal\", \"action\": \"capacity_hold\","
+        " \"product\": \"100 tote bags with logo\", \"quantity\": 100,"
+        " \"print_file\": \"" + print_file + "\","
         " \"address\": \"Sjøsalen, Sjøgaten 5, 5003 Bergen\","
-        " \"delivery window\": \"Wed Nov 11 08:00-12:00\","
-        " \"ordering contact\": \"" + contact + "\","
-        " \"recipient can receive\": \"yes\", \"cost\": 0,"
-        " \"binding\": false, \"hold ends\": \"09:00\", \"sources\":"
-        f" {{\"recipient can receive\": {answer_id}, \"route\":"
-        " \"vestland_portal.json v1\", \"window\":"
-        " \"vestland_portal.json v1\"}}}. The gateway checks all of this in"
+        " \"delivery_window\": \"Wed Nov 11 08:00-12:00\","
+        " \"ordering_contact\": \"" + contact + "\","
+        " \"recipient_can_receive\": true, \"cost\": 0,"
+        " \"binding\": false, \"hold_ends\": \"09:00\", \"sources\":"
+        f" {{\"recipient_can_receive\": {{\"kind\": \"owner_answer\","
+        f" \"id\": {answer_id}}}, \"route\": {{\"kind\": \"portal\","
+        " \"version\": 1}}, \"window\": {{\"kind\": \"portal\","
+        " \"version\": 1}}, \"ordering_contact\": {{\"kind\":"
+        " \"studio_file\"}}, \"print_file\": {{\"kind\": \"studio_file\"}}}}}}."
+        " The gateway checks all of this in"
         " code and refuses anything outside the permission; if it refuses,"
         " read the reason and fix exactly that.\n\n"
         "Then call propose_message three times for the 07:00 review (exact"

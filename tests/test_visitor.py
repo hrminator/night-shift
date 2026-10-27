@@ -125,20 +125,23 @@ def _resume_stub(job_id: str):
         state["n"] += 1
         if n == 0:
             return {"output": [_call("submit_hold", {
-                "portal": "Vestland Tekstil",
-                "fields": {
-                    "product": "100 tote bags with logo",
-                    "quantity": 100,
-                    "print_file": PRINT_FILE,
-                    "address": VENUE_ADDRESS,
-                    "delivery_window": "Wed Nov 11 08:00-12:00",
-                    "ordering_contact": CONTACT,
-                    "recipient_can_receive": "yes",
-                    "cost": 0, "binding": False, "hold_ends": "09:00",
-                    "sources": {
-                        "recipient_can_receive": aid,
-                        "route": "vestland_portal.json v1",
-                        "window": "vestland_portal.json v1"}}},
+                "portal": "vestland_portal",
+                "action": "capacity_hold",
+                "product": "100 tote bags with logo",
+                "quantity": 100,
+                "print_file": PRINT_FILE,
+                "address": VENUE_ADDRESS,
+                "delivery_window": "Wed Nov 11 08:00-12:00",
+                "ordering_contact": CONTACT,
+                "recipient_can_receive": True,
+                "cost": 0, "binding": False, "hold_ends": "09:00",
+                "sources": {
+                    "recipient_can_receive": {"kind": "owner_answer",
+                                              "id": aid},
+                    "route": {"kind": "portal", "version": 1},
+                    "window": {"kind": "portal", "version": 1},
+                    "ordering_contact": {"kind": "studio_file"},
+                    "print_file": {"kind": "studio_file"}}},
                 "s1")], "text": ""}
         if 1 <= n <= 3:
             return {"output": [_call(
