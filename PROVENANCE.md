@@ -45,3 +45,13 @@ Written Tue Oct 27 (all fictional, generated in this repo; PDFs built by `script
 - `fixtures/decision_facts.json` — the ONE decision-facts file: venue delivery window (null) and recipient-can-receive (null), with the contrast-run values documented inside.
 - `fixtures/events.json` — scheduled events: 21:30 handoff, 00:38 revised quote arrives.
 - `fixtures/studio.json` — written Day 3 step C (Muse Code session): the studio's ordering contact (Kari Strandli, fictional name/role/email/phone), the print file name (fjord-fern-logo-print.pdf, 300 dpi, black, name only) and the studio's contact list (owner, ordering contact, venue contact). Read as a source in every night turn; the gateway checks the hold's contact and print file against it and uses its list for the draft leak check. The brief's "Addresses and contacts you may use" line names both fields.
+
+## Evaluation (Day 4 step A, Muse Code session)
+
+All evaluation material is new work written for this project; no external benchmarks, datasets or harnesses are reused.
+
+- `cases/*.json` (12 files) — the wake pairs (timing/evidence/alternatives/necessity must- and no-wake) and the complete-job cases W1-W4. Each states its overrides plus expected words (quoting SCENARIO.md; AGENTS.md defines no verbatim outcome lines to quote) and machine-checkable predicates.
+- `app/eval_world.py` — case loader applying overrides in memory only; fixture files on disk are never touched.
+- `app/eval_night.py` + `scripts/eval.py` — harness running each case as a fresh night in a throwaway DATA_DIR with real muse-spark-1.3 calls, exporting every job.
+- `app/eval_score.py` — scorer reading only the app's event log; cost from the harness's own usage records at Spark 1.3 prices ($1.25 input, $0.15 cached input, $4.25 output per million).
+- `results/` — pilot outputs committed per part 4; every run marked development run.
