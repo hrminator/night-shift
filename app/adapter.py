@@ -24,7 +24,9 @@ import httpx
 BASE_URL = "https://api.meta.ai/v1"
 RESPONSES_PATH = "/responses"
 MODEL = "muse-spark-1.3"
-KEY_ENV_VAR = "NIGHT_SHIFT_API_KEY_EVAL"
+LIVE_KEY_ENV_VAR = "NIGHT_SHIFT_API_KEY_LIVE"
+EVAL_KEY_ENV_VAR = "NIGHT_SHIFT_API_KEY_EVAL"
+KEY_ENV_VAR = EVAL_KEY_ENV_VAR
 
 INCLUDE_ENCRYPTED_REASONING = ["reasoning.encrypted_content"]
 
@@ -38,13 +40,13 @@ def log_path_for(now: datetime | None = None) -> Path:
 
 
 def api_key() -> str:
-    """Read the eval key from the environment. Never logged or printed."""
+    """Read the live key first, falling back to the eval key. Never logged or printed."""
     import os
 
-    key = os.environ.get(KEY_ENV_VAR)
+    key = os.environ.get(LIVE_KEY_ENV_VAR) or os.environ.get(EVAL_KEY_ENV_VAR)
     if not key:
         raise RuntimeError(
-            f"{KEY_ENV_VAR} is not set in the environment; "
+            f"{LIVE_KEY_ENV_VAR} / {EVAL_KEY_ENV_VAR} is not set in the environment; "
             "export it before making model calls."
         )
     return key

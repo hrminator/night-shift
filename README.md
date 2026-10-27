@@ -22,7 +22,7 @@ Live: https://night-shift-demo.fly.dev/ (redeploy pending). Next: reliability at
 The app reads its run records (and later its SQLite file) from `DATA_DIR`,
 default `./data` locally; on Fly `DATA_DIR=/data`, a 1 GB volume. The image
 already contains `data/` and `fixtures/` as seed content. The live site key
-stays a Fly secret; it is never written into files. From this folder, once the
+stays a Fly secret and is read first (falling back to NIGHT_SHIFT_API_KEY_EVAL); it is never written into files. From this folder, once the
 hosting account exists, run these three commands (do not run them before then):
 
 ```powershell

@@ -40,3 +40,44 @@ def test_reasoning_items_kept_in_order_and_droppable_whole():
     assert [i.get("type") for i in dropped] == ["message"]
     # The surviving message item is untouched.
     assert dropped[0]["content"][0]["text"] == "hi"
+
+
+def test_api_key_prefers_live_over_eval(monkeypatch):
+    import app.adapter as adapter
+
+    monkeypatch.setenv("NIGHT_SHIFT_API_KEY_LIVE", "live-key")
+    monkeypatch.setenv("NIGHT_SHIFT_API_KEY_EVAL", "eval-key")
+    assert adapter.api_key() == "live-key"
+
+
+def test_api_key_falls_back_to_eval(monkeypatch):
+    import app.adapter as adapter
+
+    monkeypatch.delenv("NIGHT_SHIFT_API_KEY_LIVE", raising=False)
+    monkeypatch.setenv("NIGHT_SHIFT_API_KEY_EVAL", "eval-key")
+    assert adapter.api_key() == "eval-key"
+
+
+def test_api_key_reads_live_only(monkeypatch):
+    import app.adapter as adapter
+
+    monkeypatch.setenv("NIGHT_SHIFT_API_KEY_LIVE", "live-key")
+    monkeypatch.delenv("NIGHT_SHIFT_API_KEY_EVAL", raising=False)
+    assert adapter.api_key() == "live-key"
+
+
+def test_api_key_error_names_both_vars(monkeypatch):
+    import pytest
+
+    import app.adapter as adapter
+
+    monkeypatch.delenv("NIGHT_SHIFT_API_KEY_LIVE", raising=False)
+    monkeypatch.delenv("NIGHT_SHIFT_API_KEY_EVAL", raising=False)
+    with pytest.raises(RuntimeError, match="NIGHT_SHIFT_API_KEY_LIVE"):
+        adapter.api_key()
+    try:
+        adapter.api_key()
+    except RuntimeError as exc:
+        assert "NIGHT_SHIFT_API_KEY_EVAL" in str(exc)
+    else:  # pragma: no cover - api_key must raise when both are missing
+        raise AssertionError("api_key() did not raise with no keys set")
