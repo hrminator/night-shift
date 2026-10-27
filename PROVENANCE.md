@@ -9,8 +9,8 @@ Everything in this repository was created during the hackathon building period (
 
 ## Who and what built this
 
-- **Builder:** Muse Code (Meta), directed by the owner. All code, fixtures, prompts, tests and the case files were written in Muse Code sessions during the building period.
-- **Planning and direction help:** a general AI assistant (Claude) helped write the plan, this brief, the scenario text, the README and the video script, and drafted the prompts given to Muse Code on the owner's direction. It wrote no code, fixtures or tests; those are Muse Code's work.
+- **Built by:** one person with AI tools, Oct 27–Nov 3, 2026. All code, tests and fixtures were written by Muse Code (muse-spark-1.3), driven by the prompt files in `prompts/`.
+- **Planning and direction help:** a general AI assistant (Claude) wrote and sent those prompt files and the README prose, and ran Muse Code headless; API details in the prompts are copied from Meta's docs and labelled as such. I set direction, made every decision and reviewed the results. Plain-language design documents written before Oct 27 were used as inputs; no pre-event code is in this repository.
 - **Models in the product:** Muse Spark 1.3 through the Meta Model API (Responses API).
 
 ## Dependencies
@@ -20,6 +20,8 @@ Everything in this repository was created during the hackathon building period (
 Added Tue Oct 27 (Python 3.13.5, `uv sync`): fastapi 0.162.0 (MIT), uvicorn 0.54.0 (BSD-3-Clause), httpx 0.28.1 (BSD-3-Clause), pytest 9.1.1 (MIT), plus their transitive deps pinned in `uv.lock`.
 
 Added Tue Oct 27 (`uv add`): reportlab 5.1.0 (BSD), Pillow 13.0.0 (HPND) — for generating the Baltic quote PDFs and the scan-styled raster effect.
+
+Added Tue Oct 27: tzdata 2026.5 (Apache-2.0) — provider of IANA time zone data, needed for the virtual clock on Windows.
 
 ## Fonts and assets
 
