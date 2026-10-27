@@ -51,6 +51,15 @@ CREATE TABLE IF NOT EXISTS locks (
   owner TEXT,
   expires_at TEXT
 );
+CREATE TABLE IF NOT EXISTS operations (
+  operation_id TEXT PRIMARY KEY,
+  job_id TEXT NOT NULL,
+  tool TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  effect_event_id INTEGER,
+  acknowledgement TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
 """
 
 
