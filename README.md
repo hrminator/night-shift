@@ -34,8 +34,8 @@ fly deploy
 ## Results
 
 Recorded runs (muse-spark-1.3, Tue Oct 27; exports in `data/runs/`, details in `BUILDLOG.md`):
-- Hero `1b7dfbdae214`: notified at 00:47 ("Can Sjøsalen, Bergen receive the 100 tote bags during Wed Nov 11 08:00-12:00 van window?"), answered 01:05, hold H-2041 placed on resume, morning page with 3 drafts.
-- Contrast `db4b4b68aebc`: venue receipt verified from its own file, decided `act_under_permission`, but its hold attempts were refused in code and the turn ran out of budget — no hold, no notification, recorded honestly.
+- Hero `6c7c7c742513`: notified at 00:47 ("Can Sjosalen, Sjogaten 5, 5003 Bergen receive the 100 tote bags in the Wed Nov 11 08:00-12:00 van window?"), answered 01:05, hold H-2041 placed on resume first try, morning page with 3 drafts.
+- Contrast `37f34f71d9df`: venue receipt verified from its own file, decided `act_under_permission` at 22:30 and placed hold H-2041 by itself under the standing permission (gateway 8/8, first try), no notification. A second identical contrast run (`36e41552448b`) disagreed with it: it woke at 00:47 asking about venue receipt though its own venue claim quoted the Wednesday delivery line, and placed no hold. Same settings, opposite nights — recorded honestly in `BUILDLOG.md`.
 
 ## Disclosure
 

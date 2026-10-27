@@ -4,7 +4,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_CACHE_DIR=/tmp/uv-cache \
     DAILY_CAP_USD=5 \
-    RECORDED_JOB=""
+    RECORDED_JOB="6c7c7c742513"
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
