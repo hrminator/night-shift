@@ -5,13 +5,50 @@ from __future__ import annotations
 import html
 import json
 import os
+import shutil
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-app = FastAPI(title="Night Shift")
+def bundled_runs_dir() -> Path:
+    """Bundled records baked into the image under the repo's data/runs."""
+    return Path(__file__).resolve().parent.parent / "data" / "runs"
+
+
+def seed_bundled_runs(target: Path | None = None, source: Path | None = None) -> list[Path]:
+    """Copy bundled read-sources-*.json records into the runtime DATA_DIR."""
+    dest = target if target is not None else data_dir() / "runs"
+    src = source if source is not None else bundled_runs_dir()
+    if sorted(dest.glob("read-sources-*.json")):
+        return []
+    try:
+        if src.resolve() == dest.resolve():
+            return []
+    except OSError:
+        pass
+    if not src.is_dir():
+        return []
+    dest.mkdir(parents=True, exist_ok=True)
+    copied: list[Path] = []
+    for item in sorted(src.glob("read-sources-*.json")):
+        out = dest / item.name
+        if out.exists():
+            continue
+        shutil.copyfile(item, out)
+        copied.append(out)
+    return copied
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    seed_bundled_runs()
+    yield
+
+
+app = FastAPI(title="Night Shift", lifespan=lifespan)
 
 #: The source whose quote block carries the scan-styled-PDF label.
 SCAN_SOURCE = "baltic_quote_Q-1187-B.pdf"
