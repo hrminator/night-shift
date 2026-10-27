@@ -76,6 +76,13 @@ Opens on the replay of the recorded hero run (real Spark calls, labelled with da
 - Commit often, with plain messages. Commit timestamps are evidence that the work is new.
 - Everything fictional stays fictional: no real companies, no real people, no personal data.
 
+## Working on this Windows machine
+
+- Your sandboxed shell starts in a system folder, not the repo. Begin every shell command with `Set-Location C:\Users\herma\night-shift` (or use absolute paths), otherwise git and relative paths fail with "not a git repository".
+- Available: Python, `uv` (C:\Python313\Scripts\uv.exe), Docker Desktop, Node. `flyctl` is not installed yet; install it with the official PowerShell installer when you reach the deploy step.
+- Keep the virtual environment inside the repo (`.venv`), never in a temp folder.
+- The API keys are in the user environment as `NIGHT_SHIFT_API_KEY_LIVE` (for the deployed site, set as a Fly secret) and `NIGHT_SHIFT_API_KEY_EVAL` (local runs and the evaluation). Read them from the environment; never write them into files or print them. Never set `META_API_KEY`, because that redirects Muse Code's own billing.
+
 ## Out of scope (do not build)
 
 Second worker lane, separate research loop, other models in the product or results, scoreboard or counterfactual pages, cache studies, raw reasoning displays, voice, real web fetching, native web search, background mode, batch, tool_search, images, SAM, Glimmer, messaging integrations, CRM, undo, user accounts, free-text briefs, QR codes.
