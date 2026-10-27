@@ -152,6 +152,21 @@ def evidence():
     return render_evidence(record)
 
 
+def _decision_section(events: list) -> str:
+    esc = html.escape
+    checks = [e for e in events if e["kind"] == "check"]
+    decisions = [e for e in events if e["kind"] == "decision"]
+    claims = {e["id"]: e for e in events if e["kind"] == "claim"}
+    if not checks and not decisions:
+        return ""
+    items = "".join(f"<li>{esc(str((c['payload'] or {}).get('name', '?')))}: {esc(str((c['payload'] or {}).get('result', '?')))} — {esc(str((c['payload'] or {}).get('note', '')))}</li>" for c in checks)
+    blocks = ""
+    for d in decisions:
+        p = d["payload"] or {}
+        cites = "".join(f"<blockquote>{esc(str(claims[cid]['payload'].get('quote', '')))} <cite>({esc(str(claims[cid]['payload'].get('source', '')))})</cite></blockquote>" for cid in (p.get("evidence") or []) if cid in claims)
+        blocks += f"<p>Decision: {esc(str(p.get('outcome', '?')))} — {esc(str(p.get('reason', '')))} (evidence {esc(str(p.get('evidence', '')))})</p>{cites}"
+    return f"<section><h2>How it decided</h2><ul>{items}</ul>{blocks}</section>"
+
 def _summarize(kind: str, payload: dict) -> str:
     if kind == "handoff":
         return "Owner hands over the brief at 21:30 and goes offline."
@@ -170,6 +185,8 @@ def _summarize(kind: str, payload: dict) -> str:
         return "Saved point for resume (full next-call input stored)."
     if kind == "owner_answer":
         return f"Owner answered: {payload.get('choice', '?')} (source: owner)."
+    if kind == "check":
+        return f"check {payload.get('name', '?')}: {payload.get('result', '?')} — {str(payload.get('note', ''))[:200]}"
     if kind == "gateway_check":
         mark = "pass" if payload.get("passed") else "FAIL"
         return f"gateway {payload.get('check', '?')}: {mark}"
@@ -197,10 +214,10 @@ def _summarize(kind: str, payload: dict) -> str:
 
 
 @app.post("/jobs/run")
-def run_job_route():
+def run_job_route(variant: str = "hero"):
     from app import runner as runner_mod
 
-    summary = runner_mod.run_job()
+    summary = runner_mod.run_job(variant=variant)
     return RedirectResponse(url=f"/jobs/{summary['job_id']}", status_code=303)
 
 
@@ -261,7 +278,7 @@ def job_page(job_id: str):
         f"<p>Status: {esc(str(job.get('status', '?')))} · "
         f"clock: {esc(str(job.get('virtual_time', '?')))} · "
         f"step: {esc(str(job.get('current_step', '')))}</p>"
-        f"{card}<h2>Events in order</h2><ol>{rows}</ol>"
+        f"{card}{_decision_section(events)}<h2>Events in order</h2><ol>{rows}</ol>"
         '<p><a href="/">Back to Night Shift</a></p></body></html>'
     )
 
@@ -325,7 +342,7 @@ def morning_page(job_id: str):
             f"{esc(str(payload.get('status', '')))}</h3>"
             f"<p>To: {esc(str(payload.get('to', '')))}</p>"
             f"<p>Subject: {esc(str(payload.get('subject', '')))}</p>"
-            f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>"
+            f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>{'<p><b>Not sent: recipient not in your contacts</b></p>' if payload.get('leak') else ''}"
             f'<form method="post" action="/jobs/{esc(job_id)}/approve">'
             f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
             "<button type=\"submit\">Approve this exact text</button>"

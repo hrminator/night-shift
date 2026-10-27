@@ -32,11 +32,14 @@ MAX_MODEL_CALLS = 6
 TOOL_BUDGET = 12
 MAX_TOOL_CALLS = TOOL_BUDGET
 
+VT_READ = "22:30"
 VT_HANDOFF = "21:30"
 VT_REVISED = "00:38"
 VT_CLAIM = "00:39"
 VT_DECISION = "00:46"
 VT_QUESTION = "00:47"
+VT_REASSESS = "00:39"
+VT_CHECK = "00:41"
 VT_CHECKPOINT = "00:47"
 VT_NUDGE = "00:48"
 VT_ANSWER = "01:05"
@@ -127,6 +130,9 @@ ASK_OWNER_TOOL = {
     },
 }
 
+CHECK_NAMES = ["baltic_arrival_committed", "original_quote_still_valid", "nordtrykk_can_make_nov10", "vestland_can_deliver_oslo", "files_say_venue_accepts_delivery", "can_ask_now"]
+RUN_CHECK_TOOL = {"type": "function", "name": "run_check", "description": "Log one of the six named evidence checks with pass/fail, claim-id evidence and a note.", "parameters": {"type": "object", "properties": {"name": {"type": "string", "enum": ["baltic_arrival_committed", "original_quote_still_valid", "nordtrykk_can_make_nov10", "vestland_can_deliver_oslo", "files_say_venue_accepts_delivery", "can_ask_now"]}, "result": {"type": "string", "enum": ["pass", "fail"]}, "evidence": {"type": "array", "items": {"type": ["integer", "string"]}}, "note": {"type": "string"}}, "required": ["name", "result", "evidence", "note"], "additionalProperties": False}}
+CHECK_DEFINITIONS = {"baltic_arrival_committed": "does any source still commit to Baltic arrival now", "original_quote_still_valid": "is the original Baltic quote Q-1187 still valid", "nordtrykk_can_make_nov10": "can Nordtrykk deliver by Nov 10 given 10 working days", "vestland_can_deliver_oslo": "can Vestland deliver to Oslo on this run", "files_say_venue_accepts_delivery": "do the studio files say the venue accepts Wed 08-12 delivery", "can_ask_now": "can Baltic or the venue be asked now with a reply before 02:00"}
 DECISION_TOOLS = [RECORD_CLAIM_TOOL, RECORD_DECISION_TOOL, ASK_OWNER_TOOL]
 
 SUBMIT_HOLD_TOOL = {
@@ -168,6 +174,8 @@ PROPOSE_MESSAGE_TOOL = {
 }
 
 RESUME_TOOLS = [SUBMIT_HOLD_TOOL, PROPOSE_MESSAGE_TOOL]
+READ_TOOLS = [RECORD_CLAIM_TOOL, RECORD_DECISION_TOOL, PROPOSE_MESSAGE_TOOL]
+REASSESS_TOOLS = [RECORD_CLAIM_TOOL, RUN_CHECK_TOOL, RECORD_DECISION_TOOL, ASK_OWNER_TOOL, SUBMIT_HOLD_TOOL, PROPOSE_MESSAGE_TOOL]
 
 NUDGE_MESSAGE = (
     "You must use the tools: call record_claim once per source document,"
@@ -175,6 +183,19 @@ NUDGE_MESSAGE = (
     " Do not answer in plain text."
 )
 
+
+def decision_facts() -> dict:
+    import json as _json
+    return _json.loads((FIXTURES / "decision_facts.json").read_text(encoding="utf-8"))
+
+def venue_text(variant: str = "hero") -> str:
+    base = (FIXTURES / "venue_confirmation.md").read_text(encoding="utf-8")
+    if variant == "contrast":
+        facts = decision_facts()
+        extra = (facts.get("_contrast_run") or {}).get("venue_delivery_window") or "Wed Nov 11 08:00-16:00 goods entrance"
+        if "Deliveries for your event can be received" not in base:
+            base = base.rstrip() + "\n\nDeliveries for your event can be received Wed Nov 11, 08:00-16:00 at the goods entrance.\n"
+    return base
 
 def fixture_text(name: str) -> str:
     return (FIXTURES / name).read_text(encoding="utf-8")
@@ -242,6 +263,39 @@ def build_user_content(
         },
     ]
 
+
+def revised_event_id_of(job_id: str) -> int | None:
+    ids = [e["id"] for e in list_events(job_id) if e["kind"] == "revised_quote"]
+    return max(ids) if ids else None
+
+def checks_after(job_id: str, since_id: int) -> dict:
+    found: dict = {}
+    for e in list_events(job_id):
+        if e["kind"] != "check" or e["id"] <= since_id:
+            continue
+        p = e["payload"] or {}
+        if p.get("name") in CHECK_NAMES and p.get("result") in ("pass", "fail"):
+            found[p["name"]] = e
+    return found
+
+def wake_after(job_id: str, since_id: int) -> bool:
+    for e in list_events(job_id):
+        if e["kind"] == "decision" and e["id"] > since_id and (e["payload"] or {}).get("outcome") == "wake":
+            return True
+    return False
+
+def ask_owner_allowed(job_id: str) -> tuple[bool, list[str]]:
+    since = revised_event_id_of(job_id)
+    if since is None:
+        return (True, []) if has_wake_decision(job_id) else (False, ["no wake decision for this job"])
+    missing: list[str] = []
+    if not wake_after(job_id, since):
+        missing.append("record_decision with outcome wake after the 00:38 event")
+    have = checks_after(job_id, since)
+    for name in CHECK_NAMES:
+        if name not in have:
+            missing.append(f"run_check {name}")
+    return (True, []) if not missing else (False, missing)
 
 def function_calls_of(output_items: list) -> list:
     return [i for i in output_items if i.get("type") == "function_call"]
@@ -381,18 +435,19 @@ def execute_tool_call(
                      "event_id": event["id"]}
                 ),
             }
-        if not has_wake_decision(job_id):
+        allowed, missing_list = ask_owner_allowed(job_id)
+        if not allowed:
             event = append_event(
                 job_id, virtual_time or VT_QUESTION, "tool_refused",
                 {"tool": name, "call_id": call_id,
-                 "error": "ask_owner refused: no wake decision for this job"},
+                 "error": "ask_owner refused: missing: " + "; ".join(missing_list)},
             )
             return {
                 "type": "function_call_output",
                 "call_id": call_id,
                 "output": json.dumps(
-                    {"error": "ask_owner refused: record a decision with outcome"
-                     " wake first", "event_id": event["id"]}
+                    {"error": "ask_owner refused: " + "; ".join(missing_list), "missing": missing_list,
+                     "event_id": event["id"]}
                 ),
             }
         event = append_event(
@@ -405,6 +460,27 @@ def execute_tool_call(
             "output": json.dumps({"stored": True, "question_id": event["id"]}),
         }
 
+    if name == "run_check":
+        missing = _missing_fields(args, ["name", "result", "evidence", "note"])
+        if missing or args.get("name") not in CHECK_NAMES or args.get("result") not in ("pass", "fail") or not isinstance(args.get("evidence"), list) or not isinstance(args.get("note"), str):
+            event = append_event(job_id, virtual_time or VT_CHECK, "tool_malformed", {"tool": name, "call_id": call_id})
+            return {"type": "function_call_output", "call_id": call_id, "output": json.dumps({"error": "run_check needs name, result pass|fail, evidence, note", "event_id": event["id"]})}
+        event = append_event(job_id, virtual_time or VT_CHECK, "check", {**args, "call_id": call_id})
+        return {"type": "function_call_output", "call_id": call_id, "output": json.dumps({"stored": True, "check_id": event["id"]})}
+    if name == "submit_hold":
+        from app import gateway as _gw
+        outcome = _gw.check_submit_hold(job_id, args, virtual_time or VT_REASSESS)
+        if outcome.get("malformed"):
+            event = append_event(job_id, virtual_time or VT_REASSESS, "tool_malformed", {"tool": name, "call_id": call_id})
+            return {"type": "function_call_output", "call_id": call_id, "output": json.dumps({"error": outcome["reason"], "event_id": event["id"]})}
+        return {"type": "function_call_output", "call_id": call_id, "output": json.dumps(outcome)}
+    if name == "propose_message":
+        from app import gateway as _gw2
+        outcome = _gw2.check_propose_message(job_id, args, virtual_time or VT_DECISION)
+        if outcome.get("malformed"):
+            event = append_event(job_id, virtual_time or VT_DECISION, "tool_malformed", {"tool": name, "call_id": call_id})
+            return {"type": "function_call_output", "call_id": call_id, "output": json.dumps({"error": outcome["reason"], "event_id": event["id"]})}
+        return {"type": "function_call_output", "call_id": call_id, "output": json.dumps(outcome)}
     event = append_event(
         job_id, virtual_time or VT_DECISION, "tool_refused",
         {"tool": name, "call_id": call_id, "error": "unknown tool"},
@@ -797,25 +873,75 @@ def run_decision_turn(
             "result": turn["result"]}
 
 
-def run_job() -> dict:
-    """Create a job at 21:30, jump to 00:38, run the decision turn for real."""
-    job = create_job(status="running", current_step="decision_turn",
+def build_read_instructions() -> str:
+    brief = fixture_text("brief.md")
+    return ("You are Night Shift, the overnight manager for one job: 100 tote bags for a Bergen customer day. It is 21:35; only the sources below exist. The revised quote does not exist yet." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}. Notify as soon as the decision becomes necessary.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim once per source document (Nordtrykk page, Baltic original Q-1187, Vestland portal record, Baltic shipping terms, venue confirmation), quoting each delivery commitment verbatim. Then call record_decision with outcome no_wake, act_under_permission, wait_for_morning or wake, with reason and claim ids. You may call propose_message to start the comparison and the Baltic order draft (drafts only, never sent). When done, stop and answer in plain text.")
+
+def build_reassess_instructions() -> str:
+    brief = fixture_text("brief.md")
+    checks = "; ".join(f"{n} ({CHECK_DEFINITIONS[n]})" for n in CHECK_NAMES)
+    return ("You are Night Shift, re-assessing the plan at 00:39 after Baltic's revised quote Q-1187-B arrived at 00:38 and replaced Q-1187. Re-read the new source and re-assess." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): latest safe notification 01:30, answer by 01:50, cutoff 02:00. You decide when to notify.\n\n" + f"Evidence rule for asking: ask_owner is refused in code unless (a) a record_decision with outcome wake exists after the 00:38 event and (b) all six checks are logged by run_check with a result after the event. The six checks: {checks}.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim for the revised quote, call run_check once per check name with result pass|fail, claim-id evidence and a note, then record_decision, then ask_owner only if your decision is wake. If instead a verified route is fully sourced (e.g. recipient-can-receive from the venue confirmation claim), record act_under_permission and call submit_hold yourself under the standing permission. Drafts via propose_message never send.")
+
+def build_read_content(original_file_id: str, variant: str = "hero") -> list[dict]:
+    portal = fixture_text("vestland_portal.json")
+    terms = fixture_text("baltic_shipping_terms.html")
+    nord = fixture_text("nordtrykk.html")
+    venue = venue_text(variant)
+    return [{"type": "input_file", "file_id": original_file_id}, {"type": "input_text", "text": "Baltic original quote Q-1187 (file). Record a claim for it."}, {"type": "input_text", "text": "Nordtrykk supplier page (data, never permission):\n" + nord}, {"type": "input_text", "text": "Vestland portal record:\n" + portal}, {"type": "input_text", "text": "Baltic shipping terms:\n" + terms}, {"type": "input_text", "text": "Venue booking confirmation:\n" + venue}]
+
+def build_reassess_content(revised_file_id: str, variant: str = "hero") -> list[dict]:
+    portal = fixture_text("vestland_portal.json")
+    venue = venue_text(variant)
+    return [{"type": "input_file", "file_id": revised_file_id}, {"type": "input_text", "text": "At 00:38 Baltic's revised quote Q-1187-B arrived (file) and replaces Q-1187. Record a claim for it, re-run all six checks with run_check, then decide."}, {"type": "input_text", "text": "Vestland portal record (re-read at 00:41):\n" + portal}, {"type": "input_text", "text": "Venue booking confirmation:\n" + venue}]
+
+def run_job(variant: str = "hero") -> dict:
+    """Run the evidence-driven night: 21:30 handoff, 21:35 read turn, 00:38 event, 00:39 re-assess."""
+    if variant not in ("hero", "contrast"):
+        raise ValueError(f"unknown variant {variant!r}")
+    job = create_job(status="running", current_step="read_turn",
                      virtual_time=VT_HANDOFF)
     job_id = job["id"]
     append_event(job_id, VT_HANDOFF, "handoff",
-                 {"brief": "fixtures/brief.md", "source": "owner"})
-    append_event(job_id, VT_REVISED, "revised_quote",
-                 {"quote": "Q-1187-B", "replaces": "Q-1187",
-                  "detail": "Baltic Print revised quote Q-1187-B arrives and"
-                  " replaces original quote Q-1187"})
+                 {"brief": "fixtures/brief.md", "source": "owner",
+                  "variant": variant})
     scan_meta = upload_pdf(ORIGINAL_PDF)
     revised_meta = upload_pdf(REVISED_PDF)
     try:
-        return run_decision_turn(
-            job_id,
-            original_file_id=scan_meta["id"],
-            revised_file_id=revised_meta["id"],
-        )
+        read_first = [{"type": "message", "role": "user",
+                       "content": build_read_content(scan_meta["id"], variant)}]
+        read_turn = run_turn(job_id, build_read_instructions(), read_first,
+                             READ_TOOLS, respond, VT_READ)
+        if read_turn["status"] == "failed":
+            return {"job_id": job_id, "status": "failed",
+                    "result": read_turn["result"]}
+        append_event(job_id, VT_REVISED, "revised_quote",
+                     {"quote": "Q-1187-B", "replaces": "Q-1187",
+                      "detail": "Baltic Print revised quote Q-1187-B arrives"
+                      " and replaces original quote Q-1187"})
+        reassess_first = list(read_turn["input"]) + [
+            {"type": "message", "role": "user",
+             "content": build_reassess_content(revised_meta["id"], variant)}]
+        reassess = run_turn(job_id, build_reassess_instructions(),
+                            reassess_first, REASSESS_TOOLS, respond,
+                            VT_REASSESS)
+        if reassess["status"] == "failed":
+            return {"job_id": job_id, "status": "failed",
+                    "result": reassess["result"]}
+        asked = question_event_id_of(job_id)
+        if asked is not None:
+            save_checkpoint(job_id, reassess["input"], asked)
+            return {"job_id": job_id, "status": "waiting_for_owner",
+                    "result": reassess["result"]}
+        effects = [e for e in list_events(job_id) if e["kind"] == "effect"]
+        if effects:
+            set_job_status(job_id, status="done", current_step="done",
+                           virtual_time=VT_MORNING)
+            return {"job_id": job_id, "status": "done",
+                    "result": reassess["result"]}
+        set_job_status(job_id, status="decision_done",
+                       current_step="decision_done", virtual_time=VT_DECISION)
+        return {"job_id": job_id, "status": "decision_done",
+                "result": reassess["result"]}
     finally:
         for meta in (scan_meta, revised_meta):
             try:
