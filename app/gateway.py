@@ -467,9 +467,17 @@ def check_submit_hold(
                  {"tool": "submit_hold", "ok": True,
                   "operation_id": operation_id, "checks": checks},
                  path=path)
-    placed = portal_mod.ensure_hold(
-        job_id, operation_id, submit_virtual_time,
-        args["portal"], args["fields"], path=path)
+    try:
+        placed = portal_mod.ensure_hold(
+            job_id, operation_id, submit_virtual_time,
+            args["portal"], args["fields"], path=path)
+    except Exception as exc:  # noqa: BLE001 - a simulated outage is data
+        append_event(job_id, submit_virtual_time, "portal_error",
+                     {"tool": "submit_hold", "operation_id": operation_id,
+                      "error": f"portal error (retryable): {exc}"},
+                     path=path)
+        return {"ok": False, "reason": f"portal error (retryable): {exc}",
+                "retryable": True, "operation_id": operation_id}
     return {"ok": True, "deduped": placed["deduped"],
             "acknowledgement": placed["acknowledgement"],
             "effect_event_id": placed["effect_event_id"],

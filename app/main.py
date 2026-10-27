@@ -357,6 +357,8 @@ def _summarize(kind: str, payload: dict) -> str:
         return f"draft to {payload.get('to', '?')}: {str(payload.get('body', ''))[:120]}"
     if kind == "turn_done":
         return f"turn done after {payload.get('tool_calls', '?')} tool calls"
+    if kind == "portal_error":
+        return f"portal error: {payload.get('error', '?')}"
     if kind == "approval_requested":
         return f"approval requested for draft {payload.get('draft_id', '?')}"
     if kind == "resume_pruned_files":

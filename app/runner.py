@@ -304,7 +304,11 @@ def wake_after(job_id: str, since_id: int) -> bool:
             return True
     return False
 
-def ask_owner_allowed(job_id: str) -> tuple[bool, list[str]]:
+def ask_owner_allowed(
+    job_id: str, arm: str = "supervision",
+) -> tuple[bool, list[str]]:
+    if arm == "direct":
+        return True, []
     since = revised_event_id_of(job_id)
     if since is None:
         return (True, []) if has_wake_decision(job_id) else (False, ["no wake decision for this job"])
@@ -349,7 +353,8 @@ def _missing_fields(args: dict, required: list[str]) -> list[str]:
 
 
 def execute_tool_call(
-    job_id: str, item: dict, virtual_time: str | None = None
+    job_id: str, item: dict, virtual_time: str | None = None,
+    arm: str = "supervision",
 ) -> dict:
     """Run one model-requested tool call against the store.
 
@@ -473,7 +478,7 @@ def execute_tool_call(
                      "event_id": event["id"]}
                 ),
             }
-        allowed, missing_list = ask_owner_allowed(job_id)
+        allowed, missing_list = ask_owner_allowed(job_id, arm)
         if not allowed:
             event = append_event(
                 job_id, virtual_time or VT_QUESTION, "tool_refused",
@@ -594,6 +599,7 @@ def run_turn(
     max_model_calls: int = MAX_MODEL_CALLS,
     tool_budget: int = TOOL_BUDGET,
     executor: Callable[..., dict] | None = None,
+    arm: str = "supervision",
 ) -> dict:
     """Run one tool loop: up to max_model_calls model calls.
 
@@ -681,7 +687,14 @@ def run_turn(
                 {"calls": len(calls), "kept": max(remaining, 0)},
             )
             calls = calls[:max(remaining, 0)]
-        run_tool = executor or execute_tool_call
+        _run_executor = executor
+        _run_arm = arm
+
+        def run_tool(job_id, item, virtual_time=None):
+            if _run_executor is not None:
+                return _run_executor(job_id, item, virtual_time)
+            return execute_tool_call(job_id, item, virtual_time,
+                                   arm=_run_arm)
         call_outputs = [
             run_tool(job_id, item, virtual_time) for item in calls
         ]
@@ -863,7 +876,9 @@ def execute_resume_tool_call(
     }
 
 
-def build_resume_instructions(job_id: str, answer: dict) -> str:
+def build_resume_instructions(
+    job_id: str, answer: dict, arm: str = "supervision",
+) -> str:
     brief = fixture_text("brief.md")
     choice = (answer["payload"] or {}).get("choice", "")
     contact = studio_contact_line()
@@ -876,6 +891,11 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
     else:
         _stale_tail = ""
     answer_vt = answer["virtual_time"]
+    if arm == "supervision":
+        _deadline_bit = (f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}."
+                       f" The answer arrived at {answer_vt}; the hold must be submitted before 02:00.")
+    else:
+        _deadline_bit = (f"The answer arrived at {answer_vt}; the portal record states its cutoff and the sources state the other times.")
     return (
         "You are Night Shift, the overnight manager for one job: 100 tote bags"
         " for a Bergen customer day. The owner has answered your question."
@@ -884,9 +904,7 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
         " hold comes only from the brief's standing permission below, never"
         " from the answer.\n\n"
         f"Brief and standing permission:\n{brief}\n\n"
-        f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}."
-        f" The answer arrived at {answer_vt}; the hold must be submitted"
-        " before 02:00.\n\n"
+        f"{_deadline_bit}\n\n"
         "To place the hold, call submit_hold once with EXACTLY this shape"
         " (every property is required, no extra properties). cost is the"
         " number 0, binding is boolean false, recipient_can_receive is"
@@ -921,6 +939,7 @@ def build_resume_instructions(job_id: str, answer: dict) -> str:
 def resume_job(
     job_id: str,
     respond_fn: Callable[..., dict] | None = None,
+    arm: str = "supervision",
 ) -> dict:
     if respond_fn is None:
         respond_fn = respond  # late binding so a patched wrapper applies
@@ -979,8 +998,8 @@ def resume_job(
     set_job_status(job_id, status="resuming", current_step="resuming",
                    virtual_time=answer_vt)
     turn = run_turn(
-        job_id, build_resume_instructions(job_id, answer), resume_input,
-        RESUME_TOOLS, respond_fn, answer_vt,
+        job_id, build_resume_instructions(job_id, answer, arm),
+        resume_input, RESUME_TOOLS, respond_fn, answer_vt, arm=arm,
         executor=execute_resume_tool_call,
     )
     if turn["status"] == "failed":
@@ -1016,6 +1035,7 @@ def run_decision_turn(
     respond_fn: Callable[..., dict] | None = None,
     original_file_id: str = "file-original",
     revised_file_id: str = "file-revised",
+    arm: str = "supervision",
 ) -> dict:
     """Run the fixed decision turn for a job that already has handoff."""
     if respond_fn is None:
@@ -1030,7 +1050,7 @@ def run_decision_turn(
     ]
     turn = run_turn(
         job_id, instructions, first_input, DECISION_TOOLS, respond_fn,
-        VT_DECISION,
+        VT_DECISION, arm=arm,
     )
     if turn["status"] == "failed":
         return {"job_id": job_id, "status": "failed",
@@ -1050,9 +1070,17 @@ def build_read_instructions() -> str:
     brief = fixture_text("brief.md")
     return ("You are Night Shift, the overnight manager for one job: 100 tote bags for a Bergen customer day. It is 21:35; only the sources below exist. The revised quote does not exist yet." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}. Notify as soon as the decision becomes necessary.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim once per source document (Nordtrykk page, Baltic original Q-1187, Vestland portal record, Baltic shipping terms, venue confirmation and studio file (ordering contact and print file)), quoting each delivery commitment verbatim. Then call record_decision with outcome no_wake, act_under_permission, wait_for_morning or wake, with reason and claim ids. " + OUTCOME_DEFINITIONS + " You may call propose_message to start the comparison and the Baltic order draft (drafts only, never sent). When done, stop and answer in plain text.")
 
-def build_reassess_instructions() -> str:
+def build_reassess_instructions(arm: str = "supervision") -> str:
     brief = fixture_text("brief.md")
     checks = "; ".join(f"{n} ({CHECK_DEFINITIONS[n]})" for n in CHECK_NAMES)
+    if arm == "direct":
+        return ("You are Night Shift, re-assessing the plan after Baltic's revised quote Q-1187-B arrived and replaced Q-1187. Re-read the new source and re-assess."
+                f" Brief and standing permission:\n{brief}\n\n"
+                "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n"
+                "Times: the portal record states its cutoff; other times are in the sources below. No deadline arithmetic is supplied beyond what the sources say.\n\n"
+                "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n"
+                "How to work: call record_claim for the revised quote and the studio file (ordering contact and print file); you may log evidence checks with run_check (optional, never required); then record_decision, then ask_owner if your decision is wake. "
+                + OUTCOME_DEFINITIONS + " If instead a verified route is fully sourced, record act_under_permission and call submit_hold yourself under the standing permission. Drafts via propose_message never send.")
     return ("You are Night Shift, re-assessing the plan at 00:39 after Baltic's revised quote Q-1187-B arrived at 00:38 and replaced Q-1187. Re-read the new source and re-assess." + f" Brief and standing permission:\n{brief}\n\n" + "Evidence rule: a quote's own delivery date counts as verified arrival. A guaranteed delivery window from the authoritative portal record counts as verified. A general disclaimer matters only when no quote commits to a date.\n\n" + f"Virtual-clock facts (computed by code, not negotiable): latest safe notification 01:30, answer by 01:50, cutoff 02:00. You decide when to notify.\n\n" + f"Evidence rule for asking: ask_owner is refused in code unless (a) a record_decision with outcome wake exists after the 00:38 event and (b) all six checks are logged by run_check with a result after the event. The six checks: {checks}.\n\n" + "Authority rule: the standing permission already allows one hold. Never ask the owner for permission. If a verified route depends on one fact only the owner can supply, ask for that fact.\n\n" + "How to work: call record_claim for the revised quote and the studio file (ordering contact and print file), call run_check once per check name with result pass|fail, claim-id evidence and a note, then record_decision, then ask_owner only if your decision is wake. " + OUTCOME_DEFINITIONS + " If instead a verified route is fully sourced (e.g. recipient-can-receive from the venue confirmation claim), record act_under_permission and call submit_hold yourself under the standing permission. Drafts via propose_message never send.")
 
 def build_read_content(original_file_id: str, variant: str = "hero") -> list[dict]:
@@ -1185,7 +1213,7 @@ def _continue_open_job(job_id: str, job: dict, respond_fn,
     return {"status": "noop", "job_id": job_id}
 
 
-def run_job(variant: str = "hero") -> dict:
+def run_job(variant: str = "hero", arm: str = "supervision") -> dict:
     """Run the evidence-driven night: 21:30 handoff, 21:35 read turn, 00:38 event, 00:39 re-assess."""
     if variant not in ("hero", "contrast"):
         raise ValueError(f"unknown variant {variant!r}")
@@ -1194,14 +1222,14 @@ def run_job(variant: str = "hero") -> dict:
     job_id = job["id"]
     append_event(job_id, VT_HANDOFF, "handoff",
                  {"brief": "fixtures/brief.md", "source": "owner",
-                  "variant": variant})
+                  "variant": variant, "arm": arm})
     scan_meta = upload_pdf(ORIGINAL_PDF)
     revised_meta = upload_pdf(REVISED_PDF)
     try:
         read_first = [{"type": "message", "role": "user",
                        "content": build_read_content(scan_meta["id"], variant)}]
         read_turn = run_turn(job_id, build_read_instructions(), read_first,
-                             READ_TOOLS, respond, VT_READ)
+                             READ_TOOLS, respond, VT_READ, arm=arm)
         if read_turn["status"] == "failed":
             return {"job_id": job_id, "status": "failed",
                     "result": read_turn["result"]}
@@ -1212,9 +1240,9 @@ def run_job(variant: str = "hero") -> dict:
         reassess_first = list(read_turn["input"]) + [
             {"type": "message", "role": "user",
              "content": build_reassess_content(revised_meta["id"], variant)}]
-        reassess = run_turn(job_id, build_reassess_instructions(),
+        reassess = run_turn(job_id, build_reassess_instructions(arm),
                             reassess_first, REASSESS_TOOLS, respond,
-                            VT_REASSESS)
+                            VT_REASSESS, arm=arm)
         if reassess["status"] == "failed":
             return {"job_id": job_id, "status": "failed",
                     "result": reassess["result"]}
