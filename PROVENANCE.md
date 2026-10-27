@@ -10,7 +10,7 @@ Everything in this repository was created during the hackathon building period (
 ## Who and what built this
 
 - **Builder:** Muse Code (Meta), directed by the owner. All code, fixtures, prompts, tests and the case files were written in Muse Code sessions during the building period.
-- **Planning help:** a general AI assistant (Claude) helped write the plan, this brief, the scenario text, the README and the video script. It wrote no code, fixtures, prompts or tests.
+- **Planning and direction help:** a general AI assistant (Claude) helped write the plan, this brief, the scenario text, the README and the video script, and drafted the prompts given to Muse Code on the owner's direction. It wrote no code, fixtures or tests; those are Muse Code's work.
 - **Models in the product:** Muse Spark 1.3 through the Meta Model API (Responses API).
 
 ## Dependencies

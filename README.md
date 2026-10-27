@@ -15,4 +15,4 @@ Day 1. Everything below this line is filled in as it is built.
 
 ## Disclosure
 
-Personal project, built on my own time with no company code, data or resources. The builder was Muse Code; a general AI assistant helped with planning, this README and the video script, and wrote no code. Details in `PROVENANCE.md`.
+Personal project, built on my own time with no company code, data or resources. All code, tests and fixtures were written by Muse Code. A general AI assistant helped with planning, the written brief, the prompts given to Muse Code, this README and the video script. Details in `PROVENANCE.md`.
