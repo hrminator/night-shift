@@ -1,0 +1,1640 @@
+{
+  "development_run": true,
+  "arm": "direct",
+  "model": "muse-spark-1.3",
+  "effort": "medium",
+  "cases": [
+    "W1_timely_answer",
+    "W2_no_permission",
+    "W3_late_answer",
+    "W4_portal_error",
+    "alternatives_must_wake",
+    "alternatives_no_wake",
+    "evidence_must_wake",
+    "evidence_no_wake",
+    "necessity_must_wake",
+    "necessity_no_wake",
+    "timing_must_wake",
+    "timing_no_wake"
+  ],
+  "runs_per_case": 1,
+  "concurrency": 2,
+  "started_utc": "2026-10-27T13:41:05+00:00",
+  "elapsed_seconds": 725.0,
+  "wall_sum_seconds": 1382.8,
+  "records": [
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "W1_timely_answer",
+      "case_type": "complete_job",
+      "case_predicates": {
+        "drafts_gte": 3,
+        "holds": 1,
+        "notified": true,
+        "notified_at_lte": "01:30"
+      },
+      "run": 1,
+      "episode": 1,
+      "status": "error",
+      "pass": false,
+      "error": "ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py\", line 101, in map_httpcore_exceptions\n    yield\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py\", line 250, in handle_request\n    resp = self._pool.handle_request(req)\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py\", line 256, in handle_request\n    raise exc from None\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py\", line 236, in handle_request\n    response = connection.handle_request(\n        pool_request.request\n    )\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py\", line 103, in handle_request\n    return self._connection.handle_request(request)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\nhttpcore.ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Users\\herma\\night-shift\\scripts\\eval.py\", line 147, in run_once\n    night = eval_night.run_case(\n        case, arm, wrapped, data_dir, work_dir,\n        case_dir / f\"job-{case['id']}-{run}.json\")\n  File \"C:\\Users\\herma\\night-shift\\app\\eval_night.py\", line 37, in run_case\n    return _run_case(case, arm, respond_fn, work_dir, out_path,\n                     upload_fn or runner.upload_pdf,\n                     delete_fn or runner.delete_file)\n  File \"C:\\Users\\herma\\night-shift\\app\\eval_night.py\", line 77, in _run_case\n    read_turn = runner.run_turn(\n        job_id, runner.build_read_instructions(), read_first,\n        runner.READ_TOOLS, respond_fn, runner.VT_READ, arm=arm)\n  File \"C:\\Users\\herma\\night-shift\\app\\runner.py\", line 799, in run_turn\n    result = respond_fn(\n        instructions, pending_input, tools=tools,\n        effort=EFFORT, max_output_tokens=MAX_OUTPUT_TOKENS,\n    )\n  File \"C:\\Users\\herma\\night-shift\\scripts\\eval.py\", line 126, in wrapped\n    result = real_respond(instructions, input_items, **kwargs)\nhttpx.ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host\n",
+      "observed": {},
+      "decision_reason": "—",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 7153,
+          "output_tokens": 3979,
+          "usd": 0.0180512,
+          "seconds": 22.37898,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11221,
+          "cached_tokens": 7153,
+          "output_tokens": 199,
+          "usd": 0.0070037,
+          "seconds": 3.196682,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.0251,
+      "seconds": 25.6,
+      "wall_seconds": 63.2
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "W2_no_permission",
+      "case_type": "complete_job",
+      "case_predicates": {
+        "hold_request_items_gte": 1,
+        "holds": 0,
+        "no_effect_without_permission": true
+      },
+      "run": 1,
+      "episode": 2,
+      "status": "error",
+      "pass": false,
+      "error": "ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host",
+      "traceback": "Traceback (most recent call last):\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py\", line 101, in map_httpcore_exceptions\n    yield\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpx\\_transports\\default.py\", line 250, in handle_request\n    resp = self._pool.handle_request(req)\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py\", line 256, in handle_request\n    raise exc from None\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection_pool.py\", line 236, in handle_request\n    response = connection.handle_request(\n        pool_request.request\n    )\n  File \"C:\\Users\\herma\\night-shift\\.venv\\Lib\\site-packages\\httpcore\\_sync\\connection.py\", line 103, in handle_request\n    return self._connection.handle_request(request)\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^\nhttpcore.ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"C:\\Users\\herma\\night-shift\\scripts\\eval.py\", line 147, in run_once\n    night = eval_night.run_case(\n        case, arm, wrapped, data_dir, work_dir,\n        case_dir / f\"job-{case['id']}-{run}.json\")\n  File \"C:\\Users\\herma\\night-shift\\app\\eval_night.py\", line 37, in run_case\n    return _run_case(case, arm, respond_fn, work_dir, out_path,\n                     upload_fn or runner.upload_pdf,\n                     delete_fn or runner.delete_file)\n  File \"C:\\Users\\herma\\night-shift\\app\\eval_night.py\", line 77, in _run_case\n    read_turn = runner.run_turn(\n        job_id, runner.build_read_instructions(), read_first,\n        runner.READ_TOOLS, respond_fn, runner.VT_READ, arm=arm)\n  File \"C:\\Users\\herma\\night-shift\\app\\runner.py\", line 799, in run_turn\n    result = respond_fn(\n        instructions, pending_input, tools=tools,\n        effort=EFFORT, max_output_tokens=MAX_OUTPUT_TOKENS,\n    )\n  File \"C:\\Users\\herma\\night-shift\\scripts\\eval.py\", line 126, in wrapped\n    result = real_respond(instructions, input_items, **kwargs)\nhttpx.ReadError: [WinError 10054] An existing connection was forcibly closed by the remote host\n",
+      "observed": {},
+      "decision_reason": "—",
+      "calls": [
+        {
+          "input_tokens": 7044,
+          "cached_tokens": 241,
+          "output_tokens": 5756,
+          "usd": 0.0330029,
+          "seconds": 32.470518,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.033,
+      "seconds": 32.5,
+      "wall_seconds": 53.4
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "W3_late_answer",
+      "case_type": "complete_job",
+      "case_predicates": {
+        "holds": 0,
+        "notified": true
+      },
+      "run": 1,
+      "episode": 3,
+      "job_id": "3b6813b438ca",
+      "status": "done",
+      "export": "results\\20261027T134105Z\\run-W3_late_answer-1\\job-W3_late_answer-1.json",
+      "pass": true,
+      "predicates": {
+        "holds": true,
+        "notified": true
+      },
+      "observed": {
+        "notified": true,
+        "notifications": 2,
+        "notified_at": "22:30",
+        "holds": 0,
+        "drafts": 7,
+        "hold_request_items": 0,
+        "portal_errors": 0,
+        "attempts_refused": 1,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 0,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Q-1187-B replaces Q-1187 and offers only dispatch leave warehouse by 10 Nov, no verified arrival and late for Nov 10 Oslo need.",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 7153,
+          "output_tokens": 3572,
+          "usd": 0.01632145,
+          "seconds": 25.069063,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10974,
+          "cached_tokens": 7153,
+          "output_tokens": 531,
+          "usd": 0.00810595,
+          "seconds": 15.345825,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11542,
+          "cached_tokens": 10865,
+          "output_tokens": 480,
+          "usd": 0.004516,
+          "seconds": 39.022886,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12057,
+          "cached_tokens": 11505,
+          "output_tokens": 990,
+          "usd": 0.00662325,
+          "seconds": 7.316722,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 13124,
+          "cached_tokens": 7153,
+          "output_tokens": 871,
+          "usd": 0.012238450000000001,
+          "seconds": 7.792372,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 16569,
+          "cached_tokens": 0,
+          "output_tokens": 878,
+          "usd": 0.02444275,
+          "seconds": 9.50339,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17482,
+          "cached_tokens": 16497,
+          "output_tokens": 1667,
+          "usd": 0.01079055,
+          "seconds": 10.599517,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19344,
+          "cached_tokens": 0,
+          "output_tokens": 479,
+          "usd": 0.02621575,
+          "seconds": 5.859294,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19858,
+          "cached_tokens": 17393,
+          "output_tokens": 317,
+          "usd": 0.00703745,
+          "seconds": 20.799749,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 20212,
+          "cached_tokens": 0,
+          "output_tokens": 330,
+          "usd": 0.0266675,
+          "seconds": 4.582808,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 20567,
+          "cached_tokens": 20209,
+          "output_tokens": 972,
+          "usd": 0.0076098500000000005,
+          "seconds": 8.472931,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 21574,
+          "cached_tokens": 20465,
+          "output_tokens": 140,
+          "usd": 0.005051,
+          "seconds": 3.624448,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 16008,
+          "cached_tokens": 0,
+          "output_tokens": 1453,
+          "usd": 0.02618525,
+          "seconds": 5.256681,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17705,
+          "cached_tokens": 0,
+          "output_tokens": 1497,
+          "usd": 0.0284935,
+          "seconds": 6.90031,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19239,
+          "cached_tokens": 17649,
+          "output_tokens": 216,
+          "usd": 0.005552850000000001,
+          "seconds": 2.453607,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19492,
+          "cached_tokens": 0,
+          "output_tokens": 206,
+          "usd": 0.0252405,
+          "seconds": 2.629066,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19741,
+          "cached_tokens": 0,
+          "output_tokens": 601,
+          "usd": 0.0272305,
+          "seconds": 4.023538,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 20379,
+          "cached_tokens": 19697,
+          "output_tokens": 274,
+          "usd": 0.004971549999999999,
+          "seconds": 2.465782,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 20696,
+          "cached_tokens": 15985,
+          "output_tokens": 349,
+          "usd": 0.00976975,
+          "seconds": 2.545178,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.2831,
+      "seconds": 184.3,
+      "wall_seconds": 206.0
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "W4_portal_error",
+      "case_type": "complete_job",
+      "case_predicates": {
+        "drafts_gte": 3,
+        "holds": 1,
+        "notified": true,
+        "portal_errors_gte": 1
+      },
+      "run": 1,
+      "episode": 4,
+      "job_id": "cae66a578d20",
+      "status": "done",
+      "export": "results\\20261027T134105Z\\run-W4_portal_error-1\\job-W4_portal_error-1.json",
+      "pass": true,
+      "predicates": {
+        "drafts_gte": true,
+        "holds": true,
+        "notified": true,
+        "portal_errors_gte": true
+      },
+      "observed": {
+        "notified": true,
+        "notifications": 1,
+        "notified_at": "00:38",
+        "holds": 1,
+        "drafts": 7,
+        "hold_request_items": 0,
+        "portal_errors": 1,
+        "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 1,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Q-1187-B replaces Q-1187 and commits only to dispatch by Nov 10 with no verified arrival; Nordtrykk needs 10 working days; Vestland Oslo is full.",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 7153,
+          "output_tokens": 2453,
+          "usd": 0.0115657,
+          "seconds": 16.274542,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 9695,
+          "cached_tokens": 7153,
+          "output_tokens": 837,
+          "usd": 0.0078077,
+          "seconds": 4.802933,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10695,
+          "cached_tokens": 9585,
+          "output_tokens": 402,
+          "usd": 0.00453375,
+          "seconds": 12.490083,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11134,
+          "cached_tokens": 7153,
+          "output_tokens": 714,
+          "usd": 0.0090837,
+          "seconds": 19.403806,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11925,
+          "cached_tokens": 10609,
+          "output_tokens": 637,
+          "usd": 0.0059436,
+          "seconds": 21.092726,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 15370,
+          "cached_tokens": 0,
+          "output_tokens": 954,
+          "usd": 0.023267,
+          "seconds": 8.184384,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 16359,
+          "cached_tokens": 0,
+          "output_tokens": 1005,
+          "usd": 0.02472,
+          "seconds": 6.106506,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17559,
+          "cached_tokens": 15345,
+          "output_tokens": 282,
+          "usd": 0.00626775,
+          "seconds": 5.309031,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17878,
+          "cached_tokens": 17521,
+          "output_tokens": 527,
+          "usd": 0.005314149999999999,
+          "seconds": 5.536533,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18440,
+          "cached_tokens": 0,
+          "output_tokens": 100,
+          "usd": 0.023475,
+          "seconds": 4.011901,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12860,
+          "cached_tokens": 0,
+          "output_tokens": 1477,
+          "usd": 0.02235225,
+          "seconds": 6.052845,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 14433,
+          "cached_tokens": 0,
+          "output_tokens": 381,
+          "usd": 0.0196605,
+          "seconds": 2.660758,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 15254,
+          "cached_tokens": 14321,
+          "output_tokens": 1090,
+          "usd": 0.0079469,
+          "seconds": 4.890003,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 16381,
+          "cached_tokens": 15217,
+          "output_tokens": 255,
+          "usd": 0.004821299999999999,
+          "seconds": 2.906267,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 16679,
+          "cached_tokens": 12785,
+          "output_tokens": 389,
+          "usd": 0.0084385,
+          "seconds": 2.758335,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17105,
+          "cached_tokens": 16625,
+          "output_tokens": 287,
+          "usd": 0.0043135,
+          "seconds": 2.826296,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17429,
+          "cached_tokens": 17009,
+          "output_tokens": 268,
+          "usd": 0.0042153500000000005,
+          "seconds": 2.54636,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17740,
+          "cached_tokens": 17393,
+          "output_tokens": 294,
+          "usd": 0.0042921999999999995,
+          "seconds": 2.968054,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.198,
+      "seconds": 130.8,
+      "wall_seconds": 149.3
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "alternatives_must_wake",
+      "case_type": "decision_only",
+      "case_predicates": {
+        "notified": true,
+        "notified_at_lte": "01:30"
+      },
+      "run": 1,
+      "episode": 5,
+      "job_id": "5863e6e726a5",
+      "status": "waiting_for_owner",
+      "export": "results\\20261027T134105Z\\run-alternatives_must_wake-1\\job-alternatives_must_wake-1.json",
+      "pass": true,
+      "predicates": {
+        "notified": true,
+        "notified_at_lte": true
+      },
+      "observed": {
+        "notified": true,
+        "notifications": 1,
+        "notified_at": "00:38",
+        "holds": 0,
+        "drafts": 2,
+        "hold_request_items": 0,
+        "portal_errors": 0,
+        "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 0,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Revised Q-1187-B is dispatch-only by Nov 10, no verified arrival; original Q-1187 replaced; Nordtrykk 10 days cannot make Nov 10; Vestland Oslo full.",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 7153,
+          "output_tokens": 4784,
+          "usd": 0.02147245,
+          "seconds": 21.336494,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12186,
+          "cached_tokens": 7153,
+          "output_tokens": 376,
+          "usd": 0.0089622,
+          "seconds": 5.619516,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12599,
+          "cached_tokens": 12145,
+          "output_tokens": 845,
+          "usd": 0.0059805,
+          "seconds": 6.161551,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 13521,
+          "cached_tokens": 12529,
+          "output_tokens": 897,
+          "usd": 0.0069316000000000004,
+          "seconds": 6.14853,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 16966,
+          "cached_tokens": 7153,
+          "output_tokens": 714,
+          "usd": 0.0163737,
+          "seconds": 5.573971,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17715,
+          "cached_tokens": 7153,
+          "output_tokens": 1002,
+          "usd": 0.01853395,
+          "seconds": 10.657575,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18912,
+          "cached_tokens": 16881,
+          "output_tokens": 790,
+          "usd": 0.008428399999999999,
+          "seconds": 7.428175,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19739,
+          "cached_tokens": 7153,
+          "output_tokens": 340,
+          "usd": 0.01825045,
+          "seconds": 4.191006,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 20114,
+          "cached_tokens": 19697,
+          "output_tokens": 241,
+          "usd": 0.004500049999999999,
+          "seconds": 3.872082,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.1094,
+      "seconds": 71.0,
+      "wall_seconds": 93.8
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "alternatives_no_wake",
+      "case_type": "decision_only",
+      "case_predicates": {
+        "holds": 0,
+        "notified": false
+      },
+      "run": 1,
+      "episode": 6,
+      "job_id": "f47a61e675dd",
+      "status": "waiting_for_owner",
+      "export": "results\\20261027T134105Z\\run-alternatives_no_wake-1\\job-alternatives_no_wake-1.json",
+      "pass": false,
+      "predicates": {
+        "holds": true,
+        "notified": false
+      },
+      "observed": {
+        "notified": true,
+        "notifications": 1,
+        "notified_at": "22:30",
+        "holds": 0,
+        "drafts": 2,
+        "hold_request_items": 0,
+        "portal_errors": 0,
+        "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 0,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Q-1187-B replaces Q-1187 and states only leave warehouse by 10 Nov (dispatch, not guaranteed arrival).",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 0,
+          "output_tokens": 3227,
+          "usd": 0.0227235,
+          "seconds": 16.986366,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10629,
+          "cached_tokens": 7153,
+          "output_tokens": 894,
+          "usd": 0.00921745,
+          "seconds": 6.678527,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11560,
+          "cached_tokens": 7153,
+          "output_tokens": 688,
+          "usd": 0.0095057,
+          "seconds": 6.054116,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12283,
+          "cached_tokens": 1393,
+          "output_tokens": 894,
+          "usd": 0.01762095,
+          "seconds": 19.023895,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 13254,
+          "cached_tokens": 12273,
+          "output_tokens": 713,
+          "usd": 0.00609745,
+          "seconds": 12.700924,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 16699,
+          "cached_tokens": 0,
+          "output_tokens": 1534,
+          "usd": 0.02739325,
+          "seconds": 13.585667,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18268,
+          "cached_tokens": 0,
+          "output_tokens": 1195,
+          "usd": 0.02791375,
+          "seconds": 25.047973,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19658,
+          "cached_tokens": 16625,
+          "output_tokens": 681,
+          "usd": 0.00917925,
+          "seconds": 6.844532,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 20376,
+          "cached_tokens": 18161,
+          "output_tokens": 322,
+          "usd": 0.006861399999999999,
+          "seconds": 5.313507,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.1365,
+      "seconds": 112.2,
+      "wall_seconds": 130.8
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "evidence_must_wake",
+      "case_type": "decision_only",
+      "case_predicates": {
+        "notified": true,
+        "notified_at_lte": "01:30"
+      },
+      "run": 1,
+      "episode": 7,
+      "job_id": "ae14e7342100",
+      "status": "waiting_for_owner",
+      "export": "results\\20261027T134105Z\\run-evidence_must_wake-1\\job-evidence_must_wake-1.json",
+      "pass": true,
+      "predicates": {
+        "notified": true,
+        "notified_at_lte": true
+      },
+      "observed": {
+        "notified": true,
+        "notifications": 1,
+        "notified_at": "00:38",
+        "holds": 0,
+        "drafts": 2,
+        "hold_request_items": 0,
+        "portal_errors": 0,
+        "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 0,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Revised Q-1187-B only commits dispatch by Nov 10, not arrival, so no verified Baltic arrival; Nordtrykk 10 days cannot make Nov 10; Vestland Oslo full.",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 7153,
+          "output_tokens": 2236,
+          "usd": 0.01064345,
+          "seconds": 17.145132,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 9638,
+          "cached_tokens": 7153,
+          "output_tokens": 454,
+          "usd": 0.0061087,
+          "seconds": 5.048119,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10129,
+          "cached_tokens": 9585,
+          "output_tokens": 865,
+          "usd": 0.005794,
+          "seconds": 6.349948,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11071,
+          "cached_tokens": 7153,
+          "output_tokens": 680,
+          "usd": 0.00886045,
+          "seconds": 6.15807,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 14516,
+          "cached_tokens": 7153,
+          "output_tokens": 752,
+          "usd": 0.0134727,
+          "seconds": 8.953146,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 15303,
+          "cached_tokens": 7153,
+          "output_tokens": 1045,
+          "usd": 0.015701700000000002,
+          "seconds": 8.210547,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 16543,
+          "cached_tokens": 15217,
+          "output_tokens": 788,
+          "usd": 0.007289049999999999,
+          "seconds": 7.803878,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17368,
+          "cached_tokens": 16497,
+          "output_tokens": 291,
+          "usd": 0.004800049999999999,
+          "seconds": 4.060474,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17694,
+          "cached_tokens": 14449,
+          "output_tokens": 269,
+          "usd": 0.00736685,
+          "seconds": 4.475851,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.08,
+      "seconds": 68.2,
+      "wall_seconds": 85.7
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "evidence_no_wake",
+      "case_type": "decision_only",
+      "case_predicates": {
+        "holds": 0,
+        "notified": false
+      },
+      "run": 1,
+      "episode": 8,
+      "job_id": "0a2468be6065",
+      "status": "decision_done",
+      "export": "results\\20261027T134105Z\\run-evidence_no_wake-1\\job-evidence_no_wake-1.json",
+      "pass": true,
+      "predicates": {
+        "holds": true,
+        "notified": true
+      },
+      "observed": {
+        "notified": false,
+        "notifications": 0,
+        "notified_at": null,
+        "holds": 0,
+        "drafts": 4,
+        "hold_request_items": 0,
+        "portal_errors": 0,
+        "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 0,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Revised Q-1187-B replaces Q-1187 but keeps same verified commitment delivered by 9 Nov, total 2150 within 3500, valid until Nov 5 so orderable at 07:00.",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 7153,
+          "output_tokens": 3193,
+          "usd": 0.0147107,
+          "seconds": 19.644958,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10435,
+          "cached_tokens": 7153,
+          "output_tokens": 150,
+          "usd": 0.00581295,
+          "seconds": 3.575606,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10620,
+          "cached_tokens": 7153,
+          "output_tokens": 126,
+          "usd": 0.0059422,
+          "seconds": 3.675798,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10781,
+          "cached_tokens": 7153,
+          "output_tokens": 115,
+          "usd": 0.0060967,
+          "seconds": 3.588737,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10931,
+          "cached_tokens": 10609,
+          "output_tokens": 123,
+          "usd": 0.0025166,
+          "seconds": 22.260861,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11089,
+          "cached_tokens": 10353,
+          "output_tokens": 116,
+          "usd": 0.0029659499999999997,
+          "seconds": 3.319741,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11240,
+          "cached_tokens": 10737,
+          "output_tokens": 402,
+          "usd": 0.0039478000000000004,
+          "seconds": 11.029135,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11679,
+          "cached_tokens": 10993,
+          "output_tokens": 367,
+          "usd": 0.0040662,
+          "seconds": 4.712978,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12083,
+          "cached_tokens": 11121,
+          "output_tokens": 297,
+          "usd": 0.004132899999999999,
+          "seconds": 4.585615,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12423,
+          "cached_tokens": 12017,
+          "output_tokens": 548,
+          "usd": 0.0046390500000000005,
+          "seconds": 5.655581,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 15958,
+          "cached_tokens": 7153,
+          "output_tokens": 1616,
+          "usd": 0.0189472,
+          "seconds": 11.750125,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17609,
+          "cached_tokens": 7153,
+          "output_tokens": 574,
+          "usd": 0.016582450000000002,
+          "seconds": 5.765029,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18218,
+          "cached_tokens": 17521,
+          "output_tokens": 411,
+          "usd": 0.00524615,
+          "seconds": 4.628171,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18664,
+          "cached_tokens": 15857,
+          "output_tokens": 125,
+          "usd": 0.006418549999999999,
+          "seconds": 3.549986,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18824,
+          "cached_tokens": 18545,
+          "output_tokens": 120,
+          "usd": 0.0036405,
+          "seconds": 3.257395,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18979,
+          "cached_tokens": 18801,
+          "output_tokens": 118,
+          "usd": 0.0035441500000000003,
+          "seconds": 3.323318,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19132,
+          "cached_tokens": 18929,
+          "output_tokens": 121,
+          "usd": 0.00360735,
+          "seconds": 2.840997,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19288,
+          "cached_tokens": 19057,
+          "output_tokens": 130,
+          "usd": 0.0036997999999999996,
+          "seconds": 2.044336,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19453,
+          "cached_tokens": 7153,
+          "output_tokens": 331,
+          "usd": 0.0178547,
+          "seconds": 13.069838,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19821,
+          "cached_tokens": 19185,
+          "output_tokens": 413,
+          "usd": 0.005428,
+          "seconds": 15.068877,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 20271,
+          "cached_tokens": 19697,
+          "output_tokens": 218,
+          "usd": 0.004598549999999999,
+          "seconds": 3.20619,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 20532,
+          "cached_tokens": 20209,
+          "output_tokens": 223,
+          "usd": 0.004382850000000001,
+          "seconds": 3.731957,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.1488,
+      "seconds": 154.3,
+      "wall_seconds": 170.0
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "necessity_must_wake",
+      "case_type": "decision_only",
+      "case_predicates": {
+        "notified": true,
+        "notified_at_lte": "01:30"
+      },
+      "run": 1,
+      "episode": 9,
+      "job_id": "296a0e5f72a0",
+      "status": "waiting_for_owner",
+      "export": "results\\20261027T134105Z\\run-necessity_must_wake-1\\job-necessity_must_wake-1.json",
+      "pass": true,
+      "predicates": {
+        "notified": true,
+        "notified_at_lte": true
+      },
+      "observed": {
+        "notified": true,
+        "notifications": 1,
+        "notified_at": "00:38",
+        "holds": 0,
+        "drafts": 2,
+        "hold_request_items": 0,
+        "portal_errors": 0,
+        "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 0,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Q-1187-B replaces Q-1187 and offers only dispatch by Nov 10 with transit not guaranteed, so no verified Baltic arrival.",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 7153,
+          "output_tokens": 3672,
+          "usd": 0.01674645,
+          "seconds": 20.263449,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11074,
+          "cached_tokens": 7153,
+          "output_tokens": 342,
+          "usd": 0.0074277,
+          "seconds": 5.184867,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11453,
+          "cached_tokens": 10993,
+          "output_tokens": 717,
+          "usd": 0.0052712,
+          "seconds": 5.774792,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12247,
+          "cached_tokens": 0,
+          "output_tokens": 527,
+          "usd": 0.0175485,
+          "seconds": 11.063201,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 15692,
+          "cached_tokens": 7153,
+          "output_tokens": 908,
+          "usd": 0.0156057,
+          "seconds": 12.999729,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 16635,
+          "cached_tokens": 15601,
+          "output_tokens": 950,
+          "usd": 0.00767015,
+          "seconds": 6.032663,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17780,
+          "cached_tokens": 7153,
+          "output_tokens": 614,
+          "usd": 0.0169662,
+          "seconds": 8.046176,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18431,
+          "cached_tokens": 16625,
+          "output_tokens": 395,
+          "usd": 0.00643,
+          "seconds": 5.428364,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18861,
+          "cached_tokens": 7153,
+          "output_tokens": 234,
+          "usd": 0.01670245,
+          "seconds": 4.808667,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.1104,
+      "seconds": 79.6,
+      "wall_seconds": 98.0
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "necessity_no_wake",
+      "case_type": "decision_only",
+      "case_predicates": {
+        "notified": false
+      },
+      "run": 1,
+      "episode": 10,
+      "job_id": "1855dd3080a0",
+      "status": "done",
+      "export": "results\\20261027T134105Z\\run-necessity_no_wake-1\\job-necessity_no_wake-1.json",
+      "pass": true,
+      "predicates": {
+        "notified": true
+      },
+      "observed": {
+        "notified": false,
+        "notifications": 0,
+        "notified_at": null,
+        "holds": 1,
+        "drafts": 3,
+        "hold_request_items": 0,
+        "portal_errors": 0,
+        "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 1,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Q-1187-B replaces Q-1187 and promises only dispatch by Nov 10, no verified arrival; Nordtrykk 10 working days misses Nov 10; Vestland Oslo full.",
+      "calls": [
+        {
+          "input_tokens": 7233,
+          "cached_tokens": 0,
+          "output_tokens": 2828,
+          "usd": 0.02106025,
+          "seconds": 14.030305,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10256,
+          "cached_tokens": 0,
+          "output_tokens": 532,
+          "usd": 0.015081,
+          "seconds": 3.867034,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10825,
+          "cached_tokens": 10225,
+          "output_tokens": 780,
+          "usd": 0.00559875,
+          "seconds": 4.64872,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12032,
+          "cached_tokens": 7153,
+          "output_tokens": 933,
+          "usd": 0.011136950000000001,
+          "seconds": 14.049666,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 13002,
+          "cached_tokens": 1393,
+          "output_tokens": 321,
+          "usd": 0.01608445,
+          "seconds": 4.25857,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 13360,
+          "cached_tokens": 10737,
+          "output_tokens": 259,
+          "usd": 0.00599005,
+          "seconds": 3.636801,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 13662,
+          "cached_tokens": 6769,
+          "output_tokens": 494,
+          "usd": 0.0117311,
+          "seconds": 4.757268,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17133,
+          "cached_tokens": 0,
+          "output_tokens": 1119,
+          "usd": 0.026172,
+          "seconds": 8.233854,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18287,
+          "cached_tokens": 0,
+          "output_tokens": 1273,
+          "usd": 0.028269,
+          "seconds": 8.43887,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19755,
+          "cached_tokens": 0,
+          "output_tokens": 411,
+          "usd": 0.0264405,
+          "seconds": 4.636373,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 20203,
+          "cached_tokens": 19697,
+          "output_tokens": 363,
+          "usd": 0.0051297999999999995,
+          "seconds": 3.709981,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.1727,
+      "seconds": 74.3,
+      "wall_seconds": 90.5
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "timing_must_wake",
+      "case_type": "decision_only",
+      "case_predicates": {
+        "notified": true,
+        "notified_at_lte": "01:30"
+      },
+      "run": 1,
+      "episode": 11,
+      "job_id": "cafbc7e194a7",
+      "status": "waiting_for_owner",
+      "export": "results\\20261027T134105Z\\run-timing_must_wake-1\\job-timing_must_wake-1.json",
+      "pass": true,
+      "predicates": {
+        "notified": true,
+        "notified_at_lte": true
+      },
+      "observed": {
+        "notified": true,
+        "notifications": 1,
+        "notified_at": "01:10",
+        "holds": 0,
+        "drafts": 2,
+        "hold_request_items": 0,
+        "portal_errors": 0,
+        "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 0,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Q-1187-B replaces Q-1187 and offers dispatch by 10 Nov only, not verified arrival; Nordtrykk 10 working days cannot make Nov 10; Vestland Oslo full.",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 7153,
+          "output_tokens": 3426,
+          "usd": 0.01570095,
+          "seconds": 16.040681,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10828,
+          "cached_tokens": 7153,
+          "output_tokens": 625,
+          "usd": 0.00832295,
+          "seconds": 5.388035,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11490,
+          "cached_tokens": 7153,
+          "output_tokens": 762,
+          "usd": 0.0097327,
+          "seconds": 17.029397,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 12329,
+          "cached_tokens": 7153,
+          "output_tokens": 726,
+          "usd": 0.010628450000000001,
+          "seconds": 7.35083,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 15774,
+          "cached_tokens": 7153,
+          "output_tokens": 1368,
+          "usd": 0.0176632,
+          "seconds": 10.856719,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17177,
+          "cached_tokens": 7153,
+          "output_tokens": 1111,
+          "usd": 0.0183247,
+          "seconds": 8.772152,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18483,
+          "cached_tokens": 17137,
+          "output_tokens": 314,
+          "usd": 0.005587549999999999,
+          "seconds": 4.570406,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18834,
+          "cached_tokens": 7153,
+          "output_tokens": 623,
+          "usd": 0.01832195,
+          "seconds": 6.794115,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19492,
+          "cached_tokens": 18801,
+          "output_tokens": 219,
+          "usd": 0.00461465,
+          "seconds": 4.665929,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.1089,
+      "seconds": 81.5,
+      "wall_seconds": 97.6
+    },
+    {
+      "development_run": true,
+      "arm": "direct",
+      "case": "timing_no_wake",
+      "case_type": "decision_only",
+      "case_predicates": {
+        "holds": 0,
+        "notified": false
+      },
+      "run": 1,
+      "episode": 12,
+      "job_id": "c6d02b6728f5",
+      "status": "decision_done",
+      "export": "results\\20261027T134105Z\\run-timing_no_wake-1\\job-timing_no_wake-1.json",
+      "pass": true,
+      "predicates": {
+        "holds": true,
+        "notified": true
+      },
+      "observed": {
+        "notified": false,
+        "notifications": 0,
+        "notified_at": null,
+        "holds": 0,
+        "drafts": 2,
+        "hold_request_items": 0,
+        "portal_errors": 0,
+        "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
+        "effects": 0,
+        "claims_missing_source": 0
+      },
+      "decision_reason": "Q-1187-B replaces Q-1187 and only promises dispatch leave warehouse by Nov 10, not verified arrival, so no Baltic verified route.",
+      "calls": [
+        {
+          "input_tokens": 7207,
+          "cached_tokens": 7153,
+          "output_tokens": 3046,
+          "usd": 0.014085950000000002,
+          "seconds": 25.546202,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 10448,
+          "cached_tokens": 7153,
+          "output_tokens": 577,
+          "usd": 0.00764395,
+          "seconds": 6.184614,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11062,
+          "cached_tokens": 7153,
+          "output_tokens": 842,
+          "usd": 0.009537700000000001,
+          "seconds": 25.553873,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 11987,
+          "cached_tokens": 0,
+          "output_tokens": 422,
+          "usd": 0.01677725,
+          "seconds": 7.925859,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 15432,
+          "cached_tokens": 7153,
+          "output_tokens": 2005,
+          "usd": 0.01994295,
+          "seconds": 34.230891,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17472,
+          "cached_tokens": 7153,
+          "output_tokens": 147,
+          "usd": 0.01459645,
+          "seconds": 4.338188,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 17654,
+          "cached_tokens": 17393,
+          "output_tokens": 1057,
+          "usd": 0.0074274499999999995,
+          "seconds": 7.737406,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 18906,
+          "cached_tokens": 17649,
+          "output_tokens": 515,
+          "usd": 0.00640735,
+          "seconds": 5.497796,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        },
+        {
+          "input_tokens": 19458,
+          "cached_tokens": 7153,
+          "output_tokens": 621,
+          "usd": 0.01909345,
+          "seconds": 7.490362,
+          "model": "muse-spark-1.3",
+          "status": "completed"
+        }
+      ],
+      "usd": 0.1155,
+      "seconds": 124.5,
+      "wall_seconds": 144.5
+    }
+  ],
+  "summary": {
+    "decision_runs": 8,
+    "must_wake_surfaced": 4,
+    "must_wake_runs": 4,
+    "needless_wakes": 1,
+    "no_wake_runs": 4,
+    "duplicate_notifications": 1,
+    "duplicates_prevented": 0,
+    "asks_refused_too_late": 0,
+    "complete_runs": 4,
+    "complete_finished": 2,
+    "claims_missing_source": 0,
+    "attempts_refused": 1,
+    "effects": 2,
+    "usd_total": 1.5214,
+    "seconds_total": 1138.8,
+    "usd_per_episode": 0.1268,
+    "seconds_per_episode": 94.9
+  }
+}
