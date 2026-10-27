@@ -11,7 +11,11 @@ Built solo for the Meta Global AI Developer Hackathon 2026, Indie track, theme "
 
 ## Status
 
-Day 1. Everything below this line is filled in as it is built.
+Day 3 (Oct 27). One job runs the full night for real: sources read, the 00:38 revised quote, six checks, a wake question, an owner answer, one H-2041 hold and a morning page.
+The front door at `/` replays the recorded hero run and lets a visitor answer into a new live job, guarded by a daily spend cap and a 2-resume limit.
+Fixtures carry the studio's ordering contact and print file, which the gateway checks in code; version-bound approvals, operation ids and the contact-list leak flag are enforced with contract tests.
+Recorded hero (Oct 27): notified 00:47 about venue receipt only, hold placed on resume. Recorded contrast: decided to act itself but left the hold unplaced.
+Live: https://night-shift-demo.fly.dev/ (redeploy pending). Next: reliability at the public URL, then runtime limits and evaluation.
 
 ## Deploy (Fly.io, app `night-shift-demo`, region Stockholm)
 
@@ -26,6 +30,12 @@ fly launch --copy-config --no-deploy
 fly secrets set NIGHT_SHIFT_API_KEY_LIVE=$env:NIGHT_SHIFT_API_KEY_LIVE
 fly deploy
 ```
+
+## Results
+
+Recorded runs (muse-spark-1.3, Tue Oct 27; exports in `data/runs/`, details in `BUILDLOG.md`):
+- Hero `1b7dfbdae214`: notified at 00:47 ("Can Sjøsalen, Bergen receive the 100 tote bags during Wed Nov 11 08:00-12:00 van window?"), answered 01:05, hold H-2041 placed on resume, morning page with 3 drafts.
+- Contrast `db4b4b68aebc`: venue receipt verified from its own file, decided `act_under_permission`, but its hold attempts were refused in code and the turn ran out of budget — no hold, no notification, recorded honestly.
 
 ## Disclosure
 

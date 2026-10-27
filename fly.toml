@@ -3,6 +3,9 @@ primary_region = "arn"
 
 [env]
   DATA_DIR = "/data"
+  DAILY_CAP_USD = "5"
+  # RECORDED_JOB unset = replay the latest hero run with a wake and a hold.
+  # RUN_TOKEN is a secret, not an env: `fly secrets set RUN_TOKEN=...`.
 
 [http_service]
   internal_port = 8080
