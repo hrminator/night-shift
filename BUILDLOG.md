@@ -2,6 +2,11 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt F4b part 3: matched replay experiment (6 live resumes)
+
+- New scripts/replay_matched.py: forks recorded night 6c7c7c742513 at its paused state in throwaway DATA_DIRs with the same answer ("Bergen: the venue can receive it" at 01:05), 3 runs per arm. Replay resumes via runner.resume_job (10 reasoning items replayed, no files); resend drops the reasoning and re-attaches the read+reassess source content (both PDFs by fresh id, texts inline; uploads deleted after). Mechanics covered by tests/test_replay_matched.py (5 stub tests, no network).
+- results/replay-matched-20261028T202510Z/: replay mean 53,252.7 input tokens (33,401 / 93,000 / 33,357), resend mean 132,037.3 (154,418 / 83,511 / 158,183); all 6 done with holds passed and 5.0 mean drafts; thanks-venue runs 2/3 replay, 3/3 resend. README replay sentence replaced with the matched means; Day-1 6349/2106 kept as a labelled unmatched footnote.
+
 ## Wed Oct 28 — prompt F4b part 2: scorer definitions + rescore (no model reruns)
 
 - Scorer: must-wake needs notified + in-window (case notify_by, default 01:30) + a question matching the case's expected.missing_fact keywords (7 notified cases carry the venue-receipt list); "must-wake surfaced in window" and "late or wrong-question wakes" reported separately. A hold before the revised-quote event (or with no event) is premature, fails the run via no_premature_hold, and is counted separately. claims_missing_source now means the source resolves to no known world source (eval_world.KNOWN_SOURCE_TOKENS). Reports label the suite "12 constructed situations, 2 arms, N repetitions". New tests/test_eval_score.py (9 tests) + scripts/rescore.py (idempotent; rewrites results.json + report.md in place).
