@@ -2,6 +2,10 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt F5 part 4: README results
+
+- Results section: Night B now reads 1 of 3 before the fix (20261028T205824Z) and 3 of 3 after (20261028T221930Z, run 849015e83ed8 pinned), plus the "Two behaviours we fixed from measurements" paragraph (premature hold, misattributed thanks, each with before/after folders, and the loose thanks-venue correction).
+
 ## Wed Oct 28 — prompt F5 part 3: verification runs, re-pin
 
 - results/20261028T221930Z/: supervision necessity_no_wake x3 (concurrency 2, $0.3848, 363.1 model-s). Premature holds 0; effects 3; no notifications; misattributed 0. All three 22:30 reasons cite the Q-1187 line plus the precedence rule, and all three 00:38 reasons quote the dispatch line that ends the plan of record.
