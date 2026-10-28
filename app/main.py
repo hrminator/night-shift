@@ -610,6 +610,25 @@ def _draft_head_events(events: list) -> list:
     return [heads[key] for key in sorted(heads)]
 
 
+def _is_owner_note(draft: dict) -> bool:
+    to = str((draft.get("payload") or {}).get("to", "")).lower()
+    return "owner" in to
+
+
+def _current_heads(events: list) -> list:
+    from app import gateway as gateway_mod
+    smap = gateway_mod.superseded_map_for(events)
+    return [d for d in _draft_head_events(events) if d["id"] not in smap]
+
+
+def _approval_heads(events: list) -> list:
+    return [d for d in _current_heads(events) if not _is_owner_note(d)]
+
+
+def _for_you_heads(events: list) -> list:
+    return [d for d in _current_heads(events) if _is_owner_note(d)]
+
+
 def _draft_state(job_id: str, draft: dict, at_virtual: str = "07:00") -> str:
     """Approval state of one draft head: approved / needs approval again."""
     from app import gateway as gateway_mod
@@ -634,7 +653,7 @@ def _draft_cards(job_id: str, events: list, with_forms: bool = True) -> str:
     cards = ""
     earlier = ""
     _smap = gateway_mod.superseded_map_for(events)
-    for draft in [d for d in _draft_head_events(events) if d["id"] not in _smap]:
+    for draft in [d for d in _draft_head_events(events) if d["id"] not in _smap and not _is_owner_note(d)]:
         payload = draft["payload"] or {}
         version_hash = gateway_mod.head_version_hash(draft)
         state = _draft_state(job_id, draft)
@@ -667,6 +686,15 @@ def _draft_cards(job_id: str, events: list, with_forms: bool = True) -> str:
             f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>"
             f"{leak}{forms}</section>"
         )
+    for_you = ""
+    for draft in [d for d in _draft_head_events(events) if d["id"] not in _smap and _is_owner_note(d)]:
+        payload = draft["payload"] or {}
+        version = payload.get("version", 1)
+        state = _draft_state(job_id, draft)
+        leak = ("<p><b>Not sent: recipient not in your contacts</b></p>" if payload.get("leak") else "")
+        for_you += ("<section><h3>" f"{esc(str(payload.get('purpose', 'message')))} · {esc(state)}" f" · v{esc(str(version))}</h3>" f"<p>To: {esc(str(payload.get('to', '')))}</p>" f"<p>Subject: {esc(str(payload.get('subject', '')))}</p>" f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>" f"{leak}</section>")
+    if for_you:
+        cards += "<section><h2>For you</h2>" + for_you + "</section>"
     for draft in [d for d in _draft_head_events(events) if d["id"] in _smap]:
         payload = draft["payload"] or {}
         version = payload.get("version", 1)
@@ -761,17 +789,20 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
     evidence_section = (
         f"<h2>Evidence checks</h2><ol>{evidence_rows}</ol>" if evidence else ""
     )
+    approval_count = len(_approval_heads(events))
+    approval_word = "approval" if approval_count == 1 else "approvals"
+    draft_word = "draft" if approval_count == 1 else "drafts"
     if effects:
         label = (
             "Vestland slot held until 09:00 · Done: comparison, hold, "
-            "3 drafts · Needs you: 3 approvals (the Vestland order before "
+            f"{approval_count} {draft_word} · Needs you: {approval_count} {approval_word} (the Vestland order before "
             "09:00) · Couldn't verify: Baltic's arrival · Supplier system "
             "and mail simulated"
         )
     else:
         label = (
             "No hold was placed · Done: comparison, drafts · "
-            "Needs you: review · Couldn't verify: Baltic's arrival · "
+            f"Needs you: {approval_count} {approval_word} · Couldn't verify: Baltic's arrival · "
             "Supplier system and mail simulated"
         )
     ack = ""
