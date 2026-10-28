@@ -52,7 +52,7 @@ Every Meta API call goes through [app/adapter.py](app/adapter.py), called from [
 - Effort per call type: night turns run at medium with `max_output_tokens` 8192; source extraction runs at low with 2048. The probe measured minimal (41 in / 241 out / 229 reasoning, 2.11 s), low (41 / 350 / 339, 1.85 s) and medium (41 / 1024 / 1022, 4.4 s, truncated with empty text — medium needs at least 2048).
 - Tool calling uses `tool_choice:"auto"` with parallel tool calls; a call whose arguments fail the schema is refused and logged as malformed, and a turn that answers in plain text is nudged once, then marked failed and recorded.
 - The builder is Muse Code: all code commits are Muse Code's, driven by the prompt files in [prompts/](prompts/). The exact instruction text the app sends is published in [docs/instructions.md](docs/instructions.md), generated from the code.
-- The grounding call: after the reassess turn, the app sends the scan-styled revised quote as a PNG plus the exact line Spark quoted and asks for its bounding box on a 0-1000 grid (call type `ground`, `text.format` json_schema, outside the decision context). This call does not detect the change — Spark found the change reading the page itself; it only points at the line Spark quoted. The probe scored 10 runs against the fixture's line band (vertical centre in band plus 70% width coverage): 2 of 10 on target at low effort, 7 of 10 at medium, verdict FAIL, so pages show the quoted line underlined instead of a box. 10 runs is a small sample.
+- The grounding call: after the reassess turn, the app sends the scan-styled revised quote as a PNG (the @2x render, 1190x1682) plus the exact line Spark quoted and asks for its bounding box on a 0-1000 grid (call type `ground`, `text.format` json_schema, outside the decision context). This call does not detect the change — Spark found the change reading the page itself; it only points at the line Spark quoted. The probes scored 10 runs each against the fixture's line band (vertical centre in band plus 70% width coverage): 2 of 10 on target at low effort (1x), 7 of 10 at medium (1x), 0 of 10 at medium (2x), 0 of 10 at medium with a tighter instruction (2x); verdict FAIL, so a failed probe leaves the quoted line underlined with no box. 10 runs per probe is a small sample.
 
 ## Results
 
@@ -80,6 +80,7 @@ Not yet: three to five small-business owners will be asked Thu–Sat and quoted 
 - Post-pilot fixes, both Oct 27 and enforced in code: the duplicate-question rule (a repeat ask is refused with the open question quoted) and the never-ask-after-deadline rule (an ask past the answer deadline is refused; the outcome is wait_for_morning). The direct arm skips both.
 - A removed early instruction tune: "the guaranteed van IS the verified route" (Day 2 tune 2) was removed Oct 27 with the neutral rewrite; the neutral wording woke on its first run with no tune needed.
 - A model-judgment miss, untuned: alternatives_no_wake still wakes needlessly after the new rules. Per the brief there is no instruction tuning, so it stands as a miss.
+- The 1x medium grounding probe's 3 misses landed on the line directly above or below the quoted line (off-by-one-line at 595x841, where one text line is about 10 px tall).
 
 ## What's real, computed and simulated
 
