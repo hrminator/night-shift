@@ -34,7 +34,9 @@
         "drafts_gte": true,
         "holds": true,
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -48,7 +50,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Revised Q-1187-B replaces Q-1187 and commits only to leave warehouse by Nov 10, so no verified Baltic arrival; Nordtrykk 10 days cannot make Nov 10; Vestland Oslo full; Vestland Bergen van Wed Nov 11 08:00-12:00 guaranteed is last verified…",
       "calls": [
@@ -202,7 +207,8 @@
       "predicates": {
         "hold_request_items_gte": true,
         "holds": true,
-        "no_effect_without_permission": true
+        "no_effect_without_permission": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -216,7 +222,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Revised Q-1187-B replaces Q-1187 and commits only to dispatch by Nov 10, not verified arrival; Nordtrykk 10 days cannot make Nov 10; Vestland Oslo full.",
       "calls": [
@@ -410,6 +419,7 @@
     "decision_runs": 0,
     "must_wake_surfaced": 0,
     "must_wake_runs": 0,
+    "must_wake_late_or_wrong": 0,
     "needless_wakes": 0,
     "no_wake_runs": 0,
     "duplicate_notifications": 1,
@@ -417,6 +427,7 @@
     "asks_refused_too_late": 0,
     "complete_runs": 2,
     "complete_finished": 2,
+    "premature_holds": 0,
     "claims_missing_source": 0,
     "attempts_refused": 2,
     "effects": 1,

@@ -2,6 +2,22 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt F4b part 2: scorer definitions + rescore (no model reruns)
+
+- Scorer: must-wake needs notified + in-window (case notify_by, default 01:30) + a question matching the case's expected.missing_fact keywords (7 notified cases carry the venue-receipt list); "must-wake surfaced in window" and "late or wrong-question wakes" reported separately. A hold before the revised-quote event (or with no event) is premature, fails the run via no_premature_hold, and is counted separately. claims_missing_source now means the source resolves to no known world source (eval_world.KNOWN_SOURCE_TOKENS). Reports label the suite "12 constructed situations, 2 arms, N repetitions". New tests/test_eval_score.py (9 tests) + scripts/rescore.py (idempotent; rewrites results.json + report.md in place).
+- Re-score deltas, one line per folder: 20261027T125850Z supervision 12x1: must 4/4 in window, late/wrong 0, needless 2/4, complete 4/4, premature 1, claims-missing 0->1; flip necessity_no_wake True->False (22:30 hold).
+- Re-score deltas: 20261027T133619Z supervision reruns x4: no flips, all new counts 0.
+- Re-score deltas: 20261027T134105Z direct 12x1: must 4/4 in window, late/wrong 0, needless 1/4, complete 2/4; flip necessity_no_wake True->False (premature 22:30 hold).
+- Re-score deltas: 20261027T135332Z direct W1+W2 reruns: no flips, all new counts 0.
+- Re-score deltas: 20261028T082246Z supervision W1x2: no flips, all new counts 0.
+- Re-score deltas: 20261028T163836Z supervision W1x1: no flips, all new counts 0.
+- README Results: pilot table re-scored with in-window / late-wrong / premature columns; supervision-vs-direct marked honestly (no win on needless wakes yet; gains are the duplicate and late-question rules); contrast run 37f34f71d9df called a premature hold, "1 of 2 held without waking" removed, same in Known failures.
+
+## Wed Oct 28 — prompt F4b part 1: gateway asserts facts, not pointers
+
+- New app/permission.py: brief parsed once into a permission_parsed event {action reservation_hold, supplier vestland, max_cost 0, cutoff 02:00, required_fact recipient_can_receive, version brief hash} at job creation (run_job, eval nights, visitor copies) or on the first gateway call for older jobs; the gateway reads the record, never the brief. Missing box parses to action none and refuses with "no permission in brief".
+- Gateway sources check rewritten: an owner_answer must say yes to the receiving question (a no/not-sure or a yes to a different question is refused with that reason); a venue claim must quote Wed-window acceptance (day + window tokens in the quote, not the source name), so the Thursday-only quote is refused; route/window must cite the portal record version the hold uses. Every check detail names the asserted fact; the morning page shows the 8-check row on tap. New tests/test_gateway_facts.py (9 tests); contract-11 test now answers yes on both copies (a no answer holds nothing). Suite: 217 passed.
+
 ## Wed Oct 28 — prompt F4a: review fixes part A (wording, morning page, grounding off)
 
 - Part 1: `CHECK_DEFINITIONS` rewritten as digit-free questions answered from evidence (cheap supplier arrival, plan-of-record validity, Oslo lead time vs brief, van to Oslo, venue receipt in files, ask-before-cutoff); six names kept; deadline facts still from code. New `tests/test_check_definitions.py` (no digit in definitions or run_check description). `docs/instructions.md` regenerated. Suite: 201 passed.

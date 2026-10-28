@@ -3,11 +3,19 @@
 ``evaluate`` checks one run's events against its case's predicates.
 ``summarize`` aggregates run records per arm without ever merging
 decision-only and complete-job results into one percentage.
+
+A must-wake night counts as surfaced only when the owner is notified in
+the case's window with a question about the case's missing fact. A hold
+placed before the revised quote is premature and fails the run.
 """
 
 from __future__ import annotations
 
 from app import clock
+from app import eval_world
+
+#: Latest notify time unless a case computes another via expected.notify_by.
+DEFAULT_NOTIFY_BY = "01:30"
 
 
 def _questions(events: list[dict]) -> list[dict]:
@@ -37,16 +45,82 @@ def _refused_kind(events: list[dict], kind: str) -> int:
 
 
 def claims_missing_source(events: list[dict]) -> int:
-    """Claims with an empty source or quoted anchor."""
+    """Claims whose source id does not resolve to a known world source."""
     missing = 0
     for event in events:
         if event.get("kind") != "claim":
             continue
         payload = event.get("payload") or {}
-        if not str(payload.get("source", "")).strip() \
-                or not str(payload.get("quote", "")).strip():
+        if not eval_world.source_resolves(
+                payload.get("source"),
+                payload.get("version_or_file_id")):
             missing += 1
     return missing
+
+
+def premature_holds(events: list[dict]) -> int:
+    """Holds placed while the plan-of-record arrival was still committed.
+
+    In practice: a hold before the revised-quote event, or any hold when
+    the revised quote never arrives. At 22:30 the original quote still
+    commits arrival, so the hold is not the only way to keep a verified
+    route open.
+    """
+    effects = _effects(events)
+    if not effects:
+        return 0
+    revised = [e for e in events if e.get("kind") == "revised_quote"]
+    if not revised:
+        return len(effects)
+    try:
+        moment = clock.at(str(revised[0]["virtual_time"]))
+    except (ValueError, KeyError):
+        return 0
+    early = 0
+    for effect in effects:
+        try:
+            if clock.at(str(effect["virtual_time"])) < moment:
+                early += 1
+        except (ValueError, KeyError):
+            continue
+    return early
+
+
+def latest_notify_for(case: dict) -> str:
+    """The case's latest notify time: 01:30 unless it computes another."""
+    notify_by = (case.get("expected") or {}).get("notify_by")
+    return str(notify_by) if notify_by else DEFAULT_NOTIFY_BY
+
+
+def question_matches(question: dict, keywords: list) -> bool:
+    """True when a question concerns one of the keyword fragments."""
+    payload = question.get("payload") or {}
+    options = payload.get("options") or []
+    text = (str(payload.get("question", "")) + " "
+            + " ".join(str(option) for option in options)).lower()
+    return any(str(word).lower() in text for word in keywords)
+
+
+def right_question_asked(events: list[dict], case: dict) -> bool:
+    """True when a question concerns the case's missing fact.
+
+    Cases without expected.missing_fact constrain nothing; a question
+    that matches none of the keywords counts as a wrong question.
+    """
+    keywords = (case.get("expected") or {}).get("missing_fact")
+    if not keywords:
+        return True
+    return any(question_matches(event, keywords)
+               for event in _questions(events))
+
+
+def woke_in_window(events: list[dict], case: dict) -> bool:
+    """Notified at or before the case's latest notify time."""
+    questions = _questions(events)
+    if not questions:
+        return False
+    return _lte(str(questions[0]["virtual_time"]),
+                latest_notify_for(case))
 
 
 def observed(events: list[dict]) -> dict:
@@ -70,6 +144,7 @@ def observed(events: list[dict]) -> dict:
         "asks_refused_too_late": _refused_kind(
             events, "ask_refused_too_late"),
         "effects": len(effects),
+        "premature_holds": premature_holds(events),
         "claims_missing_source": claims_missing_source(events),
     }
 
@@ -78,8 +153,12 @@ def evaluate(events: list[dict], case: dict) -> dict:
     """Check one run's event log against its case predicates.
 
     Returns {"pass": bool, "predicates": {name: bool}, "observed": {...}}.
+    A notified case also needs the right question, and no run survives a
+    premature hold.
     """
     seen = observed(events)
+    seen["in_window"] = woke_in_window(events, case)
+    seen["right_question"] = right_question_asked(events, case)
     wants = (case.get("expected") or {}).get("predicates") or {}
     results: dict[str, bool] = {}
     for name, want in wants.items():
@@ -104,6 +183,9 @@ def evaluate(events: list[dict], case: dict) -> dict:
                 results[name] = True
         else:
             raise ValueError(f"unknown predicate {name!r}")
+    if wants.get("notified") is True:
+        results["right_question"] = seen["right_question"]
+    results["no_premature_hold"] = seen["premature_holds"] == 0
     return {"pass": all(results.values()), "predicates": results,
             "observed": seen}
 
@@ -115,6 +197,34 @@ def _lte(first_hhmm: str, second_hhmm: str) -> bool:
         return False
 
 
+def _case_for(record: dict) -> dict:
+    """The record's case file, or bare defaults when it cannot load."""
+    try:
+        return eval_world.load_case(str(record.get("case", "")))
+    except (ValueError, OSError):
+        return {"id": record.get("case"), "expected": {},
+                "type": record.get("case_type")}
+
+
+def _in_window_of(record: dict) -> bool:
+    """Whether the record's wake landed in its case's window."""
+    seen = record.get("observed") or {}
+    if "in_window" in seen:
+        return bool(seen["in_window"])
+    if not seen.get("notified") or not seen.get("notified_at"):
+        return False
+    return _lte(str(seen["notified_at"]),
+                latest_notify_for(_case_for(record)))
+
+
+def _right_question_of(record: dict) -> bool:
+    """Whether the record's question concerned its case's missing fact."""
+    seen = record.get("observed") or {}
+    if "right_question" in seen:
+        return bool(seen["right_question"])
+    return True
+
+
 def summarize(records: list[dict]) -> dict:
     """Aggregate run records per arm; decision-only and complete-job stay
     separate. Cost/seconds come from the harness wrapper, outcomes from the
@@ -124,7 +234,13 @@ def summarize(records: list[dict]) -> dict:
 
     must_runs = [r for r in decision if _wants(r, "notified", True)]
     no_runs = [r for r in decision if _wants(r, "notified", False)]
-    must_hit = sum(1 for r in must_runs if r["observed"].get("notified"))
+    must_hit = sum(1 for r in must_runs
+                   if (r["observed"].get("notified"))
+                   and _in_window_of(r) and _right_question_of(r))
+    late_or_wrong = sum(1 for r in must_runs
+                        if (r["observed"].get("notified"))
+                        and (not _in_window_of(r)
+                             or not _right_question_of(r)))
     needless = sum(1 for r in no_runs if r["observed"].get("notified"))
     duplicates = sum(1 for r in records
                      if (r["observed"].get("notifications") or 0) > 1)
@@ -133,6 +249,7 @@ def summarize(records: list[dict]) -> dict:
         "decision_runs": len(decision),
         "must_wake_surfaced": must_hit,
         "must_wake_runs": len(must_runs),
+        "must_wake_late_or_wrong": late_or_wrong,
         "needless_wakes": needless,
         "no_wake_runs": len(no_runs),
         "duplicate_notifications": duplicates,
@@ -142,6 +259,8 @@ def summarize(records: list[dict]) -> dict:
             r["observed"].get("asks_refused_too_late", 0) for r in records),
         "complete_runs": len(complete),
         "complete_finished": finished,
+        "premature_holds": sum(
+            r["observed"].get("premature_holds", 0) for r in records),
         "claims_missing_source": sum(
             r["observed"].get("claims_missing_source", 0) for r in records),
         "attempts_refused": sum(

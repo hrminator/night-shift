@@ -116,7 +116,9 @@
       "pass": true,
       "predicates": {
         "holds": true,
-        "notified": true
+        "notified": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -130,7 +132,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Q-1187-B replaces Q-1187 and offers only dispatch leave warehouse by 10 Nov, no verified arrival and late for Nov 10 Oslo need.",
       "calls": [
@@ -331,7 +336,9 @@
         "drafts_gte": true,
         "holds": true,
         "notified": true,
-        "portal_errors_gte": true
+        "portal_errors_gte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -345,7 +352,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Q-1187-B replaces Q-1187 and commits only to dispatch by Nov 10 with no verified arrival; Nordtrykk needs 10 working days; Vestland Oslo is full.",
       "calls": [
@@ -533,7 +543,9 @@
       "pass": true,
       "predicates": {
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -547,7 +559,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Revised Q-1187-B is dispatch-only by Nov 10, no verified arrival; original Q-1187 replaced; Nordtrykk 10 days cannot make Nov 10; Vestland Oslo full.",
       "calls": [
@@ -654,7 +669,8 @@
       "pass": false,
       "predicates": {
         "holds": true,
-        "notified": false
+        "notified": false,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -668,7 +684,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Q-1187-B replaces Q-1187 and states only leave warehouse by 10 Nov (dispatch, not guaranteed arrival).",
       "calls": [
@@ -775,7 +794,9 @@
       "pass": true,
       "predicates": {
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -789,7 +810,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Revised Q-1187-B only commits dispatch by Nov 10, not arrival, so no verified Baltic arrival; Nordtrykk 10 days cannot make Nov 10; Vestland Oslo full.",
       "calls": [
@@ -896,7 +920,8 @@
       "pass": true,
       "predicates": {
         "holds": true,
-        "notified": true
+        "notified": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": false,
@@ -910,7 +935,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": false,
+        "right_question": true
       },
       "decision_reason": "Revised Q-1187-B replaces Q-1187 but keeps same verified commitment delivered by 9 Nov, total 2150 within 3500, valid until Nov 5 so orderable at 07:00.",
       "calls": [
@@ -1134,7 +1162,9 @@
       "pass": true,
       "predicates": {
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -1148,7 +1178,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Q-1187-B replaces Q-1187 and offers only dispatch by Nov 10 with transit not guaranteed, so no verified Baltic arrival.",
       "calls": [
@@ -1251,9 +1284,10 @@
       "job_id": "1855dd3080a0",
       "status": "done",
       "export": "results\\20261027T134105Z\\run-necessity_no_wake-1\\job-necessity_no_wake-1.json",
-      "pass": true,
+      "pass": false,
       "predicates": {
-        "notified": true
+        "notified": true,
+        "no_premature_hold": false
       },
       "observed": {
         "notified": false,
@@ -1267,7 +1301,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 1,
+        "claims_missing_source": 0,
+        "in_window": false,
+        "right_question": true
       },
       "decision_reason": "Q-1187-B replaces Q-1187 and promises only dispatch by Nov 10, no verified arrival; Nordtrykk 10 working days misses Nov 10; Vestland Oslo full.",
       "calls": [
@@ -1392,7 +1429,9 @@
       "pass": true,
       "predicates": {
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -1406,7 +1445,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Q-1187-B replaces Q-1187 and offers dispatch by 10 Nov only, not verified arrival; Nordtrykk 10 working days cannot make Nov 10; Vestland Oslo full.",
       "calls": [
@@ -1513,7 +1555,8 @@
       "pass": true,
       "predicates": {
         "holds": true,
-        "notified": true
+        "notified": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": false,
@@ -1527,7 +1570,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": false,
+        "right_question": true
       },
       "decision_reason": "Q-1187-B replaces Q-1187 and only promises dispatch leave warehouse by Nov 10, not verified arrival, so no Baltic verified route.",
       "calls": [
@@ -1622,6 +1668,7 @@
     "decision_runs": 8,
     "must_wake_surfaced": 4,
     "must_wake_runs": 4,
+    "must_wake_late_or_wrong": 0,
     "needless_wakes": 1,
     "no_wake_runs": 4,
     "duplicate_notifications": 1,
@@ -1629,6 +1676,7 @@
     "asks_refused_too_late": 0,
     "complete_runs": 4,
     "complete_finished": 2,
+    "premature_holds": 1,
     "claims_missing_source": 0,
     "attempts_refused": 1,
     "effects": 2,

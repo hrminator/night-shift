@@ -33,7 +33,9 @@
         "drafts_gte": true,
         "holds": true,
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -47,7 +49,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Last verified on-time route is Vestland Bergen van Wed Nov 11 08:00-12:00 guaranteed, NOK 2800 within budget; Baltic now dispatch-only, Nordtrykk no date, Oslo freight full, venue files do not confirm Wed receipt, hold closes 02:00.",
       "calls": [
@@ -351,6 +356,7 @@
     "decision_runs": 0,
     "must_wake_surfaced": 0,
     "must_wake_runs": 0,
+    "must_wake_late_or_wrong": 0,
     "needless_wakes": 0,
     "no_wake_runs": 0,
     "duplicate_notifications": 0,
@@ -358,6 +364,7 @@
     "asks_refused_too_late": 0,
     "complete_runs": 1,
     "complete_finished": 1,
+    "premature_holds": 0,
     "claims_missing_source": 0,
     "attempts_refused": 0,
     "effects": 1,

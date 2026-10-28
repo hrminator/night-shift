@@ -32,7 +32,8 @@
       "pass": false,
       "predicates": {
         "holds": true,
-        "notified": false
+        "notified": false,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -46,7 +47,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Baltic arrival no longer committed (Q-1187 replaced, Q-1187-B is dispatch only), Nordtrykk unverified, Vestland Oslo full.",
       "calls": [
@@ -153,7 +157,8 @@
       "pass": true,
       "predicates": {
         "holds": true,
-        "notified": true
+        "notified": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": false,
@@ -167,7 +172,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 1,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": false,
+        "right_question": true
       },
       "decision_reason": "02:30 past 01:50 answer deadline and 02:00 hold cutoff, so wake/hold no longer possible; park revised comparison for 07:00 review with no verified Oslo route and Bergen van receipt unverified.",
       "calls": [
@@ -314,7 +322,9 @@
         "drafts_gte": true,
         "holds": true,
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -328,7 +338,10 @@
         "duplicates_prevented": 1,
         "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "After Q-1187-B, Baltic has no verified arrival (dispatch by Nov 10 only) and Q-1187 invalid; Nordtrykk fails lead time; Vestland Oslo full.",
       "calls": [
@@ -498,7 +511,9 @@
       "pass": true,
       "predicates": {
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -512,7 +527,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Q-1187-B replaces Q-1187 with dispatch only, no verified Baltic arrival.",
       "calls": [
@@ -679,6 +697,7 @@
     "decision_runs": 3,
     "must_wake_surfaced": 1,
     "must_wake_runs": 1,
+    "must_wake_late_or_wrong": 0,
     "needless_wakes": 1,
     "no_wake_runs": 2,
     "duplicate_notifications": 1,
@@ -686,6 +705,7 @@
     "asks_refused_too_late": 1,
     "complete_runs": 1,
     "complete_finished": 1,
+    "premature_holds": 0,
     "claims_missing_source": 0,
     "attempts_refused": 0,
     "effects": 1,

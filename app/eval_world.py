@@ -51,6 +51,21 @@ REVISED_ARRIVAL_LINES = [
 ]
 
 
+#: Name fragments that resolve a claim's source to a known world source.
+KNOWN_SOURCE_TOKENS = (
+    "nordtrykk", "baltic", "vestland", "portal", "venue", "sjosalen",
+    "sjøsalen", "studio", "brief", "address", "decision", "terms",
+    "quote", "q-1187",
+)
+
+
+def source_resolves(source: object, version_or_file_id: object = "") -> bool:
+    """True when a claim's source names a known world source."""
+    blob = f"{source or ''} {version_or_file_id or ''}".lower()
+    blob = blob.replace("ø", "o").replace("æ", "ae").replace("å", "a")
+    return any(token in blob for token in KNOWN_SOURCE_TOKENS)
+
+
 def list_cases() -> list[dict]:
     """Load and validate every case file, sorted by id."""
     cases = [load_case(path.stem) for path in sorted(CASES_DIR.glob("*.json"))]
@@ -106,6 +121,16 @@ def _validate(case: dict, path: Path) -> None:
     expected = case.get("expected") or {}
     if not isinstance(expected.get("words"), str) or not expected["words"]:
         raise ValueError(f"{path}: expected.words must be non-empty")
+    missing = expected.get("missing_fact")
+    if missing is not None and (
+            not isinstance(missing, list) or not missing
+            or not all(isinstance(word, str) and word.strip()
+                       for word in missing)):
+        raise ValueError(f"{path}: expected.missing_fact must be a"
+                         " non-empty list of keywords")
+    notify_by = expected.get("notify_by")
+    if notify_by is not None:
+        _check_hhmm(path, str(notify_by))
     predicates = expected.get("predicates") or {}
     unknown = set(predicates) - KNOWN_PREDICATES
     if unknown:

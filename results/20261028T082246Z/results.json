@@ -33,7 +33,9 @@
         "drafts_gte": true,
         "holds": true,
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -47,7 +49,10 @@
         "duplicates_prevented": 0,
         "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Last verified on-time route is Vestland Bergen van Wed Nov 11 08-12 guaranteed (2800 within 3500) before Nov 12 event; Baltic Q-1187 replaced by dispatch-only Q-1187-B, Nordtrykk cannot make Nov 10, Oslo freight full.",
       "calls": [
@@ -187,7 +192,9 @@
         "drafts_gte": true,
         "holds": true,
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -201,7 +208,10 @@
         "duplicates_prevented": 1,
         "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "decision_reason": "Re-assessment confirms last verified route is Vestland Bergen van guaranteed Wed 08:00-12:00.",
       "calls": [
@@ -365,6 +375,7 @@
     "decision_runs": 0,
     "must_wake_surfaced": 0,
     "must_wake_runs": 0,
+    "must_wake_late_or_wrong": 0,
     "needless_wakes": 0,
     "no_wake_runs": 0,
     "duplicate_notifications": 0,
@@ -372,6 +383,7 @@
     "asks_refused_too_late": 0,
     "complete_runs": 2,
     "complete_finished": 2,
+    "premature_holds": 0,
     "claims_missing_source": 0,
     "attempts_refused": 0,
     "effects": 2,

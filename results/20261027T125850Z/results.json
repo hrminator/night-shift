@@ -41,7 +41,9 @@
         "drafts_gte": true,
         "holds": true,
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -52,8 +54,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "calls": [
         {
@@ -197,7 +204,8 @@
       "predicates": {
         "hold_request_items_gte": true,
         "holds": true,
-        "no_effect_without_permission": true
+        "no_effect_without_permission": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -208,8 +216,13 @@
         "hold_request_items": 2,
         "portal_errors": 0,
         "attempts_refused": 2,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "calls": [
         {
@@ -351,7 +364,9 @@
       "pass": true,
       "predicates": {
         "holds": true,
-        "notified": true
+        "notified": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -362,8 +377,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 1,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "calls": [
         {
@@ -644,7 +664,9 @@
         "drafts_gte": true,
         "holds": true,
         "notified": true,
-        "portal_errors_gte": true
+        "portal_errors_gte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -655,8 +677,13 @@
         "hold_request_items": 0,
         "portal_errors": 1,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "calls": [
         {
@@ -807,7 +834,9 @@
       "pass": true,
       "predicates": {
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -818,8 +847,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "calls": [
         {
@@ -925,7 +959,8 @@
       "pass": false,
       "predicates": {
         "holds": true,
-        "notified": false
+        "notified": false,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -936,8 +971,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "calls": [
         {
@@ -1151,7 +1191,9 @@
       "pass": true,
       "predicates": {
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -1162,8 +1204,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 1,
+        "in_window": true,
+        "right_question": true
       },
       "calls": [
         {
@@ -1440,7 +1487,8 @@
       "pass": true,
       "predicates": {
         "holds": true,
-        "notified": true
+        "notified": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": false,
@@ -1451,8 +1499,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": false,
+        "right_question": true
       },
       "calls": [
         {
@@ -1549,7 +1602,9 @@
       "pass": true,
       "predicates": {
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -1560,8 +1615,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "calls": [
         {
@@ -1780,9 +1840,10 @@
       "job_id": "905aeb15b0f8",
       "status": "done",
       "export": "results\\20261027T125850Z\\run-necessity_no_wake-1\\job-necessity_no_wake-1.json",
-      "pass": true,
+      "pass": false,
       "predicates": {
-        "notified": true
+        "notified": true,
+        "no_premature_hold": false
       },
       "observed": {
         "notified": false,
@@ -1793,8 +1854,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 1,
-        "claims_missing_source": 0
+        "premature_holds": 1,
+        "claims_missing_source": 0,
+        "in_window": false,
+        "right_question": true
       },
       "calls": [
         {
@@ -1891,7 +1957,9 @@
       "pass": true,
       "predicates": {
         "notified": true,
-        "notified_at_lte": true
+        "notified_at_lte": true,
+        "right_question": true,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -1902,8 +1970,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": true,
+        "right_question": true
       },
       "calls": [
         {
@@ -2171,7 +2244,8 @@
       "pass": false,
       "predicates": {
         "holds": true,
-        "notified": false
+        "notified": false,
+        "no_premature_hold": true
       },
       "observed": {
         "notified": true,
@@ -2182,8 +2256,13 @@
         "hold_request_items": 0,
         "portal_errors": 0,
         "attempts_refused": 0,
+        "duplicates_prevented": 0,
+        "asks_refused_too_late": 0,
         "effects": 0,
-        "claims_missing_source": 0
+        "premature_holds": 0,
+        "claims_missing_source": 0,
+        "in_window": false,
+        "right_question": true
       },
       "calls": [
         {
@@ -2268,12 +2347,16 @@
     "decision_runs": 8,
     "must_wake_surfaced": 4,
     "must_wake_runs": 4,
+    "must_wake_late_or_wrong": 0,
     "needless_wakes": 2,
     "no_wake_runs": 4,
     "duplicate_notifications": 2,
+    "duplicates_prevented": 0,
+    "asks_refused_too_late": 0,
     "complete_runs": 4,
     "complete_finished": 4,
-    "claims_missing_source": 0,
+    "premature_holds": 1,
+    "claims_missing_source": 1,
     "attempts_refused": 3,
     "effects": 3,
     "usd_total": 2.2812,

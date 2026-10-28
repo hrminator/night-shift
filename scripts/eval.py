@@ -215,6 +215,17 @@ def cache_share_line(records: list[dict]) -> str:
             f" ({cached} of {total} input tokens).")
 
 
+def _harness_wall_line(payload: dict) -> str:
+    """Harness wall line, or a plain note when the run predates it."""
+    elapsed = payload.get("elapsed_seconds")
+    wall_sum = payload.get("wall_sum_seconds")
+    if elapsed is None or wall_sum is None:
+        return "Harness wall: not recorded (run predates wall timing)."
+    return (f"Harness wall: {elapsed} s for"
+            f" {len(payload['records'])} episodes (sum of episode walls"
+            f" {wall_sum} s).")
+
+
 def render_report(payload: dict) -> str:
     """Markdown report: decision-only and complete-job stay separate."""
     summary = payload["summary"]
@@ -223,14 +234,19 @@ def render_report(payload: dict) -> str:
         "",
         f"Arm: {payload['arm']} · model: {payload['model']} · effort:"
         f" {payload['effort']} · started: {payload['started_utc']}",
+        f"Suite: {len(eval_world.list_cases())} constructed situations,"
+        f" 2 arms, {payload['runs_per_case']} "
+        f"repetition{'s' if payload['runs_per_case'] != 1 else ''}.",
         f"Cases: {', '.join(payload['cases'])} ·"
-        f" runs per case: {payload['runs_per_case']} ·"
+        f" repetitions per case: {payload['runs_per_case']} ·"
         f" concurrency: {payload.get('concurrency', 1)}",
         "",
         "## Decision-only cases (wake pairs)",
         "",
-        f"Must-wake surfaced {summary['must_wake_surfaced']} of"
+        f"Must-wake surfaced in window {summary['must_wake_surfaced']} of"
         f" {summary['must_wake_runs']}.",
+        f"Late or wrong-question wakes:"
+        f" {summary.get('must_wake_late_or_wrong', 0)} (counted separately).",
         f"Needless wakes {summary['needless_wakes']} on"
         f" {summary['no_wake_runs']} no-wake runs.",
         f"Duplicate notifications that still got through (runs with more"
@@ -249,6 +265,8 @@ def render_report(payload: dict) -> str:
         "## All runs",
         "",
         f"Claims without a source: {summary['claims_missing_source']}.",
+        f"Premature holds: {summary.get('premature_holds', 0)} (holds placed"
+        " before the revised quote; counted separately).",
         f"Unauthorized attempts (refused): {summary['attempts_refused']};"
         f" executed effects: {summary['effects']} (counted separately).",
         f"Late asks refused (ask_refused_too_late):"
@@ -258,9 +276,7 @@ def render_report(payload: dict) -> str:
         f"Model seconds: {summary['seconds_total']:.1f} total,"
         f" {summary['seconds_per_episode']:.1f} mean per episode.",
         f"Cache: {cache_share_line(payload['records'])}",
-        f"Harness wall: {payload.get('elapsed_seconds', '?')} s for"
-        f" {len(payload['records'])} episodes (sum of episode walls"
-        f" {payload.get('wall_sum_seconds', '?')} s).",
+        _harness_wall_line(payload),
         "",
         "## Per-case episodes",
         "",

@@ -56,18 +56,18 @@ Every Meta API call goes through [app/adapter.py](app/adapter.py), called from [
 
 ## Results
 
-Pilot table, muse-spark-1.3, medium, 12 cases x 1 run each arm. Decision-only and complete-job results are never merged. All runs below are development runs; full per-episode reports are in `results/`.
+Pilot table, muse-spark-1.3, medium, 12 constructed situations, 2 arms, 1 repetition each arm (re-scored Oct 28 with the in-window, right-question, and premature-hold rules). Decision-only and complete-job results are never merged. All runs below are development runs; full per-episode reports are in `results/`.
 
-| arm | must-wake | needless wakes | duplicates through / prevented | complete jobs | refused / effects | cost |
-|---|---|---|---|---|---|---|
-| supervision (`results/20261027T125850Z`) | 4/4 | 2/4 | 2 runs / 0 | 4/4 | 3 / 3 | $2.28 |
-| direct (`results/20261027T134105Z` + `results/20261027T135332Z`) | 4/4 | 1/4 | 2 runs / 0 | 4/4 | 3 / 3 | $2.12 |
+| arm | must-wake in window | needless wakes | late/wrong wakes | duplicates through / prevented | complete jobs | premature holds | refused / effects | cost |
+|---|---|---|---|---|---|---|---|---|
+| supervision (`results/20261027T125850Z`) | 4/4 | 2/4 | 0 | 2 runs / 0 | 4/4 | 1 | 3 / 3 | $2.28 |
+| direct (`results/20261027T134105Z` + `results/20261027T135332Z`) | 4/4 | 1/4 | 0 | 2 runs / 0 | 4/4 | 1 | 3 / 3 | $2.12 |
 
-The supervision pilot's misses: needless wakes on alternatives_no_wake (the 4-working-day Nordtrykk page did not stop the wake) and timing_no_wake (woke at 02:30, after the cutoff), plus duplicate notifications on W1_timely_answer and necessity_must_wake, which asked in the read turn and again after the event. After the Oct 27 ask rules, reruns pass timing_no_wake (the 02:30 ask refused in code), W1 (one hold, one prevented duplicate) and necessity_must_wake, while alternatives_no_wake still wakes needlessly. The direct pilot's misses: a needless wake on alternatives_no_wake, and two first-pass episodes (W1, W2) lost to a transport error (WinError 10054) and rerun once into a second folder — the table counts the reruns.
+The supervision pilot's misses: needless wakes on alternatives_no_wake (the 4-working-day Nordtrykk page did not stop the wake) and timing_no_wake (woke at 02:30, after the cutoff), plus duplicate notifications on W1_timely_answer and necessity_must_wake, which asked in the read turn and again after the event. After the Oct 27 ask rules, reruns pass timing_no_wake (the 02:30 ask refused in code), W1 (one hold, one prevented duplicate) and necessity_must_wake, while alternatives_no_wake still wakes needlessly. The direct pilot's misses: a needless wake on alternatives_no_wake, and two first-pass episodes (W1, W2) lost to a transport error (WinError 10054) and rerun once into a second folder — the table counts the reruns. Re-scoring Oct 28 with the new rules added one premature hold per arm (necessity_no_wake held at 22:30, before the revised quote) and one claim without a resolvable source on the supervision arm. Honestly scored, supervision does not yet beat direct on needless wakes (2 vs 1); the demonstrated gains are the duplicate-question rule and the never-ask-after-deadline rule, both proven on reruns.
 
 Final runs: 12 situations × 2 arms × 3 runs on the frozen tag, planned for Sat Oct 31.
 
-Contrast runs so far: 1 of 2 fresh contrast runs placed the hold itself without waking the owner; the other woke anyway (job ids: 37f34f71d9df, 36e41552448b).
+Contrast runs so far: neither fresh contrast run counts as a correct quiet night. Run 37f34f71d9df placed its hold at 22:30 while the original quote still committed arrival, so under the scenario's own rule it is a premature hold, not a correct quiet night; run 36e41552448b woke at 00:47 asking about venue receipt though its own venue claim quoted the Wednesday delivery line.
 
 ## What real owners said
 
@@ -75,7 +75,7 @@ Not yet: one procurement professional (a real buyer of printed merchandise) will
 
 ## Known failures and variance
 
-- The two fresh contrast runs disagree with each other: `37f34f71d9df` placed hold H-2041 by itself at 22:30 with no notification, while `36e41552448b` woke at 00:47 asking about venue receipt though its own venue claim quoted the Wednesday delivery line. Same settings, same fixtures, opposite nights.
+- The two fresh contrast runs disagree with each other, and neither is a correct quiet night: `37f34f71d9df` placed hold H-2041 by itself at 22:30 with no notification while the original quote still committed arrival, so it is a premature hold under the scenario's own rule; `36e41552448b` woke at 00:47 asking about venue receipt though its own venue claim quoted the Wednesday delivery line. Same settings, same fixtures, opposite nights.
 - The pilots' needless wakes: alternatives_no_wake woke in both arms despite the 4-working-day Nordtrykk page, and timing_no_wake woke at 02:30, after the cutoff, in the supervision pilot. Duplicate notifications went through on W1_timely_answer and necessity_must_wake, which asked in the read turn and again after the event.
 - Post-pilot fixes, both Oct 27 and enforced in code: the duplicate-question rule (a repeat ask is refused with the open question quoted) and the never-ask-after-deadline rule (an ask past the answer deadline is refused; the outcome is wait_for_morning). The direct arm skips both.
 - A removed early instruction tune: "the guaranteed van IS the verified route" (Day 2 tune 2) was removed Oct 27 with the neutral rewrite; the neutral wording woke on its first run with no tune needed.
