@@ -1,0 +1,31 @@
+Read BUILDLOG.md (S0 notes), comps/night-0038.html, comps/question-0047.html, comps/morning-0700.html and prompts/prompt-s0-comps.txt (the full design spec is inside it; it still applies except where this prompt amends it). Prompt S0b: the premium pass on the three comps. Begin every shell command with Set-Location C:\Users\herma\night-shift and set $env:UV_CACHE_DIR='C:\Users\herma\night-shift\.uv-cache'. Not sandboxed. Port 8123 (kill any stale uvicorn on it first). Commit after each part, do not push, do not deploy, suite green. Copy this file into prompts/ and list it in prompts/README.md. Invoke /taste first if available.
+
+The owner's verdict on round 1: "it looks like something built in the 1980s". The concept is right (night is a dark instrument, morning is a paper letter, three physical objects, one amber accent). The execution is a wireframe: raw mono check names as headlines, a boxed pill tag on every line, bare cards, and a single narrow column on a 1920 px screen. Round 2 must look like a product a serious company shipped in 2026: calm, premium, confident. Think of the restraint and depth of Linear and Vercel, the clarity of a Stripe receipt, and the layered night surfaces of Apple's weather cards. Not a dashboard, not a terminal, not an AI toy. All DON'Ts in the spec still hold (no purple or blue gradients, no glows, no glassmorphism, no emoji, no spinners, no device frame, one accent, no green).
+
+Deliverables: comps/v2/night-0038.html, comps/v2/question-0047.html, comps/v2/morning-0700.html, same content and the same word-for-word MUSE SPARK text as round 1 (machine-check again), served under /comps/v2/, with Playwright screenshots at 390x844 and 1920x1080 into docs/screens/comps-v2/ (six PNGs), plus one extra screenshot of each page's first viewport only (above the fold, 390x844 viewport, not full page) so the owner sees what a visitor sees first. Round 1 stays untouched for comparison.
+
+Amendments to the spec, in order of importance:
+
+1. Hierarchy above the fold. The first phone viewport shows only: wordmark and provenance chip, the clock with its timeline, one status sentence in the serif ("No need to wake you." at 22:30 / the question at 00:47 / the greeting at 07:00), and the supplier strip. Nothing else before the fold. Every list (the six reads, the six checks, the decision record, how it decided, the resume panel, the footer legend) sits lower, and the long ones are collapsed under a one-line summary row with a chevron (static open state is fine for the comp; show the collapsed row and one open example). The page must feel short.
+
+2. Plain-language headlines. A check's title is its question in plain English ("Does any source still commit to Baltic arrival now?") set in Geist 16 500; the snake_case name moves to a tiny mono hint (11 px, --ink-3) at the end of the card or disappears on phones. The result is a 20 px mark at the right: a thin check in --ink-1 or the word No in --ink-2. The model's note is the body. Never a mono headline anywhere except the clock and the receipt.
+
+3. Tags become quiet. A tag is a 6 px dot plus a word in 11 px mono, once per card, bottom right, no border, no pill. Dot colours: MUSE SPARK --lamp, CODE --ink-3, SIMULATED --ink-2. The footer legend explains the three once. Nothing else is boxed.
+
+4. Surfaces with depth. Cards: --night-1 fill, a 1 px top highlight rgba(255,255,255,.06) and a 1 px --hair border, radius 16, shadow 0 1px 0 rgba(0,0,0,.4) and 0 12px 32px rgba(0,0,0,.35). Nested cards one step lighter. The page background keeps grain. Spacing on an 8 px grid, card padding 24 on desktop and 20 on phones, section gaps 40. Consistent vertical rhythm: two text sizes per card at most.
+
+5. The three objects must look real. The quote sheet: --paper-1 with a faint paper texture (SVG noise at 4 percent, warm), a 1 degree tilt, a two-layer shadow (a tight contact shadow plus a soft 40 px one), a subtle fold line at a third of the height, Newsreader body, the quoted line underlined in --lamp-deep with the caption beneath in --ink-2. The bedside note: a smaller card-stock rectangle, 2 px thicker edge on one side as if cut, slight tilt the other way, the question in Newsreader 32 on desktop and 28 on phones. The thermal receipt: narrow (max 320 px), --thermal, a sawtooth top edge done with a CSS mask or a repeating linear-gradient, Geist Mono 13 px, dashed separators, faint print bleed. Each object sits on the page with its own shadow, never inside a card.
+
+6. Desktop uses the width. At 1024 px and above, a two-column grid: left column 440 px fixed, the instrument (clock, timeline, status, strip, feed); right column flexible, the object of that state (sheet, note, or the morning letters and receipt) with the detailed lists below it. Max content width 1200, centred, 48 px gutters. The 1920x1080 screenshot must look composed, not a phone column floating in black. On phones, one column exactly as the spec.
+
+7. Typography polish. Geist for UI with letter-spacing -0.01em on headings; the clock in Geist Mono 72 on desktop, 64 on phones, tabular, with the minutes in --ink-1 and the colon in --ink-3; section labels 12 px uppercase with 0.12em tracking in --ink-3; the serif at 17/1.6 for quotes and the drafts. Body never under 15 px; tags and ticks may be 11 px as the spec's scale says.
+
+8. Icons. At most five inline SVG line icons from the Lucide set (16 px, 1.5 stroke, currentColor): clock, file-text, check, bell, mail. No other icons, no icon fonts.
+
+9. Buttons. On the note: a filled --lamp button (text --lamp-ink, 16 px 600, radius 999, 48 px tall, a 1 px inner highlight) and a ghost button with a --hair border. On the morning letters: "Approve this exact text" in --lamp-deep fill with --paper-1 text. Press states are not needed in a static comp.
+
+10. The morning. --paper-0 background with warm grain, letters as real paper sheets (same treatment as the quote sheet, no tilt), the hold chip in --lamp-deep outline, the receipt beside the greeting on desktop and under it on phones. It must read as a letter left for you in daylight, not as a light-mode dashboard.
+
+Keep page weight under 60 KB each with no JS. Fonts via Google Fonts only.
+
+End with a short summary: whether /taste loaded, the nine screenshot paths, page weights, the commit list, and any amendment you could not follow and why.
