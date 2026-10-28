@@ -91,6 +91,88 @@ def test_state_morning_shows_recorded_morning(tmp_path, monkeypatch):
     assert "H-2041" in body
 
 
+def test_state_question_orders_note_buttons_then_detail(tmp_path, monkeypatch):
+    body = _client(tmp_path, monkeypatch).get("/?state=question").text
+    assert "Muse Spark asks" in body
+    assert "Your answer runs live on your own copy of this night" in body
+    assert "Change one fact instead" in body
+    assert 'action="/visitor/night-b"' in body
+    assert "Run the night with this fact" in body
+    assert "Why now" in body and "What I checked" in body
+    assert "If yes / If no" in body
+    assert "The three suppliers" in body
+    assert "answer by 01:50" in body
+    export = _export()
+    asked = next(e for e in export["events"]
+                 if e["kind"] == "question")
+    first, second = asked["payload"]["options"]
+    assert f"<h2>{asked['payload']['question']}</h2>" in body
+    assert body.index("</h2>") < body.index(first) < body.index(second)
+    assert body.index(second) < body.index("Why now")
+    assert body.index(second) < body.index("The three suppliers")
+
+
+def test_what_checked_splits_at_semicolons():
+    assert states_mod.what_checked_items("a; b; c") == ["a", "b", "c"]
+    assert states_mod.what_checked_items("") == []
+
+
+def _seed_waiting_job():
+    from app.store import append_event, create_job, set_job_status
+    job = create_job(status="running", current_step="waiting_for_owner",
+                     virtual_time="00:47")
+    job_id = job["id"]
+    append_event(job_id, "21:30", "handoff", {"source": "owner"})
+    append_event(job_id, "00:38", "revised_quote",
+                 {"quote": "Q-1187-B", "replaces": "Q-1187"})
+    question = append_event(job_id, "00:47", "question", {
+        "question": "Can the venue receive Wed 08-12?",
+        "why_now": "cutoff 02:00", "what_checked": "a; b",
+        "if_yes": "hold", "if_no": "no hold",
+        "options": ["Bergen: the venue can receive it", "No / not sure"],
+    })
+    set_job_status(job_id, status="waiting_for_owner",
+                   pending_question_id=question["id"],
+                   current_step="waiting_for_owner", virtual_time="00:47")
+    return job_id
+
+
+def test_job_page_open_question_is_state_b(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    job_id = _seed_waiting_job()
+    client = TestClient(main_mod.app, raise_server_exceptions=False)
+    body = client.get(f"/jobs/{job_id}").text
+    assert "Muse Spark asks" in body
+    assert "Can the venue receive Wed 08-12?" in body
+    assert "Bergen: the venue can receive it" in body
+    assert "No / not sure" in body
+    assert f'action="/jobs/{job_id}/answer"' in body
+    assert "Your answer is a fact" in body
+    assert "waiting_for_owner" in body
+    assert "handoff" in body and "revised_quote" in body
+    assert "The three suppliers" in body
+    assert "LIVE · YOUR COPY" in body
+    assert "Change one fact instead" not in body
+
+
+def test_job_page_other_statuses_render(tmp_path, monkeypatch):
+    from app.store import append_event, create_job, set_job_status
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    client = TestClient(main_mod.app, raise_server_exceptions=False)
+    answered = create_job(status="running", virtual_time="00:47")
+    append_event(answered["id"], "21:30", "handoff", {"source": "owner"})
+    set_job_status(answered["id"], status="answered")
+    page = client.get(f"/jobs/{answered['id']}").text
+    assert "Answer recorded" in page
+    assert "Resume the night from the saved point" in page
+    done = create_job(status="done", current_step="done",
+                      virtual_time="07:00")
+    append_event(done["id"], "21:30", "handoff", {"source": "owner"})
+    page = client.get(f"/jobs/{done['id']}").text
+    assert "Night complete" in page
+    assert "Morning page" in page
+
+
 def test_default_page_shows_night_then_question(tmp_path, monkeypatch):
     body = _client(tmp_path, monkeypatch).get("/").text
     assert "Read 6 sources" in body

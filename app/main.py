@@ -296,54 +296,6 @@ def _replay_timeline(events: list) -> str:
 _NIGHT_B_ERRORS: dict[str, str] = {}
 
 
-def _visitor_question_card(question: dict) -> str:
-    """The recorded question with live answer buttons, plus the Night B control."""
-    from app import night_b as night_b_mod
-    esc = html.escape
-    payload = question.get("payload") or {}
-    options = payload.get("options") or []
-    buttons = "".join(
-        f'<button type="submit" name="choice" value="{esc(str(o))}">'
-        f"{esc(str(o))}</button>"
-        for o in options
-    )
-    return (
-        "<section><h2>You're the owner</h2>"
-        "<p>Tap an answer. It starts a <b>new</b> live job from the saved "
-        "point below (real model calls, its own outbox) and moves to that "
-        "job's morning page. The recording is never changed.</p>"
-        f"<p><b>{esc(str(payload.get('question', '')))}</b></p>"
-        f"<p>Why now: {esc(str(payload.get('why_now', '')))}</p>"
-        f"<p>Checked: {esc(str(payload.get('what_checked', '')))}</p>"
-        f"<p>If yes: {esc(str(payload.get('if_yes', '')))}</p>"
-        f"<p>If no: {esc(str(payload.get('if_no', '')))}</p>"
-        f'<form method="post" action="/visitor/answer">{buttons}</form>'
-        "<details><summary>Change one fact instead</summary>"
-        "<p>Night A, the venue letter as it is: "
-        f"<i>{esc(night_b_mod.night_a_sentence())}</i></p>"
-        "<p>Night B, one line changed: "
-        f"<i>{esc(night_b_mod.night_b_sentence())}</i></p>"
-        f"{night_b_comparison_paragraph()}"
-        '<form method="post" action="/visitor/night-b">'
-        "<button type=\"submit\">Run the night with this fact</button>"
-        "</form>"
-        "<p><small>A fresh night from 21:30 on a new copy: same policy,"
-        " same permission, one fixture line changed. It runs compressed"
-        " and shows each step as it is logged.</small></p>"
-        "</details>"
-        "</section>"
-    )
-
-
-def night_b_comparison_paragraph() -> str:
-    """One scored sentence beside the control, or empty with no data."""
-    from app import night_b as night_b_mod
-    line = night_b_mod.comparison_line()
-    if not line:
-        return ""
-    return f"<p>{html.escape(line)}</p>"
-
-
 @app.get("/", response_class=HTMLResponse)
 def index(state: str = "") -> str:
     """The one product screen: replay of the recorded hero run.
@@ -378,9 +330,12 @@ def index(state: str = "") -> str:
     footer = pages_mod.footer(raw_url, RESULTS_URL)
     recline = pages_mod.recorded_line(resolved["date"], model)
     cost = recorded_cost_line(resolved["job_id"])
-    card = ""
+    ownerline = ("You're the owner. Your answer runs live on your own "
+                 "copy of this night.")
+    note = ""
     if question is not None:
-        card = _visitor_question_card(question)
+        note = states_mod.question_note(question, '/visitor/answer',
+                                        ownerline, with_change=True)
     night_detail = (
         f"{states_mod.feed_html(events)}"
         f"{states_mod.beat_html(events)}"
@@ -392,6 +347,7 @@ def index(state: str = "") -> str:
         f"{states_mod.deadline_html(events)}"
         f"{states_mod.skip_html()}</section>"
     )
+    strip_rows = states_mod.strip_rows_for(events)
     if state == "night":
         verdict = states_mod.verdict_2230(events)
         if verdict is not None:
@@ -403,6 +359,7 @@ def index(state: str = "") -> str:
             "00:38", event_tag="SCRIPTED TEST EVENT")
             + pages_mod.status_para(status_text) + strip)
         detail = night_detail + cost
+        top = pages_mod.header_row(chip) + recline
         body_class = ""
     elif state == "question":
         if question is not None:
@@ -412,8 +369,11 @@ def index(state: str = "") -> str:
             status_text = ("Overnight replay: one job, 21:30 to the"
                            " question.")
         inst = (pages_mod.clock_block("00:47", amber_dot=True)
-                + pages_mod.status_para(status_text) + strip)
-        detail = card + cost
+                + pages_mod.status_para(status_text))
+        detail = (note
+                  + states_mod.strip_fold_html(strip_rows)
+                  + recline + cost)
+        top = pages_mod.header_row(chip)
         body_class = "state-b"
     else:
         if question is not None:
@@ -424,16 +384,15 @@ def index(state: str = "") -> str:
                            " question.")
         inst = (pages_mod.clock_block("00:47", amber_dot=True)
                 + pages_mod.status_para(status_text) + strip)
-        detail = night_detail + card + cost
+        detail = night_detail + note + cost
+        top = pages_mod.header_row(chip) + recline
         body_class = ""
-    body = (pages_mod.header_row(chip)
-            + recline
+    body = (top
             + '<div class="grid"><div class="inst">'
-            + inst + '</div><div class="detail">' + detail + "</div></div>"
+            + inst + '</div><div class="detail">' + detail + '</div></div>'
             + footer)
     return pages_mod.shell("Night Shift", "night", body,
                            body_class=body_class)
-
 
 @app.get("/evidence", response_class=HTMLResponse)
 def evidence():
@@ -667,11 +626,13 @@ def _audit_section(events: list) -> str:
             f" ({esc(str(payload.get('changed_file', '')))}):"
             f" <i>{esc(str(payload.get('changed_line')))}</i></li>"
         )
-    return f"<section><h2>Audit</h2><ul>{rows}</ul></section>"
+    return ('<section class="sec"><h2>Audit</h2>' + f'<ul class="auditlist">{rows}</ul></section>')
 
 
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
 def job_page(job_id: str):
+    from app import pages as pages_mod
+    from app import states as states_mod
     from app import store as store_mod
 
     job = store_mod.get_job(job_id)
@@ -679,59 +640,106 @@ def job_page(job_id: str):
         return HTMLResponse("<h1>Unknown job</h1>", status_code=404)
     esc = html.escape
     events = store_mod.list_events(job_id)
-    rows = "".join(
-        f"<li><b>{esc(str(e['kind']))}</b> @{esc(str(e['virtual_time']))}"
-        f" — {esc(_summarize(e['kind'], e['payload'] or {}))}</li>"
-        for e in events
-    )
+    status = str(job.get("status", "?"))
+    chip = pages_mod.chip_live(
+        job_id, running=status in ("running", "resuming", "answered"))
     question = next(
         (e for e in reversed(events) if e["kind"] == "question"), None
     )
-    card = ""
-    if job.get("status") == "waiting_for_owner" and question is not None:
-        payload = question["payload"] or {}
-        options = payload.get("options") or []
-        buttons = "".join(
-            f'<button type="submit" name="choice" value="{esc(str(o))}">'
-            f"{esc(str(o))}</button>"
-            for o in options
-        )
-        card = (
-            "<section><h2>Question for the owner</h2>"
-            f"<p><b>{esc(str(payload.get('question', '')))}</b></p>"
-            f"<p>Why now: {esc(str(payload.get('why_now', '')))}</p>"
-            f"<p>Checked: {esc(str(payload.get('what_checked', '')))}</p>"
-            f"<p>If yes: {esc(str(payload.get('if_yes', '')))}</p>"
-            f"<p>If no: {esc(str(payload.get('if_no', '')))}</p>"
-            f'<form method="post" action="/jobs/{esc(job_id)}/answer">'
-            f"{buttons}</form></section>"
-        )
-    extra = ""
-    if job.get("status") == "answered":
-        extra = (
-            "<section><h2>Answer recorded</h2>"
-            f'<form method="post" action="/jobs/{esc(job_id)}/resume">'
-            "<button type=\"submit\">Resume the night from the saved point"
-            "</button></form></section>"
-        )
-    if job.get("status") == "done":
-        extra = (
-            "<section><h2>Night complete</h2>"
-            f'<p><a href="/jobs/{esc(job_id)}/morning">Morning page</a></p>'
-            "</section>"
-        )
-    return (
-        "<!doctype html><html><head><title>Night Shift job</title></head><body>"
-        f"<h1>Job {esc(job_id)}</h1>"
-        f"{extra}"
-        f"<p>Status: {esc(str(job.get('status', '?')))} · "
-        f"clock: {esc(str(job.get('virtual_time', '?')))} · "
-        f"step: {esc(str(job.get('current_step', '')))}</p>"
-        f"{_audit_section(events)}"
-        f"{card}{_decision_section(events)}{scan_grounding_section(events)}<h2>Events in order</h2><ol>{rows}</ol>"
-        '<p><a href="/">Back to Night Shift</a></p></body></html>'
+    rows = "".join(
+        f'<li><b>{esc(str(e["kind"]))}</b> @{esc(str(e["virtual_time"]))}'
+        f' \u2014 {esc(_summarize(e["kind"], e["payload"] or {}))}</li>'
+        for e in events
     )
+    events_fold = (
+        '<details class="fold">'
+        '<summary class="foldrow card">'
+        '<span class="foldname">Events in order</span>'
+        f'<span class="foldmeta">{len(events)}</span>'
+        '<span class="chev" aria-hidden="true"></span></summary>'
+        f'<div class="foldbody"><ol class="evlist">{rows}</ol></div></details>'
+    )
+    statusline = (
+        f'<p class="small">Status: {esc(status)} \u00b7 '
+        f'clock: {esc(str(job.get("virtual_time", "?")))} \u00b7 '
+        f'step: {esc(str(job.get("current_step", "")))}</p>'
+    )
+    audit = _audit_section(events)
+    scan = scan_grounding_section(events)
+    footer = pages_mod.footer(f"/jobs/{esc(job_id)}/events", RESULTS_URL)
+    strip_rows = states_mod.strip_rows_for(
+        events, morning=status == "done", hold_id=_hold_id_of(events))
+    if status == "waiting_for_owner" and question is not None:
+        ownerline = ("You're the owner. Your answer is a fact. The "
+                     "permission is from the 21:30 brief.")
+        note = states_mod.question_note(
+            question, f"/jobs/{esc(job_id)}/answer", ownerline)
+        asked_at = str(question.get("virtual_time", "00:47"))
+        inst = (pages_mod.clock_block(asked_at, amber_dot=True)
+                + pages_mod.status_para(
+                    str((question.get("payload") or {}).get(
+                        "question", ""))))
+        detail = (note + states_mod.strip_fold_html(strip_rows)
+                  + statusline + events_fold + audit + scan)
+        body_class = "state-b"
+    else:
+        if status == "answered":
+            status_text = "Answer recorded."
+            action = (
+                '<section aria-label="Answer recorded">'
+                '<div class="card">'
+                f'<form method="post" '
+                f'action="/jobs/{esc(job_id)}/resume">'
+                '<button class="btn fill" type="submit" '
+                'style="background:var(--lamp);color:var(--lamp-ink);" '
+                'border:none">'
+                'Resume the night from the saved point</button>'
+                '</form></div></section>'
+            )
+        elif status == "done":
+            status_text = "Night complete."
+            action = (
+                '<section aria-label="Night complete">'
+                '<div class="card">'
+                '<p>Night complete. '
+                f'<a href="/jobs/{esc(job_id)}/morning">'
+                'Morning page</a></p></div></section>'
+            )
+        else:
+            status_text = _job_status_sentence(status)
+            action = ""
+        tick = str(job.get("virtual_time") or "00:47")
+        inst = (pages_mod.clock_block(tick)
+                + pages_mod.status_para(status_text)
+                + pages_mod.supplier_strip(strip_rows))
+        detail = action + statusline + events_fold + audit + scan
+        body_class = ""
+    body = (pages_mod.header_row(chip)
+            + '<div class="grid"><div class="inst">'
+            + inst + '</div><div class="detail">' + detail + '</div></div>'
+            + footer)
+    return pages_mod.shell(f"Night Shift job {job_id}", "night", body,
+                           body_class=body_class)
 
+
+def _hold_id_of(events: list) -> str | None:
+    """One job's held slot id, from its own effect event, or None."""
+    for event in events:
+        if event.get("kind") == "effect":
+            hold_id = (event.get("payload") or {}).get("hold_id")
+            if isinstance(hold_id, str) and hold_id.strip():
+                return hold_id.strip()
+    return None
+
+
+def _job_status_sentence(status: str) -> str:
+    """One serif sentence for a job page without an open question."""
+    return {
+        "running": "The night is running.",
+        "resuming": "Resuming the saved night.",
+        "failed": "The night failed.",
+        "decision_done": "Decided: nothing further tonight.",
+    }.get(status, f"Status: {status}.")
 
 @app.post("/jobs/{job_id}/answer")
 async def job_answer(job_id: str, request: Request):

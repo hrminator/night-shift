@@ -369,3 +369,109 @@ def deadline_html(events: list) -> str:
 def skip_html() -> str:
     """Pinned text link into State B."""
     return "<div class=\"skip\"><a href=\"?state=question\">Skip to 00:47</a></div>"
+
+
+def what_checked_items(what_checked: str) -> list[str]:
+    """The What-I-checked line as items, split at its semicolons."""
+    return [piece.strip() for piece in str(what_checked or "").split(";")
+            if piece.strip()]
+
+
+def change_fact_html() -> str:
+    """The quiet X1 action: run a fresh night with one fixture line."""
+    from app import night_b as night_b_mod
+    esc = html.escape
+    comparison = night_b_mod.comparison_line()
+    scored = f"<p>{esc(comparison)}</p>" if comparison else ""
+    return (
+        "<details class=\"change\">"
+        "<summary>Change one fact instead</summary>"
+        "<div class=\"factbox\">"
+        "<p>Night A, the venue letter as it is: "
+        f"<i>{esc(night_b_mod.night_a_sentence())}</i></p>"
+        "<p>Night B, one line changed: "
+        f"<i>{esc(night_b_mod.night_b_sentence())}</i></p>"
+        f"{scored}"
+        "<form method=\"post\" action=\"/visitor/night-b\">"
+        "<button class=\"btn ghost\" type=\"submit\">"
+        "Run the night with this fact</button></form>"
+        "<p><small>A fresh night from 21:30 on a new copy: same policy,"
+        " same permission, one fixture line changed. It runs compressed"
+        " and shows each step as it is logged.</small></p>"
+        "</div></details>"
+    )
+
+
+def question_collapsed_html(question: dict) -> str:
+    """Why now / What I checked / If yes+no, one line each, below buttons."""
+    esc = html.escape
+    payload = _payload(question)
+    due = clock_mod.fmt(clock_mod.answer_deadline())
+    items = "".join(
+        f"<li>{esc(piece)}</li>"
+        for piece in what_checked_items(payload.get("what_checked", "")))
+    return (
+        "<details><summary>Why now</summary>"
+        f"<div class=\"foldbody\"><p>"
+        f"{esc(str(payload.get('why_now', '')))}</p></div></details>"
+        "<details><summary>What I checked</summary>"
+        f"<div class=\"foldbody\"><ul>{items}</ul></div></details>"
+        f"<details><summary>If yes / If no, or no answer by {due}</summary>"
+        "<div class=\"foldbody\">"
+        f"<p>{esc(str(payload.get('if_yes', '')))}</p>"
+        f"<p>{esc(str(payload.get('if_no', '')))}</p>"
+        "</div></details>"
+    )
+
+
+def question_note(question: dict, post_action: str, ownerline: str,
+                  with_change: bool = False) -> str:
+    """State B: banner plus the bedside note, buttons right under words."""
+    esc = html.escape
+    payload = _payload(question)
+    options = payload.get("options") or []
+    due = clock_mod.fmt(clock_mod.answer_deadline())
+    buttons = "".join(
+        f"<button class=\"btn {'fill' if pos == 0 else 'ghost'}\""
+        f" type=\"submit\" name=\"choice\" value=\"{esc(str(option))}\">"
+        f"{esc(str(option))}</button>"
+        for pos, option in enumerate(options)
+    )
+    change = change_fact_html() if with_change else ""
+    return (
+        "<section aria-label=\"Question\" id=\"state-question\">"
+        f"<div class=\"banner\">{pages_mod.ICONS['bell']}"
+        f"<span>Night Shift · 1 question · answer by {due}</span>"
+        "<span class=\"lampdot\" aria-hidden=\"true\"></span></div>"
+        "<div class=\"note\">"
+        "<p class=\"ask\">Muse Spark asks</p>"
+        f"<h2>{esc(str(payload.get('question', '')))}</h2>"
+        f"<p class=\"ownerline\">{esc(ownerline)}</p>"
+        f"<form method=\"post\" action=\"{esc(post_action)}\">"
+        f"{buttons}</form>"
+        f"{change}"
+        f"{question_collapsed_html(question)}"
+        f"<div class=\"tagrow\">{pages_mod.tag('spark')}</div>"
+        "</div></section>"
+    )
+
+
+def strip_fold_html(rows: list[tuple[str, str, str]]) -> str:
+    """The supplier strip collapsed to one line (State B, below buttons)."""
+    esc = html.escape
+    body = "".join(
+        f"<div class=\"srow\"><div><span class=\"srole\">"
+        f"{esc(role)}</span>"
+        f"<span class=\"sname\">{esc(name)}</span></div>"
+        f"<span class=\"sstat\">{esc(status)}</span></div>"
+        for role, name, status in rows
+    )
+    return (
+        "<details class=\"fold tight\">"
+        "<summary class=\"foldrow card\">"
+        "<span class=\"foldname\">The three suppliers</span>"
+        "<span class=\"chev\" aria-hidden=\"true\"></span></summary>"
+        f"<div class=\"strip card\" style=\"margin-top:12px\">{body}"
+        f"<div class=\"tagrow\">{pages_mod.tag('code')}</div></div>"
+        "</details>"
+    )
