@@ -53,9 +53,11 @@ def test_resume_instructions_list_pre_event_drafts(tmp_path, monkeypatch):
     answer = append_event(job_id, "01:05", "owner_answer",
                           {"choice": "Bergen: the venue can receive it",
                            "source": "owner"})
-    text = runner.build_resume_instructions(job_id, answer)
-    assert PURPOSE in text
-    assert "SAME purpose" in text
+    assert PURPOSE not in runner.build_resume_instructions(job_id, answer)
+    message = runner.build_resume_stale_message(job_id)
+    assert message is not None
+    assert PURPOSE in message
+    assert "SAME purpose" in message
 
 
 def _answer_and_checkpoint(job_id):
@@ -85,6 +87,7 @@ def test_resume_reissue_clears_pending_with_fake_respond(
 
     def fake_respond(instructions, input_items, **kwargs):
         seen.setdefault("instructions", instructions)
+        seen.setdefault("input_items", input_items)
         if "calls" not in seen:
             seen["calls"] = 1
             return {"output": [_propose_call(
@@ -92,12 +95,12 @@ def test_resume_reissue_clears_pending_with_fake_respond(
         return {"output": [{"type": "message", "content": [
             {"type": "output_text", "text": "done"}]}], "text": "done"}
 
-    assert PURPOSE in runner.build_resume_instructions(
+    assert PURPOSE not in runner.build_resume_instructions(
         job_id, [e for e in list_events(job_id)
                  if e["kind"] == "owner_answer"][-1])
     result = runner.resume_job(job_id, respond_fn=fake_respond)
     assert result["status"] == "done"
-    assert PURPOSE in seen["instructions"]
+    assert PURPOSE in json.dumps(seen["input_items"])
     assert gateway.superseded_map(job_id)[old["id"]] == "superseded"
     page = render_morning_page(f"Job {job_id}", list_events(job_id),
                                job_id=job_id)

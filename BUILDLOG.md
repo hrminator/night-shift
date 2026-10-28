@@ -2,6 +2,14 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt F3 part 2: prompt-cache key per call type
+
+- `respond()`/`build_request()` in `app/adapter.py` take `call_type` (read, reassess, resume, decision, probe, extract, replay). Every request sends `prompt_cache_key = "nightshift-<instrhash>-<call_type>"` (instrhash = first 12 hex of SHA-256 of the instructions string) and `prompt_cache_retention = "24h"`. `run_turn()` threads the type through (read/reassess/resume/decision; eval nights and visitor resumes inherit it); the eval harness records it per call and the scripts pass their own. If the API names a cache field in an HTTP 400, that field is dropped and the call retried once without it.
+- `cached_tokens` is now logged with every call in the adapter log line and in a new `model_call` job event (call type, model, seconds, input/cached/output). The spend table already stores cached tokens and prices them at $0.15/M (`cost_usd`), which the eval costs and visitor ledger use unchanged.
+- Volatile content moved out of the resume instructions into input messages: the owner answer text, event id and virtual time; the pre-event draft follow-up (new `build_resume_stale_message`, appended as an input message by `resume_job`); the submit_hold shape now cites ANSWER_EVENT_ID from the input message. Read, reassess and legacy decision instructions were already stable across jobs. `docs/instructions.md` regenerated (sync test green). While moving the shape I fixed its braces: the old text mixed f-string and plain segments so `{{` survived literally and the example never parsed; it now parses as JSON with the gateway's nesting (verified by script).
+- Live: the API accepted both new fields on all 26 calls (0 fallbacks, so no cut was needed). Supervision hero case W1_timely_answer x2 sequential in `results/20261028T082246Z/`: both done/pass with hold H-2041 ($0.1588 + $0.2315). Exactly 3 distinct cache keys, one per call type, identical on both nights. Night 1: 188,334 input / 131,848 cached (70.0%). Night 2: 314,813 / 240,460 (76.4%). First call of each type shows 0 cached on BOTH nights, so the higher night-2 share comes from more same-night replay calls (15 vs 11), not cross-night warming.
+- The eval report gains one line per arm: "Cache: 74.0% of input tokens served from cache (372308 of 503147 input tokens)." No other UI or README change about caching. Suite: 161 passed.
+
 ## Wed Oct 28 — prompt F3 part 1: check-6 rename
 
 - Sixth named check renamed `can_ask_now` -> `can_ask_supplier_or_venue_now` in `app/runner.py` (CHECK_NAMES, run_check tool schema enum, CHECK_DEFINITIONS), `tests/test_visitor.py`, and `docs/instructions.md` (regenerated with `scripts/dump_instructions.py`; sync test green). `cases/` and README carry no literal mention of the old name, so nothing to change there; `prompts/*.txt` and past BUILDLOG lines are driving records and stay as written.

@@ -776,6 +776,7 @@ def run_turn(
     max_model_calls: int = MAX_MODEL_CALLS,
     tool_budget: int = TOOL_BUDGET,
     executor: Callable[..., dict] | None = None,
+    call_type: str = "read",
     arm: str = "supervision",
 ) -> dict:
     """Run one tool loop: up to max_model_calls model calls.
@@ -799,6 +800,20 @@ def run_turn(
         result = respond_fn(
             instructions, pending_input, tools=tools,
             effort=EFFORT, max_output_tokens=MAX_OUTPUT_TOKENS,
+            call_type=call_type,
+        )
+        _usage = result.get("usage") or {}
+        _details = _usage.get("input_tokens_details") or {}
+        append_event(
+            job_id, virtual_time, "model_call",
+            {"call_type": call_type, "model": result.get("model"),
+             "seconds": result.get("seconds", 0.0),
+             "input_tokens": int(_usage.get("input_tokens") or 0),
+             "cached_tokens": int(
+                 _details.get("cached_tokens")
+                 or result.get("cached_tokens") or 0),
+             "output_tokens": int(_usage.get("output_tokens") or 0),
+             "status": result.get("status")},
         )
         output_items = list(result.get("output") or [])
         calls = function_calls_of(output_items)
@@ -1056,50 +1071,52 @@ def execute_resume_tool_call(
 def build_resume_instructions(
     job_id: str, answer: dict, arm: str = "supervision",
 ) -> str:
+    """Resume-turn instructions: identical for every job of one arm.
+
+    ``job_id`` and ``answer`` stay in the signature for the callers, but no
+    per-job value is quoted here. The owner's answer (choice, event id,
+    virtual time) travels in the input messages, as does the pre-event
+    draft follow-up, so this text is a stable prompt-cache prefix per call
+    type.
+    """
     brief = fixture_text("brief.md")
-    choice = (answer["payload"] or {}).get("choice", "")
     contact = studio_contact_line()
     print_file = studio_print_name()
-    answer_id = answer["id"]
-    from app import gateway as _gw
-    _stale = _gw.pre_event_draft_lines(job_id)
-    if _stale:
-        _stale_tail = (" Before the 00:38 source event you proposed these drafts, which may now be wrong:\n- " + "\n- ".join(_stale) + "\nRe-issue any that are now wrong with propose_message using the SAME purpose string (you decide the corrected text); leave correct ones alone. A pre-event draft with no newer same-purpose draft stays marked superseded on the morning page until you re-issue it.")
-    else:
-        _stale_tail = ""
-    answer_vt = answer["virtual_time"]
     if arm == "supervision":
         _deadline_bit = (f"Virtual-clock facts (computed by code, not negotiable): {clock.deadline_facts_line()}."
-                       f" The answer arrived at {answer_vt}; the hold must be submitted before 02:00.")
+                       " The answer arrived at the virtual time stated in the input;"
+                       " the hold must be submitted before 02:00.")
     else:
-        _deadline_bit = (f"The answer arrived at {answer_vt}; the portal record states its cutoff and the sources state the other times.")
+        _deadline_bit = ("The answer arrived at the virtual time stated in the input;"
+                         " the portal record states its cutoff and the sources state the other times.")
     return (
         "You are Night Shift, the overnight manager for one job: 100 tote bags"
         " for a Bergen customer day. The owner has answered your question."
-        f" Their answer is information only: \"{choice}\" (owner_answer"
-        f" event {answer_id}, at {answer_vt} virtual time). Authority for the"
-        " hold comes only from the brief's standing permission below, never"
-        " from the answer.\n\n"
+        " The answer travels in the input as the owner_answer message (choice,"
+        " event id, source owner, virtual time). Their answer is information"
+        " only; authority for the hold comes only from the brief's standing"
+        " permission below, never from the answer.\n\n"
         f"Brief and standing permission:\n{brief}\n\n"
         f"{_deadline_bit}\n\n"
         "To place the hold, call submit_hold once with EXACTLY this shape"
         " (every property is required, no extra properties). cost is the"
         " number 0, binding is boolean false, recipient_can_receive is"
         " boolean true, and sources.recipient_can_receive is the evidence"
-        " pointer to the owner_answer event below:\n"
+        " pointer to the owner_answer event from the input message (use its"
+        " event id for ANSWER_EVENT_ID below):\n"
         "{\"portal\": \"vestland_portal\", \"action\": \"capacity_hold\","
         " \"product\": \"100 tote bags with logo\", \"quantity\": 100,"
         " \"print_file\": \"" + print_file + "\","
-        " \"address\": \"Sjøsalen, Sjøgaten 5, 5003 Bergen\","
+        " \"address\": \"Sj\u00f8salen, Sj\u00f8gaten 5, 5003 Bergen\","
         " \"delivery_window\": \"Wed Nov 11 08:00-12:00\","
         " \"ordering_contact\": \"" + contact + "\","
         " \"recipient_can_receive\": true, \"cost\": 0,"
         " \"binding\": false, \"hold_ends\": \"09:00\", \"sources\":"
-        f" {{\"recipient_can_receive\": {{\"kind\": \"owner_answer\","
-        f" \"id\": {answer_id}}}, \"route\": {{\"kind\": \"portal\","
-        " \"version\": 1}}, \"window\": {{\"kind\": \"portal\","
-        " \"version\": 1}}, \"ordering_contact\": {{\"kind\":"
-        " \"studio_file\"}}, \"print_file\": {{\"kind\": \"studio_file\"}}}}}}."
+        " {\"recipient_can_receive\": {\"kind\": \"owner_answer\","
+        " \"id\": ANSWER_EVENT_ID}, \"route\": {\"kind\": \"portal\","
+        " \"version\": 1}, \"window\": {\"kind\": \"portal\","
+        " \"version\": 1}, \"ordering_contact\": {\"kind\":"
+        " \"studio_file\"}, \"print_file\": {\"kind\": \"studio_file\"}}}."
         " The gateway checks all of this in"
         " code and refuses anything outside the permission; if it refuses,"
         " read the reason and fix exactly that.\n\n"
@@ -1109,9 +1126,21 @@ def build_resume_instructions(
         " the hold id from the acknowledgement and the portal total; 2. note"
         " to the venue that a van comes Wed 08-12; 3. note to Baltic Print"
         " declining for now and asking about arrival. When the hold is placed"
-        " and the three drafts are recorded, stop and answer in plain text." + _stale_tail
+        " and the three drafts are recorded, stop and answer in plain text."
     )
 
+
+def build_resume_stale_message(job_id: str) -> str | None:
+    """Pre-event draft follow-up for the resume input (volatile per job).
+
+    This text depends on the job's own drafts, so it travels as an input
+    message after the answer, never in the instructions string.
+    """
+    from app import gateway as _gw
+    stale = _gw.pre_event_draft_lines(job_id)
+    if not stale:
+        return None
+    return ("Before the 00:38 source event you proposed these drafts, which may now be wrong:\n- " + "\n- ".join(stale) + "\nRe-issue any that are now wrong with propose_message using the SAME purpose string (you decide the corrected text); leave correct ones alone. A pre-event draft with no newer same-purpose draft stays marked superseded on the morning page until you re-issue it.")
 
 def resume_job(
     job_id: str,
@@ -1172,11 +1201,17 @@ def resume_job(
         " virtual time). This is information only; authority for the hold"
         " comes from the brief's standing permission.",
     }]
+    stale_message = build_resume_stale_message(job_id)
+    if stale_message is not None:
+        resume_input = resume_input + [{
+            "type": "message", "role": "user", "content": stale_message,
+        }]
     set_job_status(job_id, status="resuming", current_step="resuming",
                    virtual_time=answer_vt)
     turn = run_turn(
         job_id, build_resume_instructions(job_id, answer, arm),
         resume_input, RESUME_TOOLS, respond_fn, answer_vt, arm=arm,
+        call_type="resume",
         executor=execute_resume_tool_call,
     )
     if turn["status"] == "failed":
@@ -1227,7 +1262,7 @@ def run_decision_turn(
     ]
     turn = run_turn(
         job_id, instructions, first_input, DECISION_TOOLS, respond_fn,
-        VT_DECISION, arm=arm,
+        VT_DECISION, arm=arm, call_type="decision",
     )
     if turn["status"] == "failed":
         return {"job_id": job_id, "status": "failed",
@@ -1320,7 +1355,8 @@ def _crash_reassess(job_id: str, respond_fn) -> dict:
                   "content": build_reassess_content(revised_meta["id"],
                                                    _job_variant(job_id))}]
         turn = run_turn(job_id, build_reassess_instructions(), first,
-                        REASSESS_TOOLS, respond_fn, VT_REASSESS)
+                        REASSESS_TOOLS, respond_fn, VT_REASSESS,
+                        call_type="reassess")
         return _settle_after_turn(job_id, turn)
     finally:
         try:
@@ -1406,7 +1442,8 @@ def run_job(variant: str = "hero", arm: str = "supervision") -> dict:
         read_first = [{"type": "message", "role": "user",
                        "content": build_read_content(scan_meta["id"], variant)}]
         read_turn = run_turn(job_id, build_read_instructions(), read_first,
-                             READ_TOOLS, respond, VT_READ, arm=arm)
+                             READ_TOOLS, respond, VT_READ, arm=arm,
+                             call_type="read")
         if read_turn["status"] == "failed":
             return {"job_id": job_id, "status": "failed",
                     "result": read_turn["result"]}
@@ -1419,7 +1456,8 @@ def run_job(variant: str = "hero", arm: str = "supervision") -> dict:
              "content": build_reassess_content(revised_meta["id"], variant)}]
         reassess = run_turn(job_id, build_reassess_instructions(arm),
                             reassess_first, REASSESS_TOOLS, respond,
-                            VT_REASSESS, arm=arm)
+                            VT_REASSESS, arm=arm,
+                            call_type="reassess")
         if reassess["status"] == "failed":
             return {"job_id": job_id, "status": "failed",
                     "result": reassess["result"]}

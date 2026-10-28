@@ -31,7 +31,8 @@ def main() -> int:
     saved = {}
     for effort in ("minimal", "low", "medium"):
         result = respond(
-            INSTRUCTION, USER_MESSAGE, tools=[], effort=effort, max_output_tokens=1024
+            INSTRUCTION, USER_MESSAGE, tools=[], effort=effort, max_output_tokens=1024,
+            call_type="probe"
         )
         if effort == "medium":
             saved = {

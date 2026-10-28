@@ -218,6 +218,7 @@ def main() -> int:
         call1 = respond(
             INSTRUCTIONS, first_input, tools=[RECORD_CLAIM_TOOL],
             effort=effort, max_output_tokens=max_output_tokens,
+            call_type="extract",
         )
         file_send_mode = "file_id"
     except Exception as exc:  # noqa: BLE001 — probe fallback path
@@ -235,6 +236,7 @@ def main() -> int:
         call1 = respond(
             INSTRUCTIONS, first_input, tools=[RECORD_CLAIM_TOOL],
             effort=effort, max_output_tokens=max_output_tokens,
+            call_type="extract",
         )
         file_send_mode = "base64-inline"
     print(f"send mode: {file_send_mode}")
@@ -270,6 +272,7 @@ def main() -> int:
     call2 = respond(
         INSTRUCTIONS, replay_input, tools=[RECORD_CLAIM_TOOL],
         effort=effort, max_output_tokens=max_output_tokens,
+        call_type="extract",
     )
     print("call2 usage: " + json.dumps(usage_line(call2)))
     print(f"call2 text: {call2['text'][:200]!r}")

@@ -125,7 +125,8 @@ def run_once(arm: str, case: dict, run: int, out_dir: Path,
     def wrapped(instructions, input_items, **kwargs):
         result = real_respond(instructions, input_items, **kwargs)
         inputs, cached, outputs = usage_of(result)
-        calls.append({"input_tokens": inputs, "cached_tokens": cached,
+        calls.append({"call_type": kwargs.get("call_type", "?"),
+                      "input_tokens": inputs, "cached_tokens": cached,
                       "output_tokens": outputs,
                       "usd": cost_usd(inputs, cached, outputs),
                       "seconds": result.get("seconds", 0.0),
@@ -203,6 +204,17 @@ def decision_first_sentence(events: list[dict]) -> str:
     return first_sentence(reason) or "—"
 
 
+def cache_share_line(records: list[dict]) -> str:
+    """One line: share of input tokens served from the prompt cache."""
+    total = sum(call.get("input_tokens", 0) or 0 for record in records
+                for call in record.get("calls") or [])
+    cached = sum(call.get("cached_tokens", 0) or 0 for record in records
+                 for call in record.get("calls") or [])
+    pct = (100.0 * cached / total) if total else 0.0
+    return (f"{pct:.1f}% of input tokens served from cache"
+            f" ({cached} of {total} input tokens).")
+
+
 def render_report(payload: dict) -> str:
     """Markdown report: decision-only and complete-job stay separate."""
     summary = payload["summary"]
@@ -245,6 +257,7 @@ def render_report(payload: dict) -> str:
         f" ${summary['usd_per_episode']:.4f} mean per episode.",
         f"Model seconds: {summary['seconds_total']:.1f} total,"
         f" {summary['seconds_per_episode']:.1f} mean per episode.",
+        f"Cache: {cache_share_line(payload['records'])}",
         f"Harness wall: {payload.get('elapsed_seconds', '?')} s for"
         f" {len(payload['records'])} episodes (sum of episode walls"
         f" {payload.get('wall_sum_seconds', '?')} s).",

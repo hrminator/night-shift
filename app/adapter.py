@@ -4,6 +4,12 @@ Every call sends ``store:false`` and ``include:["reasoning.encrypted_content"]``
 resends instructions, tools and reasoning effort each time, never uses
 ``previous_response_id``, and always sets ``max_output_tokens``.
 
+Prompt-cache routing: every request carries a stable ``prompt_cache_key``
+(``nightshift-<instrhash>-<call_type>``, one key per call type, never per
+job) plus a ``prompt_cache_retention`` hint of ``24h``. Cached input tokens
+are reported in ``usage.input_tokens_details.cached_tokens`` and logged with
+every call.
+
 The full request body and response body (never the Authorization header) are
 appended as one JSON line to ``logs/responses-<UTC date>.jsonl``, including the
 ``model`` field the response reports.
@@ -15,6 +21,7 @@ encrypted-reasoning replay; see AGENTS.md non-negotiable 8).
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,6 +36,9 @@ EVAL_KEY_ENV_VAR = "NIGHT_SHIFT_API_KEY_EVAL"
 KEY_ENV_VAR = EVAL_KEY_ENV_VAR
 
 INCLUDE_ENCRYPTED_REASONING = ["reasoning.encrypted_content"]
+
+#: Prompt-cache retention hint (a hint, not a guarantee, per Meta's docs).
+PROMPT_CACHE_RETENTION = "24h"
 
 DEFAULT_MAX_OUTPUT_TOKENS = 1024
 DEFAULT_TIMEOUT_SECONDS = 120.0
@@ -52,12 +62,24 @@ def api_key() -> str:
     return key
 
 
+def prompt_cache_key_for(instructions: str, call_type: str) -> str:
+    """One stable cache key per call type, never per job or per request.
+
+    ``instrhash`` is the first 12 hex characters of the SHA-256 of the
+    instructions string, so identical instruction text shares a key while
+    different instruction text (another arm, another brief) does not.
+    """
+    digest = hashlib.sha256(instructions.encode("utf-8")).hexdigest()[:12]
+    return f"nightshift-{digest}-{call_type}"
+
+
 def build_request(
     instructions: str,
     input_items: list | str,
     tools: list | None = None,
     effort: str = "low",
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
+    call_type: str = "read",
 ) -> dict:
     """Build a stateless Responses request body.
 
@@ -76,6 +98,8 @@ def build_request(
         "store": False,
         "include": list(INCLUDE_ENCRYPTED_REASONING),
         "max_output_tokens": max_output_tokens,
+        "prompt_cache_key": prompt_cache_key_for(instructions, call_type),
+        "prompt_cache_retention": PROMPT_CACHE_RETENTION,
     }
     assert "previous_response_id" not in body
     return body
@@ -126,29 +150,62 @@ def respond(
     effort: str = "low",
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
+    call_type: str = "read",
 ) -> dict:
     """Make one Responses call and return the parsed result.
 
     Returns ``{"model": ..., "response_id": ..., "output": [...],
-    "usage": {...}, "text": ...}``. On HTTP 400 with reasoning items in the
+    "usage": {...}, "cached_tokens": ..., "text": ...}``. On HTTP 400 with reasoning items in the
     replayed input, retries once with the reasoning items dropped whole and
-    records that fallback in the log.
+    records that fallback in the log. If the API rejects a prompt-cache
+    field by name, that field is dropped and the call retried once without
+    it, recorded the same way.
     """
-    body = build_request(instructions, input_items, tools, effort, max_output_tokens)
+    dropped_cache_fields: list[str] = []
+
+    def _build(body_input: list | str = input_items) -> dict:
+        built = build_request(
+            instructions, body_input, tools, effort, max_output_tokens,
+            call_type,
+        )
+        for field in dropped_cache_fields:
+            built.pop(field, None)
+        return built
+
+    body = _build()
     started = datetime.now(timezone.utc)
     response = _post(body, timeout)
     fallback = None
+    if response.status_code == 400:
+        error_text = response.text
+        named = [
+            field
+            for field in ("prompt_cache_key", "prompt_cache_retention")
+            if field in error_text
+        ]
+        if named:
+            dropped_cache_fields.extend(named)
+            fallback = {
+                "dropped_request_fields": list(dropped_cache_fields),
+                "first_status": 400,
+                "first_error": error_text[:2000],
+            }
+            body = _build()
+            response = _post(body, timeout)
     if response.status_code == 400 and isinstance(input_items, list):
         dropped = drop_reasoning_items(input_items)
         if len(dropped) != len(input_items):
-            fallback = {
-                "dropped_reasoning_items": len(input_items) - len(dropped),
-                "first_status": 400,
-                "first_error": response.text[:2000],
-            }
-            body = build_request(
-                instructions, dropped, tools, effort, max_output_tokens
-            )
+            if fallback is None:
+                fallback = {
+                    "dropped_reasoning_items": len(input_items) - len(dropped),
+                    "first_status": 400,
+                    "first_error": response.text[:2000],
+                }
+            else:
+                fallback["dropped_reasoning_items"] = len(input_items) - len(
+                    dropped
+                )
+            body = _build(dropped)
             response = _post(body, timeout)
     finished = datetime.now(timezone.utc)
     try:
@@ -158,6 +215,9 @@ def respond(
             {
                 "ts": finished.isoformat(),
                 "effort": effort,
+                "call_type": call_type,
+                "prompt_cache_key": body.get("prompt_cache_key"),
+                "cached_tokens": 0,
                 "request": body,
                 "response_error": {
                     "status": response.status_code,
@@ -169,13 +229,18 @@ def respond(
         raise
     payload = response.json()
     output_items = payload.get("output", [])
+    usage = payload.get("usage", {}) or {}
+    cached = int(
+        (usage.get("input_tokens_details") or {}).get("cached_tokens") or 0
+    )
     result = {
         "model": payload.get("model"),
         "response_id": payload.get("id"),
         "status": payload.get("status"),
         "incomplete_details": payload.get("incomplete_details"),
         "output": output_items,
-        "usage": payload.get("usage", {}),
+        "usage": usage,
+        "cached_tokens": cached,
         "text": output_text_of(output_items),
         "seconds": (finished - started).total_seconds(),
     }
@@ -183,6 +248,9 @@ def respond(
         {
             "ts": finished.isoformat(),
             "effort": effort,
+            "call_type": call_type,
+            "prompt_cache_key": body.get("prompt_cache_key"),
+            "cached_tokens": cached,
             "request": body,
             "response": payload,
             "fallback": fallback,

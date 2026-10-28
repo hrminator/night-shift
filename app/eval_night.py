@@ -76,7 +76,8 @@ def _run_case(case, arm, respond_fn, work_dir, out_path, upload_fn,
                                original_meta["id"], variant)}]
             read_turn = runner.run_turn(
                 job_id, runner.build_read_instructions(), read_first,
-                runner.READ_TOOLS, respond_fn, runner.VT_READ, arm=arm)
+                runner.READ_TOOLS, respond_fn, runner.VT_READ, arm=arm,
+                call_type="read")
             if read_turn["status"] == "failed":
                 return _finish(job_id, out_path, "failed",
                                note="read turn failed")
@@ -92,7 +93,7 @@ def _run_case(case, arm, respond_fn, work_dir, out_path, upload_fn,
             reassess = runner.run_turn(
                 job_id, runner.build_reassess_instructions(arm),
                 reassess_first, runner.REASSESS_TOOLS, respond_fn,
-                revised_time, arm=arm)
+                revised_time, arm=arm, call_type="reassess")
             if reassess["status"] == "failed":
                 return _finish(job_id, out_path, "failed",
                                note="reassess turn failed")

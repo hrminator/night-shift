@@ -41,7 +41,8 @@ def main() -> int:
     }]
     try:
         result = respond(INSTRUCTIONS, replay_input, tools=[],
-                         effort="low", max_output_tokens=512)
+                         effort="low", max_output_tokens=512,
+                         call_type="replay")
     except Exception as exc:  # noqa: BLE001 - the outcome is the report
         print(f"REPLAY REFUSED: {type(exc).__name__}: {str(exc)[:300]}")
         print("Outcome: the API did not accept the replay; "
