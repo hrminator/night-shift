@@ -2,6 +2,14 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt S0: three static design comps
+
+- Recorded job is 6c7c7c742513 (pinned RECORDED_JOB in the Dockerfile), recorded 2026-10-27. Taste skill loaded; the prompt's spec took precedence throughout. No change to the night, gateway, resume or event schema.
+- `comps/night-0038.html` (17,434 bytes), `comps/question-0047.html` (16,249 bytes), `comps/morning-0700.html` (19,734 bytes): one HTML file + one inline CSS block each, Google Fonts only (Newsreader, Geist, Geist Mono, display=swap, preloaded), zero JS. All MUSE SPARK text verified word for word against the export by a throwaway script (22:30 reason, six 00:39 check notes, wake reason, question + why/checked/if-yes/if-no, 3 drafts, quoted lines); version hashes are the real head hashes (v·ac7d, v·26a6, v·f7ba). Grounding verdict is FAIL so the quoted line is underlined ("Line Muse Spark quoted"), no box.
+- Served as static files under `/comps/` (no auth) with a route test; `COPY comps ./comps` added to the Dockerfile. Suite: 196 passed.
+- Playwright (dev only) screenshots via the live app on 8123, full-page, zero horizontal overflow at both widths, committed: `docs/screens/comps/night-0038-390x844.png`, `docs/screens/comps/night-0038-1920x1080.png`, `docs/screens/comps/question-0047-390x844.png`, `docs/screens/comps/question-0047-1920x1080.png`, `docs/screens/comps/morning-0700-390x844.png`, `docs/screens/comps/morning-0700-1920x1080.png`.
+- "Measured" line is real: the run's 17 calls found in logs/responses-2026-10-27.jsonl by exact token totals (290,348 in / 14,440 out), 145,755 cached (50%), $0.26 at $1.25/$0.15/$4.25. Spec deviations, all noted for the 19:00 review: buttons carry the recorded options ("Yes - Sjosalen can receive Wed 08-12" / "No - cannot receive then"), not the generic labels; check 6 shows the recorded owner-timing note under the new name (it does not match the check definition); tags/tick labels stay at the specced 11-12px against the no-text-under-15px DON'T; no wordmark dot (all three are RECORDED, nothing live); morning strip reads "Held until 09:00 · H-2041"; state A's How-it-decided shows the six 22:30 reads instead of duplicating the checks/decision/sheet above; the what-checked line is laid out as six items at its comma/semicolon breaks with no words changed.
+
 ## Wed Oct 28 — prompt M14: owner notify by web push
 
 - Part 1: `pywebpush` 2.5.0 via uv (+ PROVENANCE line); new `app/push.py` (env config, one-shot sender with a fake-sender seam); `scripts/make_vapid.py` prints one VAPID pair (round-trip checked, 87/43 chars) and writes nothing; all four env vars documented in DEPLOY.md without values.
