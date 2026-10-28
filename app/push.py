@@ -94,3 +94,50 @@ def _short_error(exc: Exception) -> str:
     if len(text) > 200:
         text = text[:200]
     return text or type(exc).__name__
+
+
+def send_to_all(title: str, body: str, url: str) -> list[dict]:
+    """Send one push per live subscription; mark 404/410 dead.
+
+    This is the one shared code path: the notify step, the test endpoint
+    and the operator script all send through here. Returns one result per
+    subscription: {"subscription_id", "ok", "status_code"/"error",
+    "seconds"}. A delivery failure is a result, never an exception.
+    """
+    import time
+
+    from app.store import (list_live_push_subscriptions,
+                           mark_push_subscription_dead)
+
+    results: list[dict] = []
+    for sub in list_live_push_subscriptions():
+        started = time.monotonic()
+        try:
+            outcome = send_one(
+                {"endpoint": sub["endpoint"], "keys": sub["keys"]},
+                {"title": title, "body": body, "url": url},
+            )
+            results.append({
+                "subscription_id": sub["id"], "ok": True,
+                "status_code": outcome["status_code"],
+                "seconds": round(time.monotonic() - started, 3),
+            })
+        except PushError as exc:
+            if exc.status in (404, 410):
+                try:
+                    mark_push_subscription_dead(sub["id"])
+                except Exception:  # noqa: BLE001 - delivery already failed
+                    pass
+            results.append({
+                "subscription_id": sub["id"], "ok": False,
+                "error": str(exc)[:200], "status": exc.status,
+                "seconds": round(time.monotonic() - started, 3),
+            })
+        except Exception as exc:  # noqa: BLE001 - a result, not a crash
+            results.append({
+                "subscription_id": sub["id"], "ok": False,
+                "error": f"{type(exc).__name__}: {exc}"[:200],
+                "status": None,
+                "seconds": round(time.monotonic() - started, 3),
+            })
+    return results

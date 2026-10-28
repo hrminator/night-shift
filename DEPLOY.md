@@ -57,3 +57,21 @@ run from the bundled exports, so it renders with no API key set. Answering
 as the owner resumes live with real Muse Spark calls and needs
 `NIGHT_SHIFT_API_KEY_LIVE` (or `NIGHT_SHIFT_API_KEY_EVAL`) in the
 environment.
+
+## Owner phone push (M14)
+
+The night's notify step can deliver a real Web Push notification to the
+owner's own phone, for the operator's own job only (visitor jobs stay
+simulated). Needs `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and
+`PUSH_ENABLED=1` in the environment (Fly secrets on the live site);
+`VAPID_SUBJECT` is optional.
+
+Subscribe the phone on the deployed site (token from `RUN_TOKEN`):
+
+```text
+https://night-shift-demo.fly.dev/owner/phone?token=...
+```
+
+Tap "Subscribe this phone", accept the notification permission, then tap
+"Send test push" to verify. The service worker lives at
+`/static/sw.js` and only shows the notification and opens its URL.

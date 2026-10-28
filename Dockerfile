@@ -15,6 +15,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 COPY app ./app
 COPY fixtures ./fixtures
+COPY static ./static
 COPY data ./data
 
 RUN uv sync --frozen --no-dev && chown -R app:app /app

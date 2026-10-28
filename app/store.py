@@ -73,6 +73,16 @@ CREATE TABLE IF NOT EXISTS operations (
   acknowledgement TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  endpoint TEXT NOT NULL,
+  keys TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT '',
+  dead INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_dead
+  ON push_subscriptions (dead);
 """
 
 
@@ -349,6 +359,66 @@ def day_spend_usd(day: str, path: Path | None = None) -> float:
             (day,),
         ).fetchone()
         return float(row["total"])
+    finally:
+        conn.close()
+
+
+def save_push_subscription(endpoint: str, keys: dict, label: str = "",
+                           path: Path | None = None) -> dict:
+    """Store one owner-phone push subscription. Re-subscribes add rows."""
+    conn = connect(path)
+    try:
+        _ensure_init(conn)
+        created = _now_utc()
+        body = json.dumps(keys or {}, ensure_ascii=False)
+        cur = conn.execute(
+            "INSERT INTO push_subscriptions (endpoint, keys, created_at,"
+            " label, dead) VALUES (?, ?, ?, ?, 0)",
+            (endpoint, body, created, label or ""),
+        )
+        conn.commit()
+        return {"id": cur.lastrowid, "endpoint": endpoint,
+                "keys": keys or {}, "created_at": created,
+                "label": label or "", "dead": 0}
+    finally:
+        conn.close()
+
+
+def list_push_subscriptions(path: Path | None = None) -> list[dict]:
+    """Every stored subscription, oldest first, dead ones included."""
+    conn = connect(path)
+    try:
+        _ensure_init(conn)
+        rows = conn.execute(
+            "SELECT * FROM push_subscriptions ORDER BY id ASC").fetchall()
+        out = []
+        for row in rows:
+            item = dict(row)
+            try:
+                item["keys"] = json.loads(item["keys"])
+            except (ValueError, TypeError):
+                item["keys"] = {}
+            item["dead"] = int(item.get("dead") or 0)
+            out.append(item)
+        return out
+    finally:
+        conn.close()
+
+
+def list_live_push_subscriptions(path: Path | None = None) -> list[dict]:
+    """Subscriptions not marked dead, oldest first."""
+    return [s for s in list_push_subscriptions(path=path) if not s["dead"]]
+
+
+def mark_push_subscription_dead(sub_id: int,
+                                path: Path | None = None) -> None:
+    """Mark one subscription dead after a 404/410 from the push service."""
+    conn = connect(path)
+    try:
+        _ensure_init(conn)
+        conn.execute("UPDATE push_subscriptions SET dead = 1 WHERE id = ?",
+                     (sub_id,))
+        conn.commit()
     finally:
         conn.close()
 

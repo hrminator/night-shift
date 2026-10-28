@@ -11,7 +11,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 def bundled_runs_dir() -> Path:
     """Bundled records baked into the image under the repo's data/runs."""
@@ -60,6 +61,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Night Shift", lifespan=lifespan)
+
+#: Static assets (the owner-phone service worker). Shipped with the code.
+app.mount("/static", StaticFiles(directory=str(
+    Path(__file__).resolve().parent.parent / "static")), name="static")
 
 #: The source whose quote block carries the scan-styled-PDF label.
 SCAN_SOURCE = "baltic_quote_Q-1187-B.pdf"
@@ -901,3 +906,162 @@ async def visitor_answer(request: Request):
     finally:
         spend_mod.release_visitor_slot(slot, owner)
     return RedirectResponse(url=f"/jobs/{new_id}/morning", status_code=303)
+
+
+def _owner_token_ok(request: Request) -> bool:
+    """The owner-phone token rule: header or ?token=, never echoed."""
+    expected = os.environ.get("RUN_TOKEN", "")
+    if not expected:
+        return False
+    if request.headers.get("x-run-token", "") == expected:
+        return True
+    token = request.query_params.get("token", "")
+    return bool(token) and token == expected
+
+
+def _owner_forbidden():
+    return HTMLResponse(
+        "<h1>Forbidden</h1>"
+        "<p>The owner's phone page needs the run token.</p>",
+        status_code=403,
+    )
+
+
+@app.get("/owner/phone", response_class=HTMLResponse)
+def owner_phone_page(request: Request):
+    """Subscribe the owner's phone for web push (token-guarded)."""
+    if not _owner_token_ok(request):
+        return _owner_forbidden()
+    from app import push as push_mod
+
+    public_key = push_mod.vapid_public_key()
+    note = ""
+    if not public_key:
+        note = ("<p><b>Push is not configured on this server "
+                "(no VAPID public key).</b></p>")
+    return (
+        "<!doctype html><html><head><title>Owner phone</title></head>"
+        f"<body>{FRONT_CSS}<h1>Owner phone</h1>"
+        "<p>Subscribe this phone to receive the night's question by web "
+        "push. Only the operator's own job pushes; visitor jobs stay "
+        "simulated.</p>"
+        f"{note}"
+        '<p id="status">Not subscribed yet.</p>'
+        '<button id="subscribe" type="button">Subscribe this phone</button>'
+        "<p id=\"subscribed\" hidden>This phone is subscribed as the "
+        "owner's phone</p>"
+        '<button id="test" type="button">Send test push</button>'
+        '<p id="test-result"></p>'
+        "<p><small>Tip: open this page with ?token=... so the buttons "
+        "can call back.</small></p>"
+        "<script>"
+        f"const VAPID_PUBLIC_KEY = {json.dumps(public_key)};"
+        "function pageToken() {"
+        " try { return new URLSearchParams(window.location.search)"
+        ".get('token') || ''; } catch (e) { return ''; } }"
+        "function withToken(path) { const t = pageToken();"
+        " return t ? path + '?token=' + encodeURIComponent(t) : path; }"
+        "function setStatus(text) {"
+        " document.getElementById('status').textContent = text; }"
+        "function keyToBytes(base64) {"
+        " const pad = '='.repeat((4 - (base64.length % 4)) % 4);"
+        " const raw = window.atob(base64.replace(/-/g, '+')"
+        ".replace(/_/g, '/') + pad);"
+        " const out = new Uint8Array(raw.length);"
+        " for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);"
+        " return out; }"
+        "document.getElementById('subscribe')"
+        ".addEventListener('click', async () => {"
+        " try {"
+        " if (!('serviceWorker' in navigator)"
+        " || !('PushManager' in window)) {"
+        " setStatus('This browser has no web push support.'); return; }"
+        " if (!VAPID_PUBLIC_KEY) {"
+        " setStatus('Push is not configured on this server.'); return; }"
+        " setStatus('Registering...');"
+        " const reg = await navigator.serviceWorker.register('/static/sw.js');"
+        " const permission = await Notification.requestPermission();"
+        " if (permission !== 'granted') {"
+        " setStatus('Notification permission was not granted.'); return; }"
+        " setStatus('Subscribing...');"
+        " const sub = await reg.pushManager.subscribe({ userVisibleOnly: true,"
+        " applicationServerKey: keyToBytes(VAPID_PUBLIC_KEY) });"
+        " const data = sub.toJSON(); data.label = 'owner phone';"
+        " const resp = await fetch(withToken('/owner/phone/subscribe'),"
+        " { method: 'POST', headers: { 'Content-Type': 'application/json' },"
+        " body: JSON.stringify(data) });"
+        " if (!resp.ok) { setStatus('Subscribe failed (HTTP '"
+        " + resp.status + ').'); return; }"
+        " document.getElementById('subscribed').hidden = false;"
+        " setStatus('Subscribed.');"
+        " } catch (e) { setStatus('Subscribe failed: '"
+        " + (e && e.message ? e.message : e)); } });"
+        "document.getElementById('test')"
+        ".addEventListener('click', async () => {"
+        " const out = document.getElementById('test-result');"
+        " out.textContent = 'Sending...';"
+        " try {"
+        " const resp = await fetch(withToken('/owner/phone/test'),"
+        " { method: 'POST' });"
+        " const data = await resp.json();"
+        " out.textContent = 'Test push: HTTP ' + resp.status"
+        " + ' ' + JSON.stringify(data);"
+        " } catch (e) { out.textContent = 'Test push failed: '"
+        " + (e && e.message ? e.message : e); } });"
+        "</script>"
+        "</body></html>"
+    )
+
+
+@app.post("/owner/phone/subscribe")
+async def owner_phone_subscribe(request: Request):
+    """Store one phone subscription (same token rule)."""
+    if not _owner_token_ok(request):
+        return JSONResponse({"ok": False, "reason": "forbidden"},
+                            status_code=403)
+    from app import store as store_mod
+
+    try:
+        data = await request.json()
+    except ValueError:
+        return JSONResponse({"ok": False, "reason": "invalid JSON"},
+                            status_code=400)
+    if not isinstance(data, dict):
+        return JSONResponse({"ok": False, "reason": "invalid JSON"},
+                            status_code=400)
+    endpoint = data.get("endpoint")
+    keys = data.get("keys")
+    if (not isinstance(endpoint, str) or not endpoint.strip()
+            or not isinstance(keys, dict)
+            or not isinstance(keys.get("p256dh"), str)
+            or not str(keys.get("p256dh")).strip()
+            or not isinstance(keys.get("auth"), str)
+            or not str(keys.get("auth")).strip()):
+        return JSONResponse(
+            {"ok": False, "reason": "needs endpoint and keys.p256dh/auth"},
+            status_code=400)
+    label = data.get("label")
+    stored = store_mod.save_push_subscription(
+        endpoint.strip(),
+        {"p256dh": str(keys["p256dh"]).strip(),
+         "auth": str(keys["auth"]).strip()},
+        label if isinstance(label, str) else "")
+    return {"ok": True, "id": stored["id"]}
+
+
+@app.post("/owner/phone/test")
+async def owner_phone_test(request: Request):
+    """Send a test push to every live subscription (same token rule)."""
+    if not _owner_token_ok(request):
+        return JSONResponse({"ok": False, "reason": "forbidden"},
+                            status_code=403)
+    from datetime import datetime, timezone
+
+    from app import push as push_mod
+
+    if not push_mod.push_configured():
+        return {"ok": False, "reason": "disabled"}
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    results = push_mod.send_to_all(
+        "Night Shift test", f"Test push at {now}", "/")
+    return {"ok": True, "results": results}
