@@ -2,6 +2,10 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt X1 part 4: the audit view
+
+- Every job page shows an Audit section from its `provenance` event: policy SHA-256, model id, effort, fixture-set SHA-256, and for Night B jobs the changed line with `venue_confirmation.md`. Jobs predating the view say so in one line. Policy = read + reassess + resume instruction text (fixtures travel in input messages, so Night A and B share it). New tests/test_night_b_audit.py (4 tests): same policy hash, different fixture hash, hero copy carries hero provenance.
+
 ## Wed Oct 28 — prompt X1 part 3: the comparison line
 
 - The control now carries one scored sentence beside it, filled from results.json: k counts necessity_no_wake supervision runs that held without waking (premature holds excluded), n counts all of them. Default folder is the latest with such runs (today: 20261028T205824Z, "1 of 3"); NIGHT_B_RESULTS_DIR pins another, so the frozen folder takes over after the final runs. Wording follows the results.json flag ("development runs" vs "final runs"). New tests/test_night_b_results.py (7 tests).

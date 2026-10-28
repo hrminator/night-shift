@@ -588,6 +588,31 @@ def run_job_route(request: Request, variant: str = "hero"):
     return RedirectResponse(url=f"/jobs/{summary['job_id']}", status_code=303)
 
 
+def _audit_section(events: list) -> str:
+    """One job's audit facts: policy, model, effort, fixtures, change."""
+    esc = html.escape
+    found = [e for e in events if e["kind"] == "provenance"]
+    if not found:
+        return ("<p>Audit: not recorded"
+                 " (this job predates the audit view).</p>")
+    payload = found[-1]["payload"] or {}
+    rows = (
+        "<li>Policy SHA-256:"
+        f" <code>{esc(str(payload.get('policy_hash', '?')))}</code></li>"
+        f"<li>Model: {esc(str(payload.get('model', '?')))}"
+        f" · effort: {esc(str(payload.get('effort', '?')))}</li>"
+        "<li>Fixture set SHA-256:"
+        f" <code>{esc(str(payload.get('fixture_hash', '?')))}</code></li>"
+    )
+    if payload.get("changed_line"):
+        rows += (
+            "<li>Changed line"
+            f" ({esc(str(payload.get('changed_file', '')))}):"
+            f" <i>{esc(str(payload.get('changed_line')))}</i></li>"
+        )
+    return f"<section><h2>Audit</h2><ul>{rows}</ul></section>"
+
+
 @app.get("/jobs/{job_id}", response_class=HTMLResponse)
 def job_page(job_id: str):
     from app import store as store_mod
@@ -645,6 +670,7 @@ def job_page(job_id: str):
         f"<p>Status: {esc(str(job.get('status', '?')))} · "
         f"clock: {esc(str(job.get('virtual_time', '?')))} · "
         f"step: {esc(str(job.get('current_step', '')))}</p>"
+        f"{_audit_section(events)}"
         f"{card}{_decision_section(events)}{scan_grounding_section(events)}<h2>Events in order</h2><ol>{rows}</ol>"
         '<p><a href="/">Back to Night Shift</a></p></body></html>'
     )
