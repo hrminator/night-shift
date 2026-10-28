@@ -117,14 +117,6 @@ def header_row(chip_html: str) -> str:
     )
 
 
-def recorded_line(date: str, model: str) -> str:
-    """One quiet line under the header naming the recording's own facts."""
-    return (
-        f"<p class=\"recline\">Real {html.escape(model)} calls recorded on "
-        f"{html.escape(date)}. Supplier system and mail simulated.</p>"
-    )
-
-
 def timeline_pct(virtual_hhmm: str) -> float:
     """Position of one virtual time on the 21:30 -> 09:30 line, in percent."""
     span = (clock_mod.at(clock_mod.NIGHT_END)
@@ -186,7 +178,7 @@ def supplier_strip(rows: list[tuple[str, str, str]]) -> str:
     )
 
 
-def footer(raw_log_url: str, results_url: str) -> str:
+def footer(raw_log_url: str, results_url: str, job_ref: str = "") -> str:
     """Footer: the three-tag legend, links, and the scenario line."""
     esc = html.escape
     return (
@@ -210,10 +202,10 @@ def footer(raw_log_url: str, results_url: str) -> str:
         "</ul>"
         f"<p class=\"links\"><a href=\"/evidence\">Evidence</a> · "
         f"<a href=\"{esc(results_url)}\">Results in the README</a> · "
-        f"<a href=\"{esc(raw_log_url)}\">This run&rsquo;s raw event log"
+        f"<a href=\"{esc(raw_log_url)}\">This run&rsquo;s raw event log{(' · ' + esc(job_ref)) if job_ref else ''}"
         "</a></p>"
         "<p class=\"scenario\">Fictional studio and suppliers · real Muse"
-        " Spark calls · night compressed.</p>"
+        " Spark calls · night compressed. Supplier system and mail simulated.</p>"
         "</footer>"
     )
 

@@ -201,15 +201,28 @@ def test_mark3_sticky_left_column(fix_server):
         page.goto(fix_server["base"] + "/?state=night",
                   wait_until="load")
         before = _box(page, ".inst .clock")
+        page.evaluate("window.scrollTo(0, 500)")
+        page.wait_for_timeout(200)
+        stuck = _box(page, ".inst .clock")
+        assert _inside(900, stuck), stuck
+        assert stuck["x"] == pytest.approx(before["x"], abs=1), (
+            before, stuck)
+        assert stuck["width"] == pytest.approx(before["width"], abs=1), (
+            before, stuck)
+        assert stuck["y"] == pytest.approx(32, abs=2), stuck
         page.evaluate("window.scrollTo(0, 1500)")
         page.wait_for_timeout(200)
         after = _box(page, ".inst .clock")
-        assert _inside(900, after), after
+        assert after["y"] < 900 and after["y"] + after["height"] > 0, after
         assert after["x"] == pytest.approx(before["x"], abs=1), (
             before, after)
         assert after["width"] == pytest.approx(before["width"], abs=1), (
             before, after)
-        assert after["y"] == pytest.approx(32, abs=2), after
+        if abs(after["y"] - 32) > 3:
+            inst = _box(page, ".inst")
+            grid = _box(page, ".grid")
+            assert abs((inst["y"] + inst["height"])
+                       - (grid["y"] + grid["height"])) < 3, (inst, grid)
     finally:
         page.close()
 

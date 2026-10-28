@@ -145,13 +145,13 @@
   }
   window.addEventListener("resize", function () { dotTo(curVt); });
 
-  var feedSec = $('[data-rv-sec="feed"]', replay);
+  var feedSec = $('[data-rv-sec="feed"]');
   var beatSec = $('[data-rv-sec="beat"]', replay);
   var howSec = $('[data-rv-sec="how"]', replay);
   var decSec = $('[data-rv-sec="decision"]', replay);
   var checksFold = $('[data-rv="checks-fold"]', replay);
   var cards = $all('[data-rv="check"]', replay);
-  function item(slot) { return $('[data-rv="' + slot + '"]', replay); }
+  function item(slot) { return $('[data-rv="' + slot + '"]'); }
 
   var state = {done: false, manual: false, vnow: 0, fired: 0};
   function finish() {
@@ -160,6 +160,7 @@
     setClock("00:47", true);
     if (evtag && evtag.parentNode) evtag.parentNode.removeChild(evtag);
     if (replay.parentNode) replay.parentNode.removeChild(replay);
+    if (feedSec && feedSec.parentNode) feedSec.parentNode.removeChild(feedSec);
     document.body.classList.add("state-b");
     showNote();
     var paper = note ? $(".note", note) : null;

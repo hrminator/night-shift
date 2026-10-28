@@ -113,7 +113,7 @@ def _unknown_job_page(job_id: str, title: str) -> str:
             + pages_mod.status_para(title)
             + f"<section><div class=\"card\">{detail}</div></section>"
             + pages_mod.footer(f"/jobs/{html.escape(job_id)}/events",
-                               main_mod.RESULTS_URL))
+                               main_mod.RESULTS_URL, job_id))
     return pages_mod.shell(title, "night", body, head_extra=head)
 
 
@@ -189,7 +189,7 @@ def _progress_page(job_id: str, title: str, status_sentence: str,
         + '<div class="grid"><div class="inst">'
         + inst + '</div><div class="detail">' + detail + "</div></div>"
         + dawn_html
-        + pages_mod.footer(raw_url, main_mod.RESULTS_URL))
+        + pages_mod.footer(raw_url, main_mod.RESULTS_URL, job_id))
     return pages_mod.shell(title, "night", body, head_extra=head)
 
 

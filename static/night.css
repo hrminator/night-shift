@@ -49,7 +49,7 @@ a{color:inherit}
   padding:7px 12px;color:var(--fg-2);white-space:nowrap}
 .livedot{width:8px;height:8px;border-radius:50%;background:var(--lamp);flex:none;animation:pulse 1.6s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-.recline{margin:-16px 0 32px;font-size:15px;color:var(--fg-2)}
+
 /* Clock + timeline */
 .clock{font:500 64px/1 "Geist Mono",ui-monospace,SFMono-Regular,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .clock .h,.clock .m{color:var(--fg)}
@@ -221,9 +221,11 @@ details[open] .chev{transform:rotate(225deg)}
   box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 1px 2px rgba(31,27,22,.2)}
 .letter .btn.is-stale{background:transparent;color:var(--paper-ink-1);border:1px solid var(--lamp-deep);box-shadow:none}
 .letter .btn:disabled{cursor:not-allowed;opacity:.85}
-.letter textarea.edit{width:100%;margin:12px 0 0;padding:12px;font:400 16px/1.5 Newsreader,Georgia,serif;
-  color:var(--paper-ink-1);background:#fff;border:1px solid var(--hair);border-radius:8px;resize:vertical;min-height:96px}
-.letter .savebtn{background:transparent;color:var(--paper-ink-1);border:1px solid var(--hair);box-shadow:none}
+.letter textarea.edit{width:100%;margin:8px 0 0;padding:0;font:400 17px/1.6 Newsreader,Georgia,serif;
+  color:var(--paper-ink-1);background:transparent;border:1px solid transparent;border-radius:4px;resize:vertical;min-height:96px}
+.letter textarea.edit:focus{border-color:var(--hair)}
+.letter .savebtn{display:inline-block;width:auto;min-height:0;margin:8px 0 0;padding:4px 0;background:transparent;border:none;box-shadow:none;border-radius:0;color:var(--paper-ink-2);font:500 14px/1.4 Geist,system-ui,sans-serif;text-decoration:underline;text-underline-offset:3px}
+.letter .savebtn:disabled{opacity:.45;cursor:default}
 .letter .state{font:400 15px/1 "Geist Mono",ui-monospace,monospace;color:var(--paper-ink-2)}
 .outboxrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:16px}
 .drow{display:grid;grid-template-columns:20px 1fr;gap:8px;padding:12px 0;border-bottom:1px solid var(--hair);font-size:16px}
@@ -268,7 +270,7 @@ body.state-b .status{margin-top:12px;font-size:22px}
 body.state-b .note{padding:20px}
 body.state-b .note .ownerline{margin-top:16px}
 body.state-b .detail>section:first-child{margin-top:24px}
-body.state-b .recline{margin:24px 0 0}
+
 @media(max-width:480px){
   .tick em{font-size:10px}
   .status{font-size:22px}
@@ -294,13 +296,13 @@ body.state-b .recline{margin:24px 0 0}
   *{scroll-behavior:auto !important}
 }
 /* S1b replay: the scheduler in night.js reveals each row on its beat. */
-.rv #replay [data-rv],.rv #replay [data-rv-sec]{display:none}
-.rv #replay [data-rv].on,.rv #replay [data-rv-sec].on{display:block}
-.rv #replay .frow.on{display:grid}
-.rv #replay .check .yn{visibility:hidden}
-.rv #replay .check .yn.on{visibility:visible;animation:ynIn .18s ease-out}
-.rv #replay .on.feed-anim{animation:feedIn .22s ease-out}
-.rv #replay .sheet.on{animation:settle .3s ease-out}
+.rv [data-rv],.rv [data-rv-sec]{display:none}
+.rv [data-rv].on,.rv [data-rv-sec].on{display:block}
+.rv .frow.on{display:grid}
+.rv .check .yn{visibility:hidden}
+.rv .check .yn.on{visibility:visible;animation:ynIn .18s ease-out}
+.rv .on.feed-anim{animation:feedIn .22s ease-out}
+.rv .sheet.on{animation:settle .3s ease-out}
 @keyframes feedIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 @keyframes ynIn{from{opacity:0}to{opacity:1}}
 @keyframes settle{from{transform:translateY(-4px) rotate(-1deg);box-shadow:0 18px 48px rgba(0,0,0,.3)}to{transform:translateY(0) rotate(-1deg);box-shadow:var(--sheet-shadow)}}

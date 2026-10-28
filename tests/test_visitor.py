@@ -212,7 +212,8 @@ def test_front_door_replays_recorded_run(tmp_path, monkeypatch):
     response = client.get("/")
     assert response.status_code == 200
     body = response.text
-    assert "Real muse-spark-1.3 calls recorded on 2026-10-27" in body
+    assert "RECORDED · 2026-10-27 · MUSE-SPARK-1.3" in body
+    assert 'class="recline"' not in body
     assert "Supplier system and mail simulated" in body
     assert "Wed Nov 11 08:00-12:00" in body
     assert "Q-1187-B" in body

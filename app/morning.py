@@ -596,10 +596,6 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
             raw_url = ("https://github.com/hrminator/night-shift/tree/main/"
                        "data/runs")
     notice = f"<div class=\"notice\">{banner}</div>" if banner else ""
-    title_line = (
-        f"<p class=\"small\">Morning page · 07:00 virtual time · "
-        f"{html.escape(job_title)}</p>"
-    )
     holdchip = ("<p style=\"margin:0\">"
                 "<span class=\"holdchip\">HOLD LAPSES 09:00</span></p>"
                 if hold_id is not None else "")
@@ -611,7 +607,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
             + holdchip + strip + receipt)
     lookup = job_id if job_id is not None else job_title
     detail = (
-        f"<p class=\"small\"><b>{html.escape(_label_line(events))}</b></p>"
+
         f"{_needs_section(lookup, events, with_forms=job_id is not None)}"
         f"{_for_you_section(events)}"
         f"{_earlier_section(events)}"
@@ -626,10 +622,12 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
         f"{_gateway_fold(events)}"
     )
     body = (pages_mod.header_row(chip)
-            + title_line + notice
+            + notice
             + '<div class="grid"><div class="inst">'
             + inst + '</div><div class="detail">' + detail + "</div></div>"
-            + pages_mod.footer(raw_url, main_mod.RESULTS_URL))
+            + pages_mod.footer(raw_url, main_mod.RESULTS_URL, (job_id if job_id is not None else recorded_id)))
     arrived = "arrive-dawn" if dawn else ""
+    meta = (f"<meta name=\"description\" content=\""
+            f"{html.escape(_label_line(events))}\">")
     return pages_mod.shell(f"Night Shift morning · {job_title}", "paper",
-                           body, body_class=arrived)
+                           body, body_class=arrived, head_extra=meta)

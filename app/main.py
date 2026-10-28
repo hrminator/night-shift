@@ -353,8 +353,8 @@ def index(state: str = "", film: str = "", frame: str = "", beat: str = "") -> s
     strip = pages_mod.supplier_strip(states_mod.strip_rows_for(events))
     raw_url = ("https://github.com/hrminator/night-shift/blob/main/data/runs"
                f"/job-{resolved['job_id']}.json")
-    footer = pages_mod.footer(raw_url, RESULTS_URL)
-    recline = pages_mod.recorded_line(resolved["date"], model)
+    footer = pages_mod.footer(raw_url, RESULTS_URL, resolved["job_id"])
+
     cost = recorded_cost_line(resolved["job_id"])
     ownerline = ("You're the owner. Your answer runs live on your own "
                  "copy of this night.")
@@ -362,8 +362,9 @@ def index(state: str = "", film: str = "", frame: str = "", beat: str = "") -> s
     if question is not None:
         note = states_mod.question_note(question, '/visitor/answer',
                                         ownerline, with_change=True)
-    night_detail = (
-        f"{states_mod.feed_html(events)}"
+    feed = states_mod.feed_html(events)
+    night_rest = (
+
         f"{states_mod.beat_html(events)}"
         f"{scan_grounding_section(events)}"
         '<section aria-label="How it decided" data-rv-sec="how">'
@@ -385,9 +386,9 @@ def index(state: str = "", film: str = "", frame: str = "", beat: str = "") -> s
                            " question.")
         inst = (pages_mod.clock_block(
             beat, event_tag="SCRIPTED TEST EVENT")
-            + pages_mod.status_para(status_text) + strip)
-        detail = night_detail + cost
-        top = pages_mod.header_row(chip) + recline
+            + pages_mod.status_para(status_text) + strip + feed)
+        detail = night_rest + cost
+        top = pages_mod.header_row(chip)
         body_class = ""
     elif state == "question":
         # No status sentence: the note's question is the status, and
@@ -395,7 +396,7 @@ def index(state: str = "", film: str = "", frame: str = "", beat: str = "") -> s
         inst = pages_mod.clock_block(notified_at, amber_dot=True)
         detail = (note
                   + states_mod.strip_fold_html(strip_rows)
-                  + recline + cost)
+                  + cost)
         top = pages_mod.header_row(chip)
         body_class = "state-b"
     else:
@@ -406,10 +407,10 @@ def index(state: str = "", film: str = "", frame: str = "", beat: str = "") -> s
                 question, "/visitor/answer", ownerline, with_change=True,
                 hidden=True)
         inst = pages_mod.clock_block(
-            "21:30", event_tag="SCRIPTED TEST EVENT", evtag_hidden=True)
-        detail = ('<div id="replay">' + night_detail + "</div>"
+            "21:30", event_tag="SCRIPTED TEST EVENT", evtag_hidden=True) + feed
+        detail = ('<div id="replay">' + night_rest + "</div>"
                   + note_hidden
-                  + states_mod.strip_fold_html(strip_rows) + recline + cost)
+                  + states_mod.strip_fold_html(strip_rows) + cost)
         top = pages_mod.header_row(chip) + RV_SCRIPT + NOSCRIPT_SHOW
         body_class = ""
     body = (top
@@ -691,7 +692,7 @@ def job_page(job_id: str):
     )
     audit = _audit_section(events)
     scan = scan_grounding_section(events)
-    footer = pages_mod.footer(f"/jobs/{esc(job_id)}/events", RESULTS_URL)
+    footer = pages_mod.footer(f"/jobs/{esc(job_id)}/events", RESULTS_URL, job_id)
     strip_rows = states_mod.strip_rows_for(
         events, morning=status == "done", hold_id=_hold_id_of(events))
     if status == "waiting_for_owner" and question is not None:
