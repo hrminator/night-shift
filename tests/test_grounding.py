@@ -78,10 +78,24 @@ def _grounding_kinds(job_id):
             if event["kind"] in ("line_located", "line_not_located")]
 
 
+def _grid_box_for(band: dict, size: tuple) -> dict:
+    """The band itself, expressed as a 0-1000 box (an on-target answer)."""
+    width, height = size
+    return {
+        "x_min": int(band["x_left"] / width * 1000),
+        "y_min": int(band["y_top"] / height * 1000),
+        "x_max": int(band["x_right"] / width * 1000),
+        "y_max": int(band["y_bottom"] / height * 1000),
+    }
+
+
 def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
     job_id = _scan_job(tmp_path, monkeypatch)
     seen: dict = {}
     calls: list = []
+    band = grounding_mod.find_band(ARRIVAL_LINE)
+    assert band is not None
+    box = _grid_box_for(band, grounding_mod.png_size_of())
 
     def fake_respond(instructions, input_items, **kwargs):
         calls.append(1)
@@ -89,22 +103,19 @@ def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
         seen["input"] = input_items
         seen["kwargs"] = kwargs
         return _ground_result(json.dumps({
-            "object_name": "quoted line",
-            "bbox": [{"x_min": 66, "y_min": 311,
-                      "x_max": 384, "y_max": 333}]}))
+            "object_name": "quoted line", "bbox": [box]}))
 
     event = runner_mod.maybe_ground_scan_line(job_id,
                                               respond_fn=fake_respond)
     assert event is not None and event["kind"] == "line_located"
     payload = event["payload"]
-    assert payload["bbox"] == {"x_min": 66, "y_min": 311,
-                               "x_max": 384, "y_max": 333}
+    assert payload["bbox"] == box
     assert payload["line_text"] == ARRIVAL_LINE
     assert payload["png"] == "baltic_quote_Q-1187-B.png"
     assert payload["model"] == "muse-spark-1.3-test"
     assert payload["response_id"] == "resp-ground-1"
     assert payload["seconds"] == 1.2
-    assert payload["on_target"] is None
+    assert payload["on_target"] is True
     claims = [entry for entry in list_events(job_id)
               if entry["kind"] == "claim"]
     assert payload["claim_id"] == claims[-1]["id"]
@@ -249,3 +260,53 @@ def test_locate_line_logs_through_adapter(monkeypatch):
     assert seen["body"]["text"]["format"]["type"] == "json_schema"
     assert seen["log"]["call_type"] == "ground"
     assert seen["log"]["response"]["id"] == "resp-log-1"
+
+
+ARRIVAL_BAND = {"y_top": 311, "y_bottom": 333,
+                "x_left": 66, "x_right": 384}
+ARRIVAL_SIZE = (595, 841)
+
+
+def test_score_box_passes_on_target():
+    verdict = grounding_mod.score_box(
+        {"x_min": 120, "y_min": 372, "x_max": 640, "y_max": 394},
+        ARRIVAL_BAND, ARRIVAL_SIZE)
+    assert verdict["pass"] is True
+    assert verdict["vertical"] is True
+    assert verdict["wide_enough"] is True
+
+
+def test_score_box_fails_vertical_miss():
+    verdict = grounding_mod.score_box(
+        {"x_min": 120, "y_min": 100, "x_max": 640, "y_max": 200},
+        ARRIVAL_BAND, ARRIVAL_SIZE)
+    assert verdict["pass"] is False
+    assert verdict["vertical"] is False
+
+
+def test_score_box_fails_narrow_box():
+    verdict = grounding_mod.score_box(
+        {"x_min": 110, "y_min": 372, "x_max": 200, "y_max": 394},
+        ARRIVAL_BAND, ARRIVAL_SIZE)
+    assert verdict["pass"] is False
+    assert verdict["vertical"] is True
+    assert verdict["wide_enough"] is False
+
+
+def test_score_line_unknown_line_is_none():
+    assert grounding_mod.score_line(
+        {"x_min": 120, "y_min": 372, "x_max": 640, "y_max": 394},
+        "no such line on the page", ARRIVAL_SIZE) is None
+    assert grounding_mod.score_line(None, ARRIVAL_LINE,
+                                    ARRIVAL_SIZE) is None
+
+
+def test_find_band_matches_exact_and_case():
+    lines = [{"text": ARRIVAL_LINE, "y_top": 1, "y_bottom": 2,
+              "x_left": 3, "x_right": 4}]
+    assert grounding_mod.find_band(ARRIVAL_LINE, lines) == lines[0]
+    assert grounding_mod.find_band("  " + ARRIVAL_LINE + "  ",
+                                   lines) == lines[0]
+    assert grounding_mod.find_band(ARRIVAL_LINE.lower(),
+                                   lines) == lines[0]
+    assert grounding_mod.find_band("missing", lines) is None

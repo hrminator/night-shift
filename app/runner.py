@@ -1040,7 +1040,7 @@ def _maybe_ground_scan_line(
         "model": captured.get("model"),
         "response_id": captured.get("response_id"),
         "seconds": captured.get("seconds", 0.0),
-        "on_target": None,
+        "on_target": _grounding.score_line(bbox, line_text),
     })
 
 

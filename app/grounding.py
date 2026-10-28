@@ -164,3 +164,81 @@ def pick_scan_claim(events: list) -> dict | None:
         and str((event.get("payload") or {}).get("quote") or "").strip()
     ]
     return candidates[-1] if candidates else None
+
+
+def load_lines(path: Path | str = LINES_JSON_PATH) -> list:
+    """The lines.json bands, or [] when the file is missing or broken."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return data if isinstance(data, list) else []
+
+
+def find_band(line_text: str, lines: list | None = None) -> dict | None:
+    """The lines.json band for one quoted line, if it names a line there."""
+    want = str(line_text or "").strip()
+    if not want:
+        return None
+    entries = lines if lines is not None else load_lines()
+    for entry in entries:
+        if isinstance(entry, dict) \
+                and str(entry.get("text") or "").strip() == want:
+            return entry
+    folded = want.casefold()
+    for entry in entries:
+        if isinstance(entry, dict) \
+                and str(entry.get("text") or "").strip().casefold() == folded:
+            return entry
+    return None
+
+
+def png_size_of(path: Path | str = SCAN_PNG_PATH) -> tuple[int, int] | None:
+    """Pixel size of the scan PNG, or None when it cannot be read."""
+    try:
+        from PIL import Image
+        with Image.open(path) as shot:
+            return (shot.size[0], shot.size[1])
+    except (OSError, ValueError):
+        return None
+
+
+def score_box(bbox: dict, band: dict, png_size: tuple[int, int]) -> dict:
+    """Score one 0-1000 box against a lines.json band, in PNG pixels.
+
+    Pass: the box's vertical centre falls inside the band AND the box
+    covers at least 70% of the line's width.
+    """
+    width, height = png_size
+    x0 = bbox["x_min"] / 1000 * width
+    x1 = bbox["x_max"] / 1000 * width
+    centre_y = (bbox["y_min"] + bbox["y_max"]) / 2 / 1000 * height
+    vertical = band["y_top"] <= centre_y <= band["y_bottom"]
+    line_width = band["x_right"] - band["x_left"]
+    overlap = max(0.0, min(x1, band["x_right"]) - max(x0, band["x_left"]))
+    coverage = (overlap / line_width) if line_width > 0 else 0.0
+    wide_enough = coverage >= 0.70
+    return {"pass": bool(vertical and wide_enough), "centre_y": centre_y,
+            "vertical": bool(vertical), "coverage": coverage,
+            "wide_enough": bool(wide_enough)}
+
+
+def score_line(
+    bbox: dict | None,
+    line_text: str,
+    png_size: tuple[int, int] | None = None,
+    lines: list | None = None,
+) -> bool | None:
+    """on_target for one box: None when lines.json has no such line."""
+    try:
+        if bbox is None:
+            return None
+        band = find_band(line_text, lines)
+        if band is None:
+            return None
+        size = png_size or png_size_of()
+        if size is None:
+            return None
+        return score_box(bbox, band, size)["pass"]
+    except (KeyError, TypeError, ValueError, ZeroDivisionError):
+        return None

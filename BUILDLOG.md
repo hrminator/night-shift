@@ -2,6 +2,14 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt B1 part 3: the grounding probe
+
+- `scripts/probe_grounding.py`: 10 locate_line runs against the scan PNG with the arrival line's exact text, scored in PNG pixels (vertical centre in band + 70% width coverage). Verdict PASS at 9 of 10. `fixtures/grounding_verdict.json` records the latest run; `line_located` events now carry runtime `on_target` (null when lines.json has no such line).
+- Smoke (1 run, low, `results/grounding-20261028T085111Z/`): box {105,350,690,370}, FAIL, $0.0028. The request shape (input_image data URL + text.format json_schema) was accepted first try, no 400. A dark-pixel check confirmed the band (ink rows 319-326 inside band 311-333): the miss was the model's, about 20 px high.
+- Low (10 runs, `results/grounding-20261028T085216Z/`): 2 of 10 on target, FAIL, $0.0221. Bimodal: 8 boxes clustered at y 350-370 (blank space above the line), 2 on target at y 382-399.
+- Medium (10 runs, `results/grounding-20261028T085319Z/`): 7 of 10 on target, FAIL, $0.0366. Seven on target at y 382-401, two in the old high cluster, one low at y 419-433.
+- Verdict stands at FAIL (7/10 medium). Per the prompt the probe stops here (low, then medium once): Part 4 renders the fallback (quoted line underlined, no box). Suite: 176 passed.
+
 ## Wed Oct 28 — prompt B1 part 2: the grounding call
 
 - New `app/grounding.py`: `locate_line(png_path, line_text)` sends the scan PNG as an `input_image` data URL plus "locate this line" (call type `ground`, low effort, 2048 cap, `text.format` json_schema, store:false, prompt_cache_key like the other call types) and returns the first bbox clamped to 0-1000 ints, or None when the model omits it. This call does not detect the change; Spark found the change in its own reading of the page during the reassess turn. B1 only points at the line Spark quoted.
