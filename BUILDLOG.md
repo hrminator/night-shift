@@ -2,6 +2,15 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt F5 part 3: verification runs, re-pin
+
+- results/20261028T221930Z/: supervision necessity_no_wake x3 (concurrency 2, $0.3848, 363.1 model-s). Premature holds 0; effects 3; no notifications; misattributed 0. All three 22:30 reasons cite the Q-1187 line plus the precedence rule, and all three 00:38 reasons quote the dispatch line that ends the plan of record.
+- Run 1 0b8e9dabbbf6: no_wake at 22:30 ("specific dated line outranks general shipping disclaimer"); one DRAFT marker refused + re-issued clean; held H-2041 at 00:38, no notification. pass=True.
+- Run 2 63bff302a188: same shape (precedence cited at 22:30; one marker refused + clean; hold H-2041 at 00:38, no notification). pass=True.
+- Run 3 849015e83ed8: no_wake at 22:30, zero refusals of any kind, held H-2041 at 00:38 quoting the portal + venue lines, no notification, 4 drafts. pass=True. RE-PINNED as RECORDED_JOB_B (Dockerfile + fly.toml + data/runs/job-849015e83ed8.json, 51 events; the cde5 export stays).
+- results/20261028T222426Z/: supervision W1_timely_answer x1 ($0.1996, 152.1 model-s). Woke at 00:38 with the venue-receipt question (in window, right question); answer 01:05; fact_ledger logged (owner + 3 supplier lines + Thursday-only venue line); hold H-2041, gateway pass; 5 resume drafts, misattributed 0. No draft was attribution_refused: the venue_note states the van delivery without crediting the venue, so nothing needed re-issue (the refusal path is proven by contract tests). One DRAFT marker at 22:30 refused + re-issued clean. pass=True.
+- Front-door comparison reads "held without waking in 3 of 3" from 20261028T221930Z automatically (verified live on 8123, then the server stopped). S1a wobble: two playwright tests failed while my manual uvicorn still held 8123; after killing the two stale servers the suite is green (296 passed).
+
 ## Wed Oct 28 — prompt F5 part 2: who-said-what ledger + attribution rule
 
 - New app/ledger.py: code-built ledger (latest statement per party with source + time, "nothing since <handoff>" otherwise; the owner's answer is the owner's statement). resume_job logs fact_ledger and files the fact list before the answer message; the morning page shows it as "Who said what" (CODE tag; jobs without the event show nothing).
