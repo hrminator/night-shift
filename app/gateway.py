@@ -524,6 +524,17 @@ def draft_leak_flag(to: str, body: str) -> tuple[bool, str]:
     return False, ""
 
 
+DRAFT_MARKERS = ["DRAFT", "DO NOT SEND", "NOT YET", "FOR REVIEW"]
+
+
+def find_draft_marker(subject: str, body: str) -> str | None:
+    blob = f"{subject}\n{body}".lower()
+    for marker in DRAFT_MARKERS:
+        if marker.lower() in blob:
+            return marker
+    return None
+
+
 def check_propose_message(
     job_id: str,
     args: dict,
@@ -541,6 +552,10 @@ def check_propose_message(
         return {"ok": False, "malformed": True,
                 "reason": f"propose_message needs text to, subject, body, "
                 f"purpose; missing {missing}"}
+    marker = find_draft_marker(args["subject"], args["body"])
+    if marker is not None:
+        append_event(job_id, virtual_time, "draft_marker_refused", {"marker": marker, "to": args["to"], "subject": args["subject"][:200], "purpose": args["purpose"]}, path=path)
+        return {"ok": False, "reason": f"Draft contains status marker {marker!r} in subject or body: re-issue the same message with subject and body exactly as they would be sent, without status text.", "marker": marker}
     append_event(job_id, virtual_time, "gateway_result",
                  {"tool": "propose_message", "ok": True, "action": "draft",
                   "note": "drafts never send; nothing is delivered"},
