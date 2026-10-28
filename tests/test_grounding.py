@@ -87,7 +87,7 @@ ARRIVAL_LINE = "Delivery: Goods will leave our warehouse by 10 November."
 def _scan_job(tmp_path, monkeypatch, quote=ARRIVAL_LINE):
     """A night whose reassess claims include the Q-1187-B scan quote."""
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
-    monkeypatch.delenv("GROUNDING_ENABLED", raising=False)
+    monkeypatch.setenv("GROUNDING_ENABLED", "1")
     job = create_job(status="running", current_step="reassess",
                      virtual_time="00:39")
     append_event(job["id"], "00:39", "claim", {
@@ -259,6 +259,27 @@ def test_grounding_flag_off_makes_no_call(tmp_path, monkeypatch):
     assert runner_mod.maybe_ground_scan_line(
         job_id, respond_fn=fake_respond) is None
     assert _grounding_kinds(job_id) == []
+
+
+def test_grounding_default_off_makes_no_call(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("GROUNDING_ENABLED", raising=False)
+    assert runner_mod.grounding_enabled() is False
+    job = create_job(status="running", current_step="reassess",
+                     virtual_time="00:39")
+    append_event(job["id"], "00:39", "claim", {
+        "source": "Baltic revised Q-1187-B",
+        "version_or_file_id": "Q-1187-B",
+        "quote": ARRIVAL_LINE,
+        "claim": "dispatch-only, no arrival date",
+    })
+
+    def fake_respond(instructions, input_items, **kwargs):
+        raise AssertionError("must not be called")
+
+    assert runner_mod.maybe_ground_scan_line(
+        job["id"], respond_fn=fake_respond) is None
+    assert _grounding_kinds(job["id"]) == []
 
 
 def test_adapter_sends_text_format_with_store_false():

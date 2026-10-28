@@ -983,8 +983,8 @@ GROUNDING_FLAG = "GROUNDING_ENABLED"
 
 
 def grounding_enabled() -> bool:
-    """The grounding call runs unless GROUNDING_ENABLED disables it."""
-    return os.environ.get(GROUNDING_FLAG, "1").strip().lower() not in (
+    """The grounding call runs only when GROUNDING_ENABLED enables it."""
+    return os.environ.get(GROUNDING_FLAG, "0").strip().lower() not in (
         "", "0", "false", "no", "off")
 
 
