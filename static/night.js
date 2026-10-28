@@ -5,10 +5,10 @@
   var STALE = "Your OK doesn't cover this version";
 
   function wireLetter(letter) {
-    var box = letter.querySelector("textarea[data-original]");
+    var box = letter.querySelector("textarea.edit");
     var btn = letter.querySelector("button[data-approve]");
     if (!box || !btn) return;
-    var original = box.getAttribute("data-original") || "";
+    var original = box.defaultValue;
     var save = letter.querySelector("button[data-save]");
     function render() {
       var edited = box.value !== original;

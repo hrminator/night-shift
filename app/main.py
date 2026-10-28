@@ -806,92 +806,6 @@ def _draft_state(job_id: str, draft: dict, at_virtual: str = "07:00") -> str:
     return "needs approval again"
 
 
-def _draft_cards(job_id: str, events: list, with_forms: bool = True) -> str:
-    """Morning draft cards: head versions with approve + one-word-edit forms.
-
-    Recorded pages render read-only (no live job to approve against)."""
-    from app import gateway as gateway_mod
-    esc = html.escape
-    cards = ""
-    earlier = ""
-    _smap = gateway_mod.superseded_map_for(events)
-    for draft in [d for d in _draft_head_events(events) if d["id"] not in _smap and not _is_owner_note(d)]:
-        payload = draft["payload"] or {}
-        version_hash = gateway_mod.head_version_hash(draft)
-        state = _draft_state(job_id, draft)
-        version = payload.get("version", 1)
-        forms = ""
-        if with_forms:
-            forms = (
-                f'<form method="post" action="/jobs/{esc(job_id)}/approve">'
-                f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
-                f'<input type="hidden" name="version_hash" '
-                f'value="{version_hash}">'
-                '<input type="hidden" name="virtual_time" value="07:00">'
-                "<button type=\"submit\">Approve this exact text</button>"
-                "</form>"
-                f'<form method="post" action="/jobs/{esc(job_id)}/edit-draft">'
-                f'<input type="hidden" name="draft_id" value="{draft["id"]}">'
-                "<textarea name=\"body\" rows=\"3\" cols=\"60\">"
-                f"{esc(str(payload.get('body', '')))}</textarea>"
-                "<button type=\"submit\">Save edited version</button>"
-                "</form>"
-            )
-        leak = ("<p><b>Not sent: recipient not in your contacts</b></p>"
-                if payload.get("leak") else "")
-        cards += (
-            "<section><h3>"
-            f"{esc(str(payload.get('purpose', 'message')))} · {esc(state)}"
-            f" · v{esc(str(version))}</h3>"
-            f"<p>To: {esc(str(payload.get('to', '')))}</p>"
-            f"<p>Subject: {esc(str(payload.get('subject', '')))}</p>"
-            f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>"
-            f"{leak}{forms}</section>"
-        )
-    for_you = ""
-    for draft in [d for d in _draft_head_events(events) if d["id"] not in _smap and _is_owner_note(d)]:
-        payload = draft["payload"] or {}
-        version = payload.get("version", 1)
-        state = _draft_state(job_id, draft)
-        leak = ("<p><b>Not sent: recipient not in your contacts</b></p>" if payload.get("leak") else "")
-        for_you += ("<section><h3>" f"{esc(str(payload.get('purpose', 'message')))} · {esc(state)}" f" · v{esc(str(version))}</h3>" f"<p>To: {esc(str(payload.get('to', '')))}</p>" f"<p>Subject: {esc(str(payload.get('subject', '')))}</p>" f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>" f"{leak}</section>")
-    if for_you:
-        cards += "<section><h2>For you</h2>" + for_you + "</section>"
-    for draft in [d for d in _draft_head_events(events) if d["id"] in _smap]:
-        payload = draft["payload"] or {}
-        version = payload.get("version", 1)
-        mark = _smap[draft["id"]]
-        earlier += (
-            "<section><h3>"
-            f"{esc(str(payload.get('purpose', 'message')))} · {mark}"
-            f" · v{esc(str(version))}</h3>"
-            f"<p>To: {esc(str(payload.get('to', '')))}</p>"
-            f"<p>Subject: {esc(str(payload.get('subject', '')))}</p>"
-            f"<blockquote>{esc(str(payload.get('body', '')))}</blockquote>"
-            "</section>"
-        )
-    if earlier:
-        cards += "<details><summary>Earlier versions (superseded drafts proposed before the 00:38 event)</summary>" + earlier + "</details>"
-    return cards
-
-
-def _outbox_section(events: list) -> str:
-    """Simulated outbox: approved drafts moved here as delivered events."""
-    esc = html.escape
-    delivered = [e for e in events if e["kind"] == "delivered"]
-    if not delivered:
-        return "<p>Outbox empty.</p>"
-    rows = "".join(
-        "<li>"
-        f"To {esc(str((d['payload'] or {}).get('to', '?')))}: "
-        f"{esc(str((d['payload'] or {}).get('subject', '')))} — "
-        f"{esc(str((d['payload'] or {}).get('outbox', '')))}"
-        "</li>"
-        for d in delivered
-    )
-    return f"<ul>{rows}</ul>"
-
-
 def _push_delivery_line(job_id: str | None, events: list) -> str:
     """One push line for owner jobs, else empty. Exact strings only."""
     if job_id is None:
@@ -949,76 +863,12 @@ def _morning_job_links(job_id: str | None, events: list) -> str:
     return links
 
 
-def render_morning_page(job_title: str, events: list, banner: str = "",
+def render_morning_page(job_title: str, events: list, banner: str = '',
                         job_id: str | None = None) -> str:
     """Morning page HTML for live jobs and recorded runs alike."""
-    esc = html.escape
-    effects = [e for e in events if e["kind"] == "effect"]
-    drafts = [e for e in events if e["kind"] == "draft"]
-    checks = [e for e in events if e["kind"] == "gateway_check"]
-    evidence = [e for e in events if e["kind"] == "check"]
-    evidence_rows = "".join(
-        "<li>"
-        f"{esc(display_check_name((c['payload'] or {}).get('name', '?')))}: "
-        f"{esc(str((c['payload'] or {}).get('result', '?')))} — "
-        f"{esc(str((c['payload'] or {}).get('note', '')))}"
-        "</li>"
-        for c in evidence
-    )
-    evidence_section = (
-        f"<h2>Evidence checks</h2><ol>{evidence_rows}</ol>" if evidence else ""
-    )
-    approval_count = len(_approval_heads(events))
-    approval_word = "approval" if approval_count == 1 else "approvals"
-    draft_word = "draft" if approval_count == 1 else "drafts"
-    if effects:
-        label = (
-            "Vestland slot held until 09:00 · Done: comparison, hold, "
-            f"{approval_count} {draft_word} · Needs you: {approval_count} {approval_word} (the Vestland order before "
-            "09:00) · Couldn't verify: Baltic's arrival · Supplier system "
-            "and mail simulated"
-        )
-    else:
-        label = (
-            "No hold was placed · Done: comparison, drafts · "
-            f"Needs you: {approval_count} {approval_word} · Couldn't verify: Baltic's arrival · "
-            "Supplier system and mail simulated"
-        )
-    ack = ""
-    for effect in effects:
-        payload = effect["payload"] or {}
-        ack += (
-            "<section><h2>Hold acknowledgement</h2>"
-            f"<p>{esc(str(payload.get('acknowledgement', '')))}</p></section>"
-        )
-    notification = _notification_section(job_id, events)
-    cards = _draft_cards(job_id if job_id is not None else job_title,
-                         events, with_forms=job_id is not None)
-    check_rows = "".join(
-        "<li>"
-        f"{esc(str((c['payload'] or {}).get('check', '?')))}: "
-        f"{'pass' if (c['payload'] or {}).get('passed') else 'FAIL'} — "
-        f"{esc(str((c['payload'] or {}).get('detail', '')))}"
-        "</li>"
-        for c in checks
-    )
-    return (
-        "<!doctype html><html><head><title>Night Shift morning</title></head>"
-        "<body>"
-        f"<h1>Morning page · 07:00 virtual time · {esc(job_title)}</h1>"
-        f"{banner}"
-        f"<p><b>{esc(label)}</b></p>"
-        f"{ack}"
-        f"{notification}"
-        f"{scan_grounding_section(events)}"
-        f"<h2>Drafts awaiting your OK on the exact text</h2>{cards}"
-        f"<h2>Outbox (Simulated delivery)</h2>{_outbox_section(events)}"
-        f"<h2>How it decided (gateway checks)</h2><details><summary>Gateway checks: {sum(1 for c in checks if (c.get('payload') or {}).get('passed'))} of {len(checks)} pass (tap to expand)</summary><ol>{check_rows}</ol></details>"
-        f"{evidence_section}"
-        f"{_morning_job_links(job_id, events)}"
-        '<p><a href="/">Back to Night Shift</a></p></body></html>'
-    )
-
+    from app import morning as morning_mod
+    return morning_mod.render_morning_page(job_title, events, banner,
+                                           job_id=job_id)
 
 @app.get("/jobs/{job_id}/morning", response_class=HTMLResponse)
 def morning_page(job_id: str):
