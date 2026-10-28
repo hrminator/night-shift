@@ -66,6 +66,10 @@ app = FastAPI(title="Night Shift", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(
     Path(__file__).resolve().parent.parent / "static")), name="static")
 
+#: Static design comps (S0): public, nothing secret, no auth.
+app.mount("/comps", StaticFiles(directory=str(
+    Path(__file__).resolve().parent.parent / "comps")), name="comps")
+
 #: The source whose quote block carries the scan-styled-PDF label.
 SCAN_SOURCE = "baltic_quote_Q-1187-B.pdf"
 
