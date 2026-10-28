@@ -2,6 +2,12 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt B1b: grounding at 2x resolution (FAIL, fallback stays)
+
+- Part 1: `scripts/make_fixtures.py` now writes `fixtures/baltic_quote_Q-1187-B@2x.png` (1190x1682, same rotation/noise as the 1x, both resized from the same noisy page) alongside the 1x PNG kept for the pages; `lines.json` records scale 1 at the top (`{png, png_size, scale, lines}`) and the @2x bands are the 1x bands times 2. `app/grounding.py` sends the @2x PNG (`SCAN_PNG_2X_*`, `scale_band`/`scaled_lines`, `instruction_variant` default|tight); `app/runner.py` logs the @2x name and scores `on_target` against the 2x band/size; `scripts/probe_grounding.py` probes the @2x with `--variant`. Tests: @2x band equals 1x times 2 for every line, lines.json scale 1, tight wording, sent bytes are the @2x file. Suite: 199 passed.
+- Part 2 probes (medium, @2x, 10 runs each): default 0 of 10 (`results/grounding-20261028T094124Z/`, $0.0341), tight 0 of 10 (`results/grounding-20261028T094225Z/`, $0.0346). Every box missed low: band 622-666, centres 676-773 (closest 10 px below the band), width coverage ~1.0. The 2x page made grounding worse, not better: 1x medium had put 7 of 10 on target with 3 off-by-one-line misses.
+- All probes so far: low 1x default 2/10 ($0.0221), medium 1x default 7/10 ($0.0366), medium 2x default 0/10 ($0.0341), medium 2x tight 0/10 ($0.0346). Verdict stays FAIL (latest: 0/10 tight); the fallback stays (quoted line underlined, no box). Per the prompt no further variants; B1b probe spend $0.0687 of the $1 cap.
+
 ## Wed Oct 28 — prompt S0: three static design comps
 
 - Recorded job is 6c7c7c742513 (pinned RECORDED_JOB in the Dockerfile), recorded 2026-10-27. Taste skill loaded; the prompt's spec took precedence throughout. No change to the night, gateway, resume or event schema.
