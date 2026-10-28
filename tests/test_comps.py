@@ -27,6 +27,24 @@ PAGES = {
         "HOLD LAPSES 09:00",
         "v·ac7d",
     ],
+    "/comps/v2/night-0038.html": [
+        "comp v2",
+        "No need to wake you.",
+        "Read 6 sources",
+        "question-0047.html",
+    ],
+    "/comps/v2/question-0047.html": [
+        "comp v2",
+        "Muse Spark asks",
+        "answer by 01:50",
+        "Change one fact instead",
+    ],
+    "/comps/v2/morning-0700.html": [
+        "comp v2",
+        "Good morning.",
+        "HOLD LAPSES 09:00",
+        "v·ac7d",
+    ],
 }
 
 
