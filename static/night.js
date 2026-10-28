@@ -327,3 +327,114 @@
   };
   window.__nightShiftDawn = {rise: RISE, settle: SETTLE, leave: LEAVE};
 })();
+
+/* S1b film: the cue sheet plays the beats; tick drives it deterministically.
+   Film is an explicit opt-in to motion (?film=1), so it auto-plays; the
+   render script and tests advance it with __nightShiftTick instead. */
+(function () {
+  "use strict";
+  var stage = document.getElementById("fstage");
+  if (!stage) return;
+  var cuesEl = document.getElementById("cues");
+  if (!cuesEl) return;
+  var beats = JSON.parse(cuesEl.textContent).beats;
+  var only = stage.getAttribute("data-beat") || "";
+  var sections = Array.prototype.slice.call(
+    stage.querySelectorAll(".fbeat"));
+  var clockH = document.querySelector(".fclock-t .h");
+  var clockM = document.querySelector(".fclock-t .m");
+  var kick = document.querySelector(".fkick");
+  var timeline = [];
+  var cursor = 0;
+  beats.forEach(function (beat) {
+    if (only && beat.name !== only) return;
+    timeline.push({
+      name: beat.name, ms: beat.ms, start: cursor,
+      el: stage.querySelector('[data-beat="' + beat.name + '"]')
+    });
+    cursor += beat.ms;
+  });
+  var total = cursor;
+  function stagger(el, local, ms, sel) {
+    if (!el) return;
+    var items = el.querySelectorAll(sel);
+    var step = items.length ? ms / items.length : ms;
+    for (var i = 0; i < items.length; i++) {
+      if (local >= i * step) items[i].classList.add("on");
+      else items[i].classList.remove("on");
+    }
+  }
+  function renderAt(vnow) {
+    vnow = Math.max(0, Math.min(total, vnow));
+    var cur = timeline[0];
+    var index = 0;
+    for (var i = 0; i < timeline.length; i++) {
+      if (vnow >= timeline[i].start) { cur = timeline[i]; index = i; }
+    }
+    for (var j = 0; j < sections.length; j++) {
+      sections[j].classList.remove("on");
+    }
+    if (cur.el) cur.el.classList.add("on");
+    var local = vnow - cur.start;
+    var p = cur.ms ? local / cur.ms : 1;
+    if (cur.el) {
+      var parts = (cur.el.getAttribute("data-clock") || "").split(":");
+      if (clockH) clockH.textContent = parts[0] || "";
+      if (clockM) clockM.textContent = parts[1] || "";
+      if (kick) kick.textContent = cur.el.getAttribute("data-kicker") || "";
+      var paper = cur.el.getAttribute("data-theme") === "paper";
+      document.body.classList.toggle("paper", paper);
+      document.body.classList.toggle("night", !paper);
+    }
+    stagger(cur.el, local, cur.ms, "[data-frow]");
+    stagger(cur.el, local, cur.ms, "[data-fcard]");
+    if (cur.name === "sheet" && cur.el) {
+      var sheet = cur.el.querySelector(".fsheet");
+      if (sheet) sheet.style.transform = "scale(" + (1 + 0.06 * p).toFixed(4)
+        + ")";
+    }
+    if (cur.name === "dawn" && cur.el) {
+      var band = cur.el.querySelector(".fdawn-band");
+      var veil = cur.el.querySelector(".fdawn-veil");
+      var rise = Math.min(1, local / 9000);
+      var settle = Math.max(0, Math.min(1, (local - 9000) / 1500));
+      if (band) band.style.transform = "translateY(" + (101 - 101 * rise)
+        + "%)";
+      if (veil) veil.style.opacity = settle.toFixed(3);
+    }
+    return {beat: cur.name, index: index, local: local, total: total};
+  }
+  var manual = false;
+  var vnow = 0;
+  var raf = 0;
+  var iv = 0;
+  function frame(now) {
+    if (manual) return;
+    if (!frame.t0) frame.t0 = now;
+    vnow = now - frame.t0;
+    renderAt(vnow);
+    if (vnow < total) raf = window.requestAnimationFrame(frame);
+  }
+  renderAt(0);
+  if (window.requestAnimationFrame) {
+    raf = window.requestAnimationFrame(frame);
+  } else {
+    iv = setInterval(function () {
+      vnow += 100;
+      renderAt(vnow);
+      if (vnow >= total) clearInterval(iv);
+    }, 100);
+  }
+  window.__nightShiftTick = function (ms) {
+    if (!manual) {
+      manual = true;
+      if (raf && window.cancelAnimationFrame) {
+        window.cancelAnimationFrame(raf);
+      }
+      if (iv) clearInterval(iv);
+    }
+    vnow += ms;
+    return renderAt(vnow);
+  };
+  window.__nightShiftFilm = {total: total, beats: beats, only: only};
+})();

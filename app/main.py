@@ -70,6 +70,10 @@ app.mount("/static", StaticFiles(directory=str(
 app.mount("/comps", StaticFiles(directory=str(
     Path(__file__).resolve().parent.parent / "comps")), name="comps")
 
+#: The film cue sheet (S1b): one JSON file the voice-over is timed against.
+app.mount("/film", StaticFiles(directory=str(
+    Path(__file__).resolve().parent.parent / "film")), name="film")
+
 #: The source whose quote block carries the scan-styled-PDF label.
 SCAN_SOURCE = "baltic_quote_Q-1187-B.pdf"
 
@@ -316,7 +320,7 @@ _NIGHT_B_ERRORS: dict[str, str] = {}
 
 
 @app.get("/", response_class=HTMLResponse)
-def index(state: str = "") -> str:
+def index(state: str = "", film: str = "", frame: str = "", beat: str = "") -> str:
     """The one product screen: replay of the recorded hero run.
 
     `?state=night|question|morning` deep links select one state; the
@@ -331,6 +335,9 @@ def index(state: str = "") -> str:
         body = (pages_mod.header_row("")
                 + "<h1>Night Shift</h1><p>No recorded run yet.</p>")
         return pages_mod.shell("Night Shift", "night", body)
+    if (film or "").strip() == "1":
+        from app import film as film_mod
+        return film_mod.render_film_page(resolved, frame=frame, beat=beat)
     record = resolved["record"]
     events = replay_mod.replay_events(record)
     full_events = list(record.get("events") or [])

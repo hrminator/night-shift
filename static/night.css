@@ -317,3 +317,57 @@ body.state-b .recline{margin:24px 0 0}
 .dawn-veil.wall{transition:opacity .4s ease}
 .arrive-dawn .receipt{animation:receiptUp .6s ease-out}
 @keyframes receiptUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+/* S1b film: true compositions for the camera; lower third stays free. */
+body.film{overflow:hidden}
+body.film,body.film *{cursor:none !important}
+body.film .wrap{max-width:none;height:100vh;padding:0}
+.fstage{position:relative;height:100vh;overflow:hidden}
+.fbeat{display:none;position:relative;height:100vh;overflow:hidden}
+.fbeat.on{display:block}
+.fbeat,.fbeat section{margin:0}
+.fclock{position:fixed;top:20px;left:32px;z-index:20}
+.fclock-t{font:500 40px/1 "Geist Mono",ui-monospace,SFMono-Regular,monospace;font-variant-numeric:tabular-nums}
+.fclock-t .c{color:var(--fg-3)}
+.fkick{margin-top:8px;font:500 12px/1.4 "Geist Mono",ui-monospace,monospace;letter-spacing:.08em;color:var(--fg-2)}
+.fprov{margin-top:4px;font:400 11px/1.4 "Geist Mono",ui-monospace,monospace;letter-spacing:.08em;color:var(--fg-3)}
+.fc{position:absolute;top:11vh;left:0;right:0;max-height:55vh;overflow:hidden;padding:0 48px}
+.fserif{margin:0;font:500 44px/1.25 Newsreader,Georgia,serif;letter-spacing:-.01em;overflow-wrap:break-word}
+.fsub{margin:16px 0 0;font-size:20px;overflow-wrap:break-word}
+.fsub.quiet{color:var(--fg-3);font-size:17px}
+.freason{margin:16px 0 0;font:italic 400 22px/1.5 Newsreader,Georgia,serif;overflow-wrap:break-word}
+.fgrid6{display:grid;grid-template-columns:1fr 1fr;gap:8px 32px}
+.fread{display:none;border-top:1px solid var(--hair);padding:10px 0}
+.fread.on{display:block}
+.fsrc{margin:0;font:400 13px/1.5 "Geist Mono",ui-monospace,monospace;color:var(--fg-2)}
+.fquote{margin:4px 0 0;font:italic 400 20px/1.45 Newsreader,Georgia,serif;overflow-wrap:break-word}
+.fbeat[data-beat="sheet"] .fc{padding:0}
+.fsheet{border-radius:0;transform:none;height:calc(55vh - 64px);overflow:hidden;padding:32px 48px;font-size:26px;transform-origin:50% 72%}
+.fsheet .firm{font-size:20px}
+.fsheet h3{font-size:30px}
+.fbeat[data-beat="sheet"] .sheetcap{margin:12px 48px 0}
+.fdiff s{display:block;font:400 28px/1.5 Newsreader,Georgia,serif;color:var(--fg-3);overflow-wrap:break-word}
+.fdiff strong{display:block;margin-top:12px;font:500 34px/1.4 Newsreader,Georgia,serif;overflow-wrap:break-word}
+.fchecks{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.fcard{display:none;background:var(--surface);border:1px solid var(--hair);border-radius:16px;padding:18px}
+.fcard.on{display:block}
+.ftitle{margin:0;font-size:20px;font-weight:500;letter-spacing:-.01em}
+.fcard .yn{display:block;margin-top:8px}
+.fnote2{margin:8px 0 0;font-size:16px;overflow-wrap:break-word}
+.fnote{max-width:940px;margin:0 auto;background:var(--paper-1);color:var(--paper-ink-1);border-radius:6px;padding:32px 40px;text-align:center}
+.fnote .fask{margin:0 0 8px;font-size:15px;color:var(--paper-ink-2)}
+.fnote h2{margin:0;font:500 46px/1.25 Newsreader,Georgia,serif;letter-spacing:-.01em;overflow-wrap:break-word}
+.fopt{margin:12px 0 0;font-size:20px;font-weight:500}
+.fans{margin:12px 0 0;font-size:15px;color:var(--paper-ink-2)}
+.fnote .tagrow{justify-content:center}
+.fdawn{position:absolute;inset:0;overflow:hidden}
+.fdawn-band{position:absolute;inset:0;background:var(--horizon);transform:translateY(101%)}
+.fdawn-veil{position:absolute;inset:0;background:var(--paper-0);opacity:0}
+.fmorn{display:flex;gap:48px;align-items:flex-start}
+.fmorn .fcounts{margin:16px 0 0;font-size:20px}
+.fmorn .receipt{margin:0;flex:none}
+body.frame-9x16 .fc{padding:0 28px}
+body.frame-9x16 .fgrid6{grid-template-columns:1fr}
+body.frame-9x16 .fchecks{grid-template-columns:1fr 1fr}
+body.frame-9x16 .fnote h2{font-size:40px}
+body.frame-9x16 .fmorn{flex-direction:column;gap:24px}
+body.frame-9x16 .fserif{font-size:40px}

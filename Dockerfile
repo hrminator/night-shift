@@ -18,6 +18,7 @@ COPY app ./app
 COPY fixtures ./fixtures
 COPY static ./static
 COPY comps ./comps
+COPY film ./film
 COPY data ./data
 
 RUN uv sync --frozen --no-dev && chown -R app:app /app
