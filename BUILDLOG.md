@@ -2,6 +2,13 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt B1 part 2: the grounding call
+
+- New `app/grounding.py`: `locate_line(png_path, line_text)` sends the scan PNG as an `input_image` data URL plus "locate this line" (call type `ground`, low effort, 2048 cap, `text.format` json_schema, store:false, prompt_cache_key like the other call types) and returns the first bbox clamped to 0-1000 ints, or None when the model omits it. This call does not detect the change; Spark found the change in its own reading of the page during the reassess turn. B1 only points at the line Spark quoted.
+- `app/adapter.py`: `build_request`/`respond` take `text_format`, sent as `text.format`; the raw response is logged like every other call.
+- `app/runner.py`: `maybe_ground_scan_line` runs once per night after the reassess turn when GROUNDING_ENABLED (environment, default on) and a Q-1187-B scan claim with a quoted line exists; logs `line_located` {claim_id, line_text, bbox, png, model, response_id, seconds, on_target: null} or `line_not_located` {claim_id, line_text, reason}; an exception never fails the night. Hooked into `run_job`, `_crash_reassess` and eval nights (both arms under the same rule).
+- Contract tests in `tests/test_grounding.py` (fake respond, no network): the event is written with the request shape (PNG data URL, quoted text, json_schema), 1001/-5 clamp, failure and empty results write line_not_located, a night without the scan claim and a disabled flag make no call. Suite: 171 passed.
+
 ## Wed Oct 28 — prompt F3 part 3: cache contract tests
 
 - New `tests/test_cache_key.py` (3 tests, fake transport, no network): `respond()` sends `prompt_cache_key` in the expected `nightshift-<12hex>-<call_type>` format plus `prompt_cache_retention: 24h`, and logs cached tokens; the key is stable across two calls of one type and distinct across call types and instruction texts; cached tokens settle through `SpendCap.call_with_cap` and `record_spend` at the cached price (1M cached input = $0.15, not $1.25). Suite: 161 passed.

@@ -17,6 +17,9 @@ appended as one JSON line to ``logs/responses-<UTC date>.jsonl``, including the
 Returned output items are kept in order -- including encrypted ``reasoning``
 items -- so they can be sent back as ``input`` on the next call (stateless
 encrypted-reasoning replay; see AGENTS.md non-negotiable 8).
+
+One call type also sends ``text.format`` with a JSON schema (the B1
+object-grounding call); it is logged like every other call.
 """
 
 from __future__ import annotations
@@ -80,12 +83,15 @@ def build_request(
     effort: str = "low",
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
     call_type: str = "read",
+    text_format: dict | None = None,
 ) -> dict:
     """Build a stateless Responses request body.
 
     ``input_items`` is either a plain user-message string or a list of input
     items (for replay: the previous turn's output items in order, followed by
-    the new items). ``previous_response_id`` is never used.
+    the new items). ``previous_response_id`` is never used. ``text_format``
+    (a ``{"type": "json_schema", ...}`` dict) is sent as ``text.format``
+    when given; ``store`` stays False either way.
     """
     body = {
         "model": MODEL,
@@ -101,6 +107,8 @@ def build_request(
         "prompt_cache_key": prompt_cache_key_for(instructions, call_type),
         "prompt_cache_retention": PROMPT_CACHE_RETENTION,
     }
+    if text_format is not None:
+        body["text"] = {"format": text_format}
     assert "previous_response_id" not in body
     return body
 
@@ -151,6 +159,7 @@ def respond(
     max_output_tokens: int = DEFAULT_MAX_OUTPUT_TOKENS,
     timeout: float = DEFAULT_TIMEOUT_SECONDS,
     call_type: str = "read",
+    text_format: dict | None = None,
 ) -> dict:
     """Make one Responses call and return the parsed result.
 
@@ -166,7 +175,7 @@ def respond(
     def _build(body_input: list | str = input_items) -> dict:
         built = build_request(
             instructions, body_input, tools, effort, max_output_tokens,
-            call_type,
+            call_type, text_format,
         )
         for field in dropped_cache_fields:
             built.pop(field, None)

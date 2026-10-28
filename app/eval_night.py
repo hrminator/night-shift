@@ -97,6 +97,8 @@ def _run_case(case, arm, respond_fn, work_dir, out_path, upload_fn,
             if reassess["status"] == "failed":
                 return _finish(job_id, out_path, "failed",
                                note="reassess turn failed")
+            runner.maybe_ground_scan_line(
+                job_id, respond_fn=respond_fn, virtual_time=revised_time)
             asked = runner.question_event_id_of(job_id)
             if asked is not None:
                 runner.save_checkpoint(job_id, reassess["input"], asked)

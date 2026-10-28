@@ -13,6 +13,10 @@ from pathlib import Path
 
 from PIL import Image
 
+import app.adapter as adapter_mod
+import app.grounding as grounding_mod
+import app.runner as runner_mod
+from app.store import append_event, create_job, list_events
 from scripts.make_fixtures import REVISED_LINES
 
 FIXTURES = Path("fixtures")
@@ -39,3 +43,209 @@ def test_arrival_line_band_inside_page():
         "Delivery: Goods will leave our warehouse by 10 November.")
     assert 0 <= arrival["x_left"] < arrival["x_right"] <= width
     assert 0 <= arrival["y_top"] < arrival["y_bottom"] <= height
+
+
+ARRIVAL_LINE = "Delivery: Goods will leave our warehouse by 10 November."
+
+
+def _scan_job(tmp_path, monkeypatch, quote=ARRIVAL_LINE):
+    """A night whose reassess claims include the Q-1187-B scan quote."""
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("GROUNDING_ENABLED", raising=False)
+    job = create_job(status="running", current_step="reassess",
+                     virtual_time="00:39")
+    append_event(job["id"], "00:39", "claim", {
+        "source": "Baltic revised Q-1187-B",
+        "version_or_file_id": "Q-1187-B",
+        "quote": quote,
+        "claim": "dispatch-only, no arrival date",
+    })
+    append_event(job["id"], "00:39", "decision", {
+        "outcome": "wake", "reason": "stub", "evidence": []})
+    return job["id"]
+
+
+def _ground_result(text, **extra):
+    result = {"output": [], "text": text, "model": "muse-spark-1.3-test",
+              "response_id": "resp-ground-1", "seconds": 1.2,
+              "usage": {"input_tokens": 100, "output_tokens": 10}}
+    result.update(extra)
+    return result
+
+
+def _grounding_kinds(job_id):
+    return [event for event in list_events(job_id)
+            if event["kind"] in ("line_located", "line_not_located")]
+
+
+def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
+    job_id = _scan_job(tmp_path, monkeypatch)
+    seen: dict = {}
+    calls: list = []
+
+    def fake_respond(instructions, input_items, **kwargs):
+        calls.append(1)
+        seen["instructions"] = instructions
+        seen["input"] = input_items
+        seen["kwargs"] = kwargs
+        return _ground_result(json.dumps({
+            "object_name": "quoted line",
+            "bbox": [{"x_min": 66, "y_min": 311,
+                      "x_max": 384, "y_max": 333}]}))
+
+    event = runner_mod.maybe_ground_scan_line(job_id,
+                                              respond_fn=fake_respond)
+    assert event is not None and event["kind"] == "line_located"
+    payload = event["payload"]
+    assert payload["bbox"] == {"x_min": 66, "y_min": 311,
+                               "x_max": 384, "y_max": 333}
+    assert payload["line_text"] == ARRIVAL_LINE
+    assert payload["png"] == "baltic_quote_Q-1187-B.png"
+    assert payload["model"] == "muse-spark-1.3-test"
+    assert payload["response_id"] == "resp-ground-1"
+    assert payload["seconds"] == 1.2
+    assert payload["on_target"] is None
+    claims = [entry for entry in list_events(job_id)
+              if entry["kind"] == "claim"]
+    assert payload["claim_id"] == claims[-1]["id"]
+    content = seen["input"][0]["content"]
+    texts = [part["text"] for part in content
+             if part["type"] == "input_text"]
+    images = [part for part in content if part["type"] == "input_image"]
+    assert len(images) == 1
+    assert images[0]["image_url"].startswith("data:image/png;base64,")
+    assert ARRIVAL_LINE in texts[0]
+    assert "0-1000" in texts[0]
+    assert seen["kwargs"]["call_type"] == "ground"
+    assert seen["kwargs"]["text_format"]["type"] == "json_schema"
+    assert "grounding expert" in seen["instructions"].lower()
+    assert runner_mod.maybe_ground_scan_line(
+        job_id, respond_fn=fake_respond) is None
+    assert len(calls) == 1
+    assert len(_grounding_kinds(job_id)) == 1
+
+
+def test_grounding_clamps_to_0_1000(tmp_path, monkeypatch):
+    job_id = _scan_job(tmp_path, monkeypatch)
+
+    def fake_respond(instructions, input_items, **kwargs):
+        return _ground_result(json.dumps({
+            "object_name": "quoted line",
+            "bbox": [{"x_min": -5, "y_min": 311,
+                      "x_max": 1001, "y_max": 333}]}))
+
+    event = runner_mod.maybe_ground_scan_line(job_id,
+                                              respond_fn=fake_respond)
+    assert event["payload"]["bbox"] == {"x_min": 0, "y_min": 311,
+                                        "x_max": 1000, "y_max": 333}
+
+
+def test_grounding_failure_writes_line_not_located(tmp_path, monkeypatch):
+    job_id = _scan_job(tmp_path, monkeypatch)
+
+    def boom(instructions, input_items, **kwargs):
+        raise RuntimeError("transport down")
+
+    event = runner_mod.maybe_ground_scan_line(job_id, respond_fn=boom)
+    assert event is not None and event["kind"] == "line_not_located"
+    assert event["payload"]["line_text"] == ARRIVAL_LINE
+    assert event["payload"]["reason"].startswith("exception: RuntimeError")
+
+
+def test_grounding_empty_result_writes_line_not_located(tmp_path,
+                                                        monkeypatch):
+    for text in ("", json.dumps({"object_name": "quoted line", "bbox": []})):
+        job_id = _scan_job(tmp_path, monkeypatch)
+
+        def fake_respond(instructions, input_items, _text=text, **kwargs):
+            return _ground_result(_text)
+
+        event = runner_mod.maybe_ground_scan_line(job_id,
+                                                  respond_fn=fake_respond)
+        assert event is not None and event["kind"] == "line_not_located"
+        assert event["payload"]["line_text"] == ARRIVAL_LINE
+        assert event["payload"]["reason"] == "no_box"
+
+
+def test_night_without_scan_claim_makes_no_call(tmp_path, monkeypatch):
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("GROUNDING_ENABLED", raising=False)
+    job = create_job(status="running", current_step="reassess",
+                     virtual_time="00:39")
+    append_event(job["id"], "00:39", "claim", {
+        "source": "Vestland portal record",
+        "quote": "Wed Nov 11 08:00-12:00", "claim": "van guaranteed"})
+    calls: list = []
+
+    def fake_respond(instructions, input_items, **kwargs):
+        calls.append(1)
+        raise AssertionError("must not be called")
+
+    assert runner_mod.maybe_ground_scan_line(
+        job["id"], respond_fn=fake_respond) is None
+    assert calls == []
+    assert _grounding_kinds(job["id"]) == []
+
+
+def test_grounding_flag_off_makes_no_call(tmp_path, monkeypatch):
+    job_id = _scan_job(tmp_path, monkeypatch)
+    monkeypatch.setenv("GROUNDING_ENABLED", "0")
+
+    def fake_respond(instructions, input_items, **kwargs):
+        raise AssertionError("must not be called")
+
+    assert runner_mod.maybe_ground_scan_line(
+        job_id, respond_fn=fake_respond) is None
+    assert _grounding_kinds(job_id) == []
+
+
+def test_adapter_sends_text_format_with_store_false():
+    body = adapter_mod.build_request(
+        "instr", "hi", call_type="ground",
+        text_format=grounding_mod.GROUNDING_FORMAT)
+    assert body["store"] is False
+    assert body["text"] == {"format": grounding_mod.GROUNDING_FORMAT}
+    assert "previous_response_id" not in body
+    assert body["prompt_cache_key"].endswith("-ground")
+    plain = adapter_mod.build_request("instr", "hi", call_type="read")
+    assert "text" not in plain
+
+
+def test_locate_line_logs_through_adapter(monkeypatch):
+    seen: dict = {}
+
+    class _FakeResponse:
+        status_code = 200
+        text = "{}"
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "model": "muse-spark-1.3-test", "id": "resp-log-1",
+                "status": "completed",
+                "output": [{"type": "message", "content": [
+                    {"type": "output_text", "text": json.dumps({
+                        "object_name": "quoted line",
+                        "bbox": [{"x_min": 1, "y_min": 2,
+                                  "x_max": 3, "y_max": 4}]})}]}],
+                "usage": {"input_tokens": 10, "output_tokens": 5},
+            }
+
+    def fake_post(body, timeout):
+        seen["body"] = body
+        return _FakeResponse()
+
+    def fake_log(record, path=None):
+        seen["log"] = record
+
+    monkeypatch.setattr(adapter_mod, "_post", fake_post)
+    monkeypatch.setattr(adapter_mod, "_append_log", fake_log)
+    bbox = grounding_mod.locate_line(SCAN_PNG, ARRIVAL_LINE)
+    assert bbox == {"x_min": 1, "y_min": 2, "x_max": 3, "y_max": 4}
+    assert seen["body"]["store"] is False
+    assert seen["body"]["max_output_tokens"] == 2048
+    assert seen["body"]["text"]["format"]["type"] == "json_schema"
+    assert seen["log"]["call_type"] == "ground"
+    assert seen["log"]["response"]["id"] == "resp-log-1"

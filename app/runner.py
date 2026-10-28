@@ -965,6 +965,85 @@ def run_turn(
     }
 
 
+GROUNDING_FLAG = "GROUNDING_ENABLED"
+
+
+def grounding_enabled() -> bool:
+    """The grounding call runs unless GROUNDING_ENABLED disables it."""
+    return os.environ.get(GROUNDING_FLAG, "1").strip().lower() not in (
+        "", "0", "false", "no", "off")
+
+
+def maybe_ground_scan_line(
+    job_id: str,
+    respond_fn: Callable[..., dict] | None = None,
+    virtual_time: str | None = None,
+) -> dict | None:
+    """One grounding call per night; never fails the night.
+
+    Called after the reassess turn's decision record is stored. When the
+    flag allows and the turn's claims include a Q-1187-B scan claim with
+    a quoted line, locate that exact quoted text on the scan PNG and log
+    line_located; any failure logs line_not_located instead.
+    """
+    try:
+        return _maybe_ground_scan_line(job_id, respond_fn, virtual_time)
+    except Exception:
+        return None
+
+
+def _maybe_ground_scan_line(
+    job_id: str,
+    respond_fn: Callable[..., dict] | None,
+    virtual_time: str | None,
+) -> dict | None:
+    from app import grounding as _grounding
+
+    if not grounding_enabled():
+        return None
+    events = list_events(job_id)
+    if any(event["kind"] in ("line_located", "line_not_located")
+           for event in events):
+        return None  # one call per night at most
+    claim = _grounding.pick_scan_claim(events)
+    if claim is None:
+        return None  # no scan claim: no call
+    line_text = str((claim["payload"] or {}).get("quote") or "")
+    if not line_text.strip():
+        return None
+    vt = virtual_time or VT_REASSESS
+    captured: dict = {}
+
+    def _capture(instructions, input_items, **kwargs):
+        result = (respond_fn or respond)(instructions, input_items,
+                                         **kwargs)
+        if isinstance(result, dict):
+            captured.update(result)
+        return result
+
+    try:
+        bbox = _grounding.locate_line(
+            _grounding.SCAN_PNG_PATH, line_text, respond_fn=_capture)
+    except Exception as exc:  # noqa: BLE001 - failure is a logged event
+        return append_event(job_id, vt, "line_not_located", {
+            "claim_id": claim["id"], "line_text": line_text,
+            "reason": f"exception: {type(exc).__name__}: {exc}"[:500],
+        })
+    if bbox is None:
+        return append_event(job_id, vt, "line_not_located", {
+            "claim_id": claim["id"], "line_text": line_text,
+            "reason": "no_box",
+        })
+    return append_event(job_id, vt, "line_located", {
+        "claim_id": claim["id"], "line_text": line_text, "bbox": bbox,
+        "png": _grounding.SCAN_PNG_NAME,
+        "model": captured.get("model"),
+        "response_id": captured.get("response_id"),
+        "seconds": captured.get("seconds", 0.0),
+        "on_target": None,
+    })
+
+
 def store_answer(
     job_id: str, choice: str, virtual_time: str = VT_ANSWER
 ) -> dict:
@@ -1357,6 +1436,8 @@ def _crash_reassess(job_id: str, respond_fn) -> dict:
         turn = run_turn(job_id, build_reassess_instructions(), first,
                         REASSESS_TOOLS, respond_fn, VT_REASSESS,
                         call_type="reassess")
+        if turn["status"] != "failed":
+            maybe_ground_scan_line(job_id, respond_fn=respond_fn)
         return _settle_after_turn(job_id, turn)
     finally:
         try:
@@ -1461,6 +1542,7 @@ def run_job(variant: str = "hero", arm: str = "supervision") -> dict:
         if reassess["status"] == "failed":
             return {"job_id": job_id, "status": "failed",
                     "result": reassess["result"]}
+        maybe_ground_scan_line(job_id)
         asked = question_event_id_of(job_id)
         if asked is not None:
             save_checkpoint(job_id, reassess["input"], asked)
