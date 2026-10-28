@@ -14,6 +14,7 @@ from __future__ import annotations
 import html
 
 from app import clock as clock_mod
+from app import ledger as ledger_mod
 from app import pages as pages_mod
 from app import states as states_mod
 
@@ -349,6 +350,22 @@ def _couldnt_section(events: list) -> str:
     )
 
 
+def _ledger_section(events: list) -> str:
+    """Who said what: the resume's code-built ledger, when logged."""
+    ledgers = [e for e in events if e.get("kind") == "fact_ledger"]
+    if not ledgers:
+        return ""
+    lines = "".join(
+        f"<li>{esc(line)}</li>"
+        for line in ledger_mod.render_lines(_payload(ledgers[-1])))
+    return (
+        "<section class=\"sec\" aria-label=\"Who said what\">"
+        "<h2>Who said what</h2>"
+        f"<div class=\"card\"><ul class=\"evlist\">{lines}</ul>"
+        f"<div class=\"tagrow\">{pages_mod.tag('code')}</div>"
+        "</div></section>")
+
+
 def _saved_section(events: list) -> str:
     """What was saved: the chance to decide, never a purchase."""
     if _effects(events):
@@ -599,6 +616,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
         f"{_earlier_section(events)}"
         f"{_done_section(events)}"
         f"{_couldnt_section(events)}"
+        f"{_ledger_section(events)}"
         f"{_saved_section(events)}"
         f"{_notification_block(job_id, events)}"
         f"{_how_section(events)}"

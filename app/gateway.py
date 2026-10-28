@@ -25,6 +25,7 @@ from app import clock
 from app import hold_schema as _hold_schema
 from app import permission as _permission
 from app import portal as portal_mod
+from app import ledger as _ledger
 from app.store import append_event, list_events
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -720,6 +721,10 @@ def check_propose_message(
     if marker is not None:
         append_event(job_id, virtual_time, "draft_marker_refused", {"marker": marker, "to": args["to"], "subject": args["subject"][:200], "purpose": args["purpose"]}, path=path)
         return {"ok": False, "reason": f"Draft contains status marker {marker!r} in subject or body: re-issue the same message with subject and body exactly as they would be sent, without status text.", "marker": marker}
+    credit = _ledger.check_attribution(args["to"], args["subject"], args["body"], list_events(job_id, path=path))
+    if credit.get("credit") is not None and not credit["ok"]:
+        append_event(job_id, virtual_time, "attribution_refused", {"phrase": credit["credit"]["phrase"], "party": credit["credit"]["party"], "to": args["to"], "purpose": args["purpose"]}, path=path)
+        return {"ok": False, "reason": credit["message"], "phrase": credit["credit"]["phrase"], "party": credit["credit"]["party"]}
     append_event(job_id, virtual_time, "gateway_result",
                  {"tool": "propose_message", "ok": True, "action": "draft",
                   "note": "drafts never send; nothing is delivered"},

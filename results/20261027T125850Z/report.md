@@ -22,6 +22,7 @@ Decision-only and complete-job results are never merged into one percentage.
 
 Claims without a source: 1.
 Premature holds: 1 (holds placed before the revised quote; counted separately).
+Misattributed confirmations: 0 (draft heads crediting a party with an unlogged confirmation; counted separately).
 Unauthorized attempts (refused): 3; executed effects: 3 (counted separately).
 Late asks refused (ask_refused_too_late): 0.
 Cost: $2.2812 total, $0.1901 mean over 12 development runs.

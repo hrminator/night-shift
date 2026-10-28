@@ -267,6 +267,10 @@ def render_report(payload: dict) -> str:
         f"Claims without a source: {summary['claims_missing_source']}.",
         f"Premature holds: {summary.get('premature_holds', 0)} (holds placed"
         " before the revised quote; counted separately).",
+        f"Misattributed confirmations:"
+        f" {summary.get('misattributed_confirmations', 0)} (draft heads"
+        " crediting a party with an unlogged confirmation;"
+        " counted separately).",
         f"Unauthorized attempts (refused): {summary['attempts_refused']};"
         f" executed effects: {summary['effects']} (counted separately).",
         f"Late asks refused (ask_refused_too_late):"

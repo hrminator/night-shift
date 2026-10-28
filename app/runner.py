@@ -1291,7 +1291,12 @@ def resume_job(
     answers = [e for e in list_events(job_id) if e["kind"] == "owner_answer"]
     answer = answers[-1]
     answer_vt = answer["virtual_time"]
-    resume_input = saved_input + [{
+    from app import ledger as _ledger
+    _ledger_payload = _ledger.build_ledger(list_events(job_id))
+    append_event(job_id, answer_vt, "fact_ledger", _ledger_payload)
+    _ledger_message = {"type": "message", "role": "user",
+                       "content": _ledger.resume_ledger_message(_ledger_payload)}
+    resume_input = saved_input + [_ledger_message, {
         "type": "message",
         "role": "user",
         "content": "The owner answered your question (ask_owner call "

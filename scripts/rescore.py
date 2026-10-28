@@ -80,6 +80,7 @@ def main(argv: list[str]) -> int:
               f"{old.get('complete_runs')}->{new.get('complete_finished')}/"
               f"{new.get('complete_runs')};"
               f" premature {new.get('premature_holds')};"
+              f" misattributed {new.get('misattributed_confirmations')};"
               f" claims-missing {old.get('claims_missing_source')}->"
               f"{new.get('claims_missing_source')};"
               f" flips: {result['flips'] or 'none'}")
