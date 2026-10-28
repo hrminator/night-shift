@@ -25,6 +25,8 @@ Added Tue Oct 27: tzdata 2026.5 (Apache-2.0) — provider of IANA time zone data
 
 Added Wed Oct 28 (`uv add`): pywebpush 2.5.0 (MPL-2.0) with py-vapid 1.9.6 (MPL-2.0), http-ece 1.2.1 (MIT), cryptography 50.0.2, requests 2.34.2 and aiohttp 3.14.5 (plus transitive deps pinned in `uv.lock`) — Web Push encryption and delivery from the notify step to the owner's phone (M14).
 
+Added Wed Oct 28 (`uv add --dev`): playwright 1.64.1 (Apache-2.0) with greenlet 3.5.6 and pyee 14.0.0 — headless-Chromium screenshots of the S0 comps (`tmp_shoot.py`, run once, not committed). Dev only, not shipped in the image; the browser (Chromium headless shell, outside the repo) came from `playwright install chromium`.
+
 ## Fonts and assets
 
 (List every font, icon and image with its source and license as it is added. None yet.)
