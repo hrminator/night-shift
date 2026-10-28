@@ -6,10 +6,14 @@
   drawn as a raster image (slight rotation + noise), embedded as the only
   page content, with no text layer.
 - fixtures/baltic_quote_Q-1187-B.png: the exact raster placed in the
-  scan-styled PDF (post-rotation, post-noise), as sent to the grounding call.
-- fixtures/baltic_quote_Q-1187-B.lines.json: one entry per rendered line
-  with its text and its pixel band (y_top, y_bottom, x_left, x_right) in
-  the PNG's own pixel coordinates.
+  scan-styled PDF (post-rotation, post-noise), kept for the pages.
+- fixtures/baltic_quote_Q-1187-B@2x.png: the same page at exactly twice
+  the pixel size (1190x1682), same rotation and noise, as sent to the
+  grounding call; its bands are the 1x bands times 2.
+- fixtures/baltic_quote_Q-1187-B.lines.json: scale metadata plus one entry
+  per rendered line
+  with its text and its 1x pixel band (y_top, y_bottom, x_left, x_right)
+  in the 1x PNG's coordinates; scale 1 recorded at the top.
 
 Run: uv run python scripts/make_fixtures.py
 """
@@ -125,8 +129,8 @@ def line_bands(
 
 def render_scan_page(
     lines: list[str], seed: int = SCAN_SEED
-) -> tuple[Image.Image, list[dict]]:
-    """Draw the scan-styled page; return (final image, line bands)."""
+) -> tuple[Image.Image, Image.Image, list[dict]]:
+    """Draw the scan-styled page; return (1x image, 2x image, 1x bands)."""
     rng = random.Random(seed)
     page_w, page_h = A4
     big = Image.new(
@@ -152,19 +156,23 @@ def render_scan_page(
         x, y = rng.randrange(w), rng.randrange(h)
         v = rng.randint(150, 235)
         pixels[x, y] = (v, v, v)
-    img = img.resize(final_size, Image.LANCZOS)
-    return img, bands
+    img_1x = img.resize(final_size, Image.LANCZOS)
+    img_2x = img.resize((final_size[0] * 2, final_size[1] * 2), Image.LANCZOS)
+    return img_1x, img_2x, bands
 
 
 def scan_pdf(path: Path, lines: list[str], seed: int = SCAN_SEED) -> list[dict]:
-    """Write the scan-styled PDF plus its exact PNG; return line bands.
+    """Write the scan-styled PDF plus its 1x and 2x PNGs; return 1x bands.
 
     The PNG kept next to the PDF is the same image object placed in the
-    PDF (post-rotation, post-noise), pixel for pixel.
+    PDF (post-rotation, post-noise), pixel for pixel. The @2x PNG is the
+    same rotated noisy page at exactly twice the size, so its bands are
+    the 1x bands times 2.
     """
-    img, bands = render_scan_page(lines, seed)
+    img, img_2x, bands = render_scan_page(lines, seed)
     png_path = path.with_suffix(".png")
     img.save(png_path)
+    img_2x.save(png_path.with_name(png_path.stem + "@2x.png"))
     page_w, page_h = A4
     doc = canvas.Canvas(str(path), pagesize=A4)
     doc.drawImage(str(png_path), 0, 0, width=page_w, height=page_h)
@@ -178,8 +186,12 @@ def main() -> int:
     text_pdf(FIXTURES / "baltic_quote_original.pdf", ORIGINAL_LINES)
     text_pdf(FIXTURES / "baltic_quote_Q-1187-B_text.pdf", REVISED_LINES)
     bands = scan_pdf(FIXTURES / "baltic_quote_Q-1187-B.pdf", REVISED_LINES)
+    with Image.open(FIXTURES / "baltic_quote_Q-1187-B.png") as _shot:
+        _size_1x = [_shot.size[0], _shot.size[1]]
+    _doc = {"png": "baltic_quote_Q-1187-B.png", "png_size": _size_1x,
+            "scale": 1, "lines": bands}
     (FIXTURES / "baltic_quote_Q-1187-B.lines.json").write_text(
-        json.dumps(bands, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(_doc, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
     for name in ("baltic_quote_original.pdf",
@@ -192,6 +204,10 @@ def main() -> int:
     with Image.open(png) as shot:
         print(f"{png.name}: {png.stat().st_size} bytes, "
               f"{shot.size[0]}x{shot.size[1]}, {len(bands)} line bands")
+    png_2x = FIXTURES / "baltic_quote_Q-1187-B@2x.png"
+    with Image.open(png_2x) as shot_2x:
+        print(f"{png_2x.name}: {png_2x.stat().st_size} bytes, "
+              f"{shot_2x.size[0]}x{shot_2x.size[1]}")
     return 0
 
 

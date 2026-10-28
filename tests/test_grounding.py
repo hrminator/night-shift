@@ -8,6 +8,7 @@ line_not_located event records the failure.
 
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 
@@ -23,11 +24,15 @@ from scripts.make_fixtures import REVISED_LINES
 
 FIXTURES = Path("fixtures")
 SCAN_PNG = FIXTURES / "baltic_quote_Q-1187-B.png"
+SCAN_PNG_2X = FIXTURES / "baltic_quote_Q-1187-B@2x.png"
 LINES_JSON = FIXTURES / "baltic_quote_Q-1187-B.lines.json"
 
 
 def _bands() -> list:
-    return json.loads(LINES_JSON.read_text(encoding="utf-8"))
+    data = json.loads(LINES_JSON.read_text(encoding="utf-8"))
+    if isinstance(data, dict):
+        return data["lines"]
+    return data
 
 
 def test_lines_json_has_one_entry_per_rendered_line():
@@ -45,6 +50,35 @@ def test_arrival_line_band_inside_page():
         "Delivery: Goods will leave our warehouse by 10 November.")
     assert 0 <= arrival["x_left"] < arrival["x_right"] <= width
     assert 0 <= arrival["y_top"] < arrival["y_bottom"] <= height
+
+
+def test_lines_json_records_scale_1():
+    doc = json.loads(LINES_JSON.read_text(encoding="utf-8"))
+    assert doc["scale"] == 1
+    assert doc["png"] == "baltic_quote_Q-1187-B.png"
+    with Image.open(SCAN_PNG) as shot:
+        assert doc["png_size"] == [shot.size[0], shot.size[1]]
+    assert grounding_mod.lines_scale() == 1
+
+
+def test_2x_band_equals_1x_times_2_for_every_line():
+    bands_1x = _bands()
+    bands_2x = grounding_mod.scaled_lines(2, bands_1x)
+    assert len(bands_2x) == len(bands_1x) == len(REVISED_LINES)
+    with Image.open(SCAN_PNG) as shot_1x:
+        size_1x = shot_1x.size
+    with Image.open(SCAN_PNG_2X) as shot_2x:
+        size_2x = shot_2x.size
+    assert size_2x == (size_1x[0] * 2, size_1x[1] * 2)
+    assert size_2x == (1190, 1682)
+    for one, two in zip(bands_1x, bands_2x):
+        assert two["text"] == one["text"]
+        assert two["y_top"] == one["y_top"] * 2
+        assert two["y_bottom"] == one["y_bottom"] * 2
+        assert two["x_left"] == one["x_left"] * 2
+        assert two["x_right"] == one["x_right"] * 2
+        assert 0 <= two["x_left"] < two["x_right"] <= size_2x[0]
+        assert 0 <= two["y_top"] < two["y_bottom"] <= size_2x[1]
 
 
 ARRIVAL_LINE = "Delivery: Goods will leave our warehouse by 10 November."
@@ -97,7 +131,8 @@ def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
     calls: list = []
     band = grounding_mod.find_band(ARRIVAL_LINE)
     assert band is not None
-    box = _grid_box_for(band, grounding_mod.png_size_of())
+    box = _grid_box_for(grounding_mod.scale_band(band, 2),
+                        grounding_mod.png_size_of(SCAN_PNG_2X))
 
     def fake_respond(instructions, input_items, **kwargs):
         calls.append(1)
@@ -113,7 +148,7 @@ def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
     payload = event["payload"]
     assert payload["bbox"] == box
     assert payload["line_text"] == ARRIVAL_LINE
-    assert payload["png"] == "baltic_quote_Q-1187-B.png"
+    assert payload["png"] == "baltic_quote_Q-1187-B@2x.png"
     assert payload["model"] == "muse-spark-1.3-test"
     assert payload["response_id"] == "resp-ground-1"
     assert payload["seconds"] == 1.2
@@ -127,6 +162,8 @@ def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
     images = [part for part in content if part["type"] == "input_image"]
     assert len(images) == 1
     assert images[0]["image_url"].startswith("data:image/png;base64,")
+    sent_png = base64.b64decode(images[0]["image_url"].split(",", 1)[1])
+    assert sent_png == SCAN_PNG_2X.read_bytes()
     assert ARRIVAL_LINE in texts[0]
     assert "0-1000" in texts[0]
     assert seen["kwargs"]["call_type"] == "ground"
@@ -136,6 +173,18 @@ def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
         job_id, respond_fn=fake_respond) is None
     assert len(calls) == 1
     assert len(_grounding_kinds(job_id)) == 1
+
+
+def test_tight_variant_names_a_single_line():
+    default = grounding_mod.build_grounding_input(SCAN_PNG_2X, ARRIVAL_LINE)
+    tight = grounding_mod.build_grounding_input(
+        SCAN_PNG_2X, ARRIVAL_LINE, "tight")
+    default_text = default[0]["content"][0]["text"]
+    tight_text = tight[0]["content"][0]["text"]
+    assert "text line reading exactly" in default_text
+    assert "the single line of text that reads:" in tight_text
+    assert ARRIVAL_LINE in tight_text
+    assert "0-1000" in tight_text
 
 
 def test_grounding_clamps_to_0_1000(tmp_path, monkeypatch):
@@ -322,7 +371,7 @@ def _located_event():
             "virtual_time": "00:39", "kind": "line_located",
             "payload": {"claim_id": 80, "line_text": ARRIVAL_LINE,
                         "bbox": dict(LOCATED_BOX),
-                        "png": "baltic_quote_Q-1187-B.png",
+                        "png": "baltic_quote_Q-1187-B@2x.png",
                         "model": "muse-spark-1.3-test",
                         "response_id": "resp-g", "seconds": 1.0,
                         "on_target": True},

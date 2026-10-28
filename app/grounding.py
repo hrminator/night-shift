@@ -25,6 +25,8 @@ from app import adapter
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
 SCAN_PNG_NAME = "baltic_quote_Q-1187-B.png"
 SCAN_PNG_PATH = FIXTURES / SCAN_PNG_NAME
+SCAN_PNG_2X_NAME = "baltic_quote_Q-1187-B@2x.png"
+SCAN_PNG_2X_PATH = FIXTURES / SCAN_PNG_2X_NAME
 LINES_JSON_NAME = "baltic_quote_Q-1187-B.lines.json"
 LINES_JSON_PATH = FIXTURES / LINES_JSON_NAME
 
@@ -68,21 +70,25 @@ GROUNDING_FORMAT = {
 }
 
 
-def build_grounding_input(png_path: Path | str, line_text: str) -> list:
+def build_grounding_input(png_path: Path | str, line_text: str, instruction_variant: str = "default") -> list:
     """One user message: the grounding instruction plus the PNG as a data URL."""
     raw = Path(png_path).read_bytes()
     if len(raw) > MAX_PNG_BYTES:
         raise ValueError(
             f"PNG is {len(raw)} bytes, over the {MAX_PNG_BYTES} inline limit")
     data_url = "data:image/png;base64," + base64.b64encode(raw).decode("ascii")
+    if instruction_variant == "tight":
+        target = f'the single line of text that reads: "{line_text}"'
+    else:
+        target = f'the text line reading exactly: "{line_text}"'
     return [{
         "type": "message",
         "role": "user",
         "content": [
             {"type": "input_text", "text": (
                 "You are an object grounding expert. Provide the bounding"
-                " box coordinates of the text line reading exactly:"
-                f' "{line_text}". The coordinates should be in the 0-1000'
+                f" box coordinates of {target}."
+                " The coordinates should be in the 0-1000"
                 " range with (0, 0) at the top left. If you cannot find an"
                 " object, omit it."
             )},
@@ -125,6 +131,7 @@ def locate_line(
     call_type: str = GROUNDING_CALL_TYPE,
     *,
     effort: str = GROUNDING_EFFORT,
+    instruction_variant: str = "default",
     respond_fn: Callable[..., dict] | None = None,
 ) -> dict | None:
     """Locate one quoted line on the scan page; None when not found.
@@ -137,7 +144,7 @@ def locate_line(
     responder = respond_fn or adapter.respond
     result = responder(
         GROUNDING_INSTRUCTIONS,
-        build_grounding_input(png_path, line_text),
+        build_grounding_input(png_path, line_text, instruction_variant),
         effort=effort,
         max_output_tokens=GROUNDING_MAX_OUTPUT_TOKENS,
         call_type=call_type,
@@ -172,7 +179,46 @@ def load_lines(path: Path | str = LINES_JSON_PATH) -> list:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
+    if isinstance(data, dict) and isinstance(data.get("lines"), list):
+        return [entry for entry in data["lines"] if isinstance(entry, dict)]
     return data if isinstance(data, list) else []
+
+
+def load_lines_doc(path: Path | str = LINES_JSON_PATH) -> dict:
+    """The full lines.json document with its scale metadata."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {"scale": 1, "lines": []}
+    if isinstance(data, dict) and isinstance(data.get("lines"), list):
+        return data
+    if isinstance(data, list):
+        return {"scale": 1, "lines": data}
+    return {"scale": 1, "lines": []}
+
+
+def lines_scale(path: Path | str = LINES_JSON_PATH) -> int:
+    """The scale recorded in lines.json (1 for the 1x PNG)."""
+    scale = load_lines_doc(path).get("scale", 1)
+    return scale if isinstance(scale, int) else 1
+
+
+def scale_band(band: dict, factor: int = 2) -> dict:
+    """One band scaled by an integer factor (exact multiply)."""
+    return {"text": band.get("text", ""),
+            "y_top": band["y_top"] * factor,
+            "y_bottom": band["y_bottom"] * factor,
+            "x_left": band["x_left"] * factor,
+            "x_right": band["x_right"] * factor}
+
+
+def scaled_lines(factor: int = 2, lines: list | None = None) -> list:
+    """Every 1x band scaled by an integer factor (exact multiply)."""
+    entries = lines if lines is not None else load_lines()
+    return [scale_band(entry, factor) for entry in entries
+            if isinstance(entry, dict)
+            and all(key in entry for key in
+                    ("y_top", "y_bottom", "x_left", "x_right"))]
 
 
 def find_band(line_text: str, lines: list | None = None) -> dict | None:

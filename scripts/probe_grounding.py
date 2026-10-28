@@ -1,6 +1,6 @@
 """Probe the B1 grounding call: locate the arrival line 10 times.
 
-Runs locate_line against fixtures/baltic_quote_Q-1187-B.png with the
+Runs locate_line against fixtures/baltic_quote_Q-1187-B@2x.png with the
 revised arrival line's exact text from lines.json, scores each box
 against the band (vertical centre inside the band AND at least 70% of
 the line's width covered, in PNG pixels), and writes
@@ -8,7 +8,7 @@ results/grounding-<timestamp>/probe.json plus probe.md. The verdict is
 PASS when at least 9 of 10 runs pass. Also records the verdict in
 fixtures/grounding_verdict.json.
 
-Run: uv run python scripts/probe_grounding.py [--effort low|medium]
+Run: uv run python scripts/probe_grounding.py [--effort low|medium] [--variant default|tight]
 """
 
 from __future__ import annotations
@@ -33,6 +33,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--effort", default="low",
                         help="reasoning effort for the grounding calls")
+    parser.add_argument("--variant", default="default",
+                        help="grounding instruction wording (default|tight)")
     parser.add_argument("--runs", type=int, default=10,
                         help="how many locate_line calls to score")
     return parser.parse_args(argv)
@@ -42,14 +44,14 @@ def render_markdown(payload: dict) -> str:
     lines = [
         "# Grounding probe",
         "",
-        f"Effort: {payload['effort']} · runs: {payload['runs']} · "
+        f"Effort: {payload['effort']} · variant: {payload.get('variant', 'default')} · runs: {payload['runs']} · "
         f"passed: {payload['passed']} · verdict: **{payload['verdict']}**",
         f"Cost: ${payload['usd']:.4f} · "
         f"model: {payload['model'] or '?'} · {payload['date']}",
         "",
         f"Line: `{payload['line_text']}`",
         f"Band (PNG pixels): {payload['band']} · "
-        f"PNG size: {payload['png_size']}",
+        f"PNG: {payload.get('png', '?')} · PNG size: {payload['png_size']}",
         "",
         "| run | bbox (0-1000) | centre y (px) | coverage | pass | seconds |",
         "|---|---|---|---|---|---|",
@@ -88,7 +90,8 @@ def main(argv: list[str] | None = None) -> int:
         print("arrival line not found in lines.json", file=sys.stderr)
         return 2
     line_text = arrival["text"]
-    size = grounding_mod.png_size_of()
+    arrival_2x = grounding_mod.scale_band(arrival, 2)
+    size = grounding_mod.png_size_of(grounding_mod.SCAN_PNG_2X_PATH)
     if size is None:
         print("scan PNG missing", file=sys.stderr)
         return 2
@@ -108,8 +111,9 @@ def main(argv: list[str] | None = None) -> int:
 
         try:
             bbox = grounding_mod.locate_line(
-                grounding_mod.SCAN_PNG_PATH, line_text,
-                effort=args.effort, respond_fn=_capture)
+                grounding_mod.SCAN_PNG_2X_PATH, line_text,
+                effort=args.effort, respond_fn=_capture,
+                instruction_variant=args.variant)
             reason = None if bbox is not None else "no_box"
         except Exception as exc:  # noqa: BLE001 - probe records, never dies
             bbox, reason = None, f"{type(exc).__name__}: {exc}"[:300]
@@ -117,7 +121,7 @@ def main(argv: list[str] | None = None) -> int:
         run_usd = cost_usd(inputs, cached, outputs)
         total_usd += run_usd
         model = model or captured.get("model")
-        score = grounding_mod.score_box(bbox, arrival, size) \
+        score = grounding_mod.score_box(bbox, arrival_2x, size) \
             if bbox is not None else None
         passed = bool(score and score["pass"])
         if reason is not None:
@@ -141,15 +145,16 @@ def main(argv: list[str] | None = None) -> int:
     folder = RESULTS / f"grounding-{stamp.strftime('%Y%m%dT%H%M%SZ')}"
     folder.mkdir(parents=True, exist_ok=True)
     payload = {
-        "effort": args.effort, "runs": args.runs, "passed": passed,
+        "effort": args.effort, "variant": args.variant,
+        "runs": args.runs, "passed": passed,
         "verdict": verdict, "pass_mark": PASS_MARK,
         "usd": round(total_usd, 4),
         "model": model,
         "date": stamp.date().isoformat(),
-        "png": grounding_mod.SCAN_PNG_NAME,
+        "png": grounding_mod.SCAN_PNG_2X_NAME,
         "png_size": list(size),
         "line_text": line_text,
-        "band": arrival,
+        "band": arrival_2x,
         "run_results": run_results,
         "failures": failures,
     }

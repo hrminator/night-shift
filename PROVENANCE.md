@@ -47,8 +47,9 @@ Written Tue Oct 27 (all fictional, generated in this repo; PDFs built by `script
 - `fixtures/baltic_quote_original.pdf` — P3's original quote Q-1187 (clean text PDF).
 - `fixtures/baltic_quote_Q-1187-B.pdf` — revised quote, scan-styled: raster image only (rotated, noise), no text layer.
 - `fixtures/baltic_quote_Q-1187-B_text.pdf` — same revised content as a normal text PDF, for comparison.
-- `fixtures/baltic_quote_Q-1187-B.png` — written Wed Oct 28 (Muse Code session): the exact raster placed in the scan-styled PDF (post-rotation, post-noise), kept by `scripts/make_fixtures.py` as the grounding call's input.
-- `fixtures/baltic_quote_Q-1187-B.lines.json` — written Wed Oct 28 (Muse Code session): one entry per rendered line with its text and pixel band in the PNG's coordinates, computed from the draw positions and font metrics plus the 0.8° rotation's vertical displacement.
+- `fixtures/baltic_quote_Q-1187-B.png` — written Wed Oct 28 (Muse Code session): the exact raster placed in the scan-styled PDF (post-rotation, post-noise), kept for the pages.
+- `fixtures/baltic_quote_Q-1187-B@2x.png` — written Wed Oct 28 (Muse Code session, B1b): the same page at exactly twice the size (1190x1682), same rotation and noise, as sent to the grounding call; its bands are the 1x bands times 2.
+- `fixtures/baltic_quote_Q-1187-B.lines.json` — written Wed Oct 28 (Muse Code session): scale 1 metadata plus one entry per rendered line with its text and 1x pixel band, computed from the draw positions and font metrics plus the 0.8° rotation's vertical displacement; B1b records scale at the top and the @2x bands are the 1x bands times 2.
 - `fixtures/grounding_verdict.json` — written Wed Oct 28 (Muse Code session): the latest grounding probe's verdict {verdict, passed, runs, effort, probe_folder, date}; currently FAIL 7/10 at medium effort.
 - `fixtures/baltic_shipping_terms.html` — P3's terms page (transit not guaranteed).
 - `fixtures/venue_confirmation.md` — Sjøsalen booking for Thu Nov 12, event hours only.
