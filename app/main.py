@@ -199,9 +199,12 @@ def recorded_cost_line(job_id: str) -> str:
         cached = int(entry["cached_tokens"])
     except (KeyError, TypeError, ValueError):
         return ""
+    from app import pages as pages_mod
     share = (100.0 * cached / inputs) if inputs else 0.0
-    return (f"<p>Recorded night {html.escape(job_id)} cost ${usd:.2f};"
-            f" {share:.0f}% of input tokens served from cache.</p>")
+    return (f"<p class=\"measured\">Recorded night "
+            f"{html.escape(job_id)} cost ${usd:.2f};"
+            f" {share:.0f}% of input tokens served from cache. "
+            f"{pages_mod.tag('code')}</p>")
 
 
 def _live_respond_fn():
@@ -346,10 +349,11 @@ def index(state: str = "") -> str:
     """The one product screen: replay of the recorded hero run.
 
     `?state=night|question|morning` deep links select one state; the
-    default (and direct calls) render the full page.
+    default (and direct calls) render the full night-then-question page.
     """
     from app import pages as pages_mod
     from app import replay as replay_mod
+    from app import states as states_mod
 
     resolved = replay_mod.resolve_recorded_job()
     if resolved is None:
@@ -364,43 +368,71 @@ def index(state: str = "") -> str:
     question = next(
         (e for e in reversed(events) if e.get("kind") == "question"), None
     )
-    if question is not None:
-        status_text = str(
-            (question.get("payload") or {}).get("question", ""))
-    else:
-        status_text = "Overnight replay: one job, 21:30 to the question."
-    card = _visitor_question_card(question) if question is not None else ""
     state = (state or "").strip().lower()
-    inst = (pages_mod.clock_block("00:47", amber_dot=True)
-            + pages_mod.status_para(status_text)
-            + pages_mod.supplier_strip(_default_strip_rows()))
-    detail = (
-        "<h2>Overnight replay: one job, 21:30 to the question</h2>"
-        f"{_replay_timeline(events)}"
-        f"{scan_grounding_section(events)}"
-        f"{card}"
-        f"{_decision_section(events)}"
-        f"{recorded_cost_line(resolved['job_id'])}"
-    )
-    _ = state
+    if state == "morning":
+        return render_morning_page(
+            f"Recorded run {resolved['job_id']}", full_events)
+    strip = pages_mod.supplier_strip(states_mod.strip_rows_for(events))
     raw_url = ("https://github.com/hrminator/night-shift/blob/main/data/runs"
                f"/job-{resolved['job_id']}.json")
+    footer = pages_mod.footer(raw_url, RESULTS_URL)
+    recline = pages_mod.recorded_line(resolved["date"], model)
+    cost = recorded_cost_line(resolved["job_id"])
+    card = ""
+    if question is not None:
+        card = _visitor_question_card(question)
+    night_detail = (
+        f"{states_mod.feed_html(events)}"
+        f"{states_mod.beat_html(events)}"
+        f"{scan_grounding_section(events)}"
+        '<section aria-label="How it decided">'
+        '<h2 class="sec">How it decided</h2>'
+        f"{states_mod.checks_html(events)}"
+        f"{states_mod.decision_html(events)}"
+        f"{states_mod.deadline_html(events)}"
+        f"{states_mod.skip_html()}</section>"
+    )
+    if state == "night":
+        verdict = states_mod.verdict_2230(events)
+        if verdict is not None:
+            status_text = "No need to wake you."
+        else:
+            status_text = ("Overnight replay: one job, 21:30 to the"
+                           " question.")
+        inst = (pages_mod.clock_block(
+            "00:38", event_tag="SCRIPTED TEST EVENT")
+            + pages_mod.status_para(status_text) + strip)
+        detail = night_detail + cost
+        body_class = ""
+    elif state == "question":
+        if question is not None:
+            status_text = str(
+                (question.get("payload") or {}).get("question", ""))
+        else:
+            status_text = ("Overnight replay: one job, 21:30 to the"
+                           " question.")
+        inst = (pages_mod.clock_block("00:47", amber_dot=True)
+                + pages_mod.status_para(status_text) + strip)
+        detail = card + cost
+        body_class = "state-b"
+    else:
+        if question is not None:
+            status_text = str(
+                (question.get("payload") or {}).get("question", ""))
+        else:
+            status_text = ("Overnight replay: one job, 21:30 to the"
+                           " question.")
+        inst = (pages_mod.clock_block("00:47", amber_dot=True)
+                + pages_mod.status_para(status_text) + strip)
+        detail = night_detail + card + cost
+        body_class = ""
     body = (pages_mod.header_row(chip)
-            + pages_mod.recorded_line(resolved["date"], model)
+            + recline
             + '<div class="grid"><div class="inst">'
             + inst + '</div><div class="detail">' + detail + "</div></div>"
-            + pages_mod.footer(raw_url, RESULTS_URL))
-    return pages_mod.shell("Night Shift", "night", body)
-
-
-def _default_strip_rows() -> list[tuple[str, str, str]]:
-    """Supplier strip rows before the per-state derivation (Part 2)."""
-    return [
-        ("the Oslo printer", "Nordtrykk AS", "Too slow"),
-        ("the guaranteed van", "Vestland Tekstil",
-         "Van to the venue only"),
-        ("the cheap one", "Baltic Print OÜ", "Arrival unverified"),
-    ]
+            + footer)
+    return pages_mod.shell("Night Shift", "night", body,
+                           body_class=body_class)
 
 
 @app.get("/evidence", response_class=HTMLResponse)
