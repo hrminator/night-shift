@@ -2,6 +2,10 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt X1 part 3: the comparison line
+
+- The control now carries one scored sentence beside it, filled from results.json: k counts necessity_no_wake supervision runs that held without waking (premature holds excluded), n counts all of them. Default folder is the latest with such runs (today: 20261028T205824Z, "1 of 3"); NIGHT_B_RESULTS_DIR pins another, so the frozen folder takes over after the final runs. Wording follows the results.json flag ("development runs" vs "final runs"). New tests/test_night_b_results.py (7 tests).
+
 ## Wed Oct 28 — prompt X1 part 1: change-one-fact control + fresh Night B path
 
 - New `app/night_b.py`: Night B case id (`necessity_no_wake`), Night A/B sentences read from the fixtures, fixture diff, policy/fixture SHA-256 helpers, provenance logging, results-folder comparison counts, and `run_fresh_night_b` (fresh job, venue variant from the case file through `eval_world.patched`, supervision arm). `run_job` gains `respond_fn`/`upload_fn`/`delete_fn`/`job_id` seams (late-bound; scripts that wrap `runner.respond` keep working) and logs a `provenance` event; eval nights and visitor copies log one too.

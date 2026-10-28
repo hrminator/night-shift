@@ -333,8 +333,12 @@ def _visitor_question_card(question: dict) -> str:
 
 
 def night_b_comparison_paragraph() -> str:
-    """The comparison sentence beside the control (Part 3 fills it)."""
-    return ""
+    """One scored sentence beside the control, or empty with no data."""
+    from app import night_b as night_b_mod
+    line = night_b_mod.comparison_line()
+    if not line:
+        return ""
+    return f"<p>{html.escape(line)}</p>"
 
 
 @app.get("/", response_class=HTMLResponse)
