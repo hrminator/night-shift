@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import html
 import json
 import os
@@ -299,6 +300,7 @@ def index() -> str:
         "simulated.</p>"
         f"<h2>Overnight replay: one job, 21:30 to the question</h2>"
         f"{_replay_timeline(events)}"
+        f"{scan_grounding_section(events)}"
         f"{card}"
         f"{_decision_section(events)}"
         f"<p><a href=\"{RESULTS_URL}\">Results in the README</a> · "
@@ -318,6 +320,94 @@ def evidence():
             status_code=404,
         )
     return render_evidence(record)
+
+
+def _grounding_verdict() -> dict:
+    """The latest grounding-probe verdict, or {} when it never ran."""
+    from app import grounding as grounding_mod
+    try:
+        raw = (grounding_mod.FIXTURES / "grounding_verdict.json").read_text(
+            encoding="utf-8")
+    except OSError:
+        return {}
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def scan_grounding_section(events: list) -> str:
+    """The scan page with the model's box, or the quoted line underlined.
+
+    Draws the box from the night's own line_located event only, and only
+    when the probe verdict is PASS. Otherwise shows the page with the
+    quoted line underlined from lines.json. Empty when the night ran no
+    grounding call. Never adds a box after the fact.
+    """
+    from app import grounding as grounding_mod
+    esc = html.escape
+    grounded = [event for event in events
+                if event.get("kind") in ("line_located",
+                                         "line_not_located")]
+    if not grounded:
+        return ""
+    event = grounded[-1]
+    payload = event.get("payload") or {}
+    line_text = str(payload.get("line_text") or "")
+    try:
+        png_bytes = grounding_mod.SCAN_PNG_PATH.read_bytes()
+    except OSError:
+        return ""
+    size = grounding_mod.png_size_of()
+    if size is None:
+        return ""
+    width, height = size
+    png_url = "data:image/png;base64," + base64.b64encode(
+        png_bytes).decode("ascii")
+    verdict = _grounding_verdict()
+    passed = verdict.get("passed")
+    overlay = ""
+    caption = "Line Muse Spark quoted"
+    box = payload.get("bbox") if event.get("kind") == "line_located" else None
+    if (isinstance(box, dict) and verdict.get("verdict") == "PASS"
+            and isinstance(passed, int)):
+        try:
+            left = float(box["x_min"]) / 10
+            top = float(box["y_min"]) / 10
+            span_w = (float(box["x_max"]) - float(box["x_min"])) / 10
+            span_h = (float(box["y_max"]) - float(box["y_min"])) / 10
+        except (KeyError, TypeError, ValueError):
+            box = None
+        else:
+            overlay = (
+                '<div style="position:absolute;'
+                f"left:{left:.1f}%;top:{top:.1f}%;"
+                f"width:{span_w:.1f}%;height:{span_h:.1f}%;"
+                'outline:3px solid #f59e0b"></div>')
+            caption = ("Muse Spark located the line it quoted "
+                       f"(grounding call; {passed} of 10 probes on target)")
+    if not overlay:
+        band = grounding_mod.find_band(line_text)
+        if band is not None:
+            left = band["x_left"] / width * 100
+            top = band["y_bottom"] / height * 100
+            span_w = (band["x_right"] - band["x_left"]) / width * 100
+            overlay = (
+                '<div style="position:absolute;'
+                f"left:{left:.1f}%;top:{top:.1f}%;width:{span_w:.1f}%;"
+                'border-top:3px solid #1d4ed8"></div>')
+    return (
+        "<section><h2>Revised quote: the line it quoted</h2>"
+        f"<blockquote>{esc(line_text)}</blockquote>"
+        '<div style="position:relative;max-width:595px">'
+        f'<img src="{png_url}" alt="scan-styled revised quote page" '
+        'style="width:100%;display:block">'
+        f"{overlay}</div>"
+        f"<p>{esc(caption)}</p>"
+        "<p><small>Scan-styled fixture page rendered by "
+        "scripts/make_fixtures.py (not a real scan).</small></p>"
+        "</section>")
 
 
 def _decision_section(events: list) -> str:
@@ -386,6 +476,10 @@ def _summarize(kind: str, payload: dict) -> str:
         return f"{kind}: {payload.get('error', payload.get('tool', ''))}"
     if kind == "model_plain_text":
         return "Model answered in plain text; nudged once."
+    if kind == "line_located":
+        return f"grounding: located the quoted line {payload.get('bbox', '?')}"
+    if kind == "line_not_located":
+        return f"grounding: line not located ({payload.get('reason', '?')})"
     if kind == "step_failed":
         return f"Step failed: {payload.get('reason', '')}"
     return kind
@@ -465,7 +559,7 @@ def job_page(job_id: str):
         f"<p>Status: {esc(str(job.get('status', '?')))} · "
         f"clock: {esc(str(job.get('virtual_time', '?')))} · "
         f"step: {esc(str(job.get('current_step', '')))}</p>"
-        f"{card}{_decision_section(events)}<h2>Events in order</h2><ol>{rows}</ol>"
+        f"{card}{_decision_section(events)}{scan_grounding_section(events)}<h2>Events in order</h2><ol>{rows}</ol>"
         '<p><a href="/">Back to Night Shift</a></p></body></html>'
     )
 
@@ -649,6 +743,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
         f"{banner}"
         f"<p><b>{esc(label)}</b></p>"
         f"{ack}"
+        f"{scan_grounding_section(events)}"
         f"<h2>Drafts awaiting your OK on the exact text</h2>{cards}"
         f"<h2>Outbox (Simulated delivery)</h2>{_outbox_section(events)}"
         f"<h2>How it decided (gateway checks)</h2><ol>{check_rows}</ol>"

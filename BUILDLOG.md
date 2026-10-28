@@ -2,6 +2,11 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt B1 part 4: rendering and the honest label
+
+- `app/main.py`: `scan_grounding_section` shows the scan PNG under the revised-quote claim on the morning page, the job page and the front-door replay. The amber box is drawn from the night's own `line_located` event only, positioned by value/10 percentages, and only when the probe verdict is PASS ("Muse Spark located the line it quoted (grounding call; N of 10 probes on target)"). Otherwise — verdict FAIL or `line_not_located` — the page shows the quoted line underlined from lines.json ("Line Muse Spark quoted"), no box. Nothing is drawn for nights with no grounding event, so the recorded hero run carries no box. Never a box after the fact.
+- README "How it uses Meta's models" gains the grounding paragraph (what the call does and does not do, 2/10 low and 7/10 medium, verdict FAIL, 10 is a small sample). Suite: 184 passed.
+
 ## Wed Oct 28 — prompt B1 part 3: the grounding probe
 
 - `scripts/probe_grounding.py`: 10 locate_line runs against the scan PNG with the arrival line's exact text, scored in PNG pixels (vertical centre in band + 70% width coverage). Verdict PASS at 9 of 10. `fixtures/grounding_verdict.json` records the latest run; `line_located` events now carry runtime `on_target` (null when lines.json has no such line).

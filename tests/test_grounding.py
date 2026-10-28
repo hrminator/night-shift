@@ -11,10 +11,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from fastapi.testclient import TestClient
 from PIL import Image
 
 import app.adapter as adapter_mod
 import app.grounding as grounding_mod
+import app.main as main_mod
 import app.runner as runner_mod
 from app.store import append_event, create_job, list_events
 from scripts.make_fixtures import REVISED_LINES
@@ -310,3 +312,139 @@ def test_find_band_matches_exact_and_case():
     assert grounding_mod.find_band(ARRIVAL_LINE.lower(),
                                    lines) == lines[0]
     assert grounding_mod.find_band("missing", lines) is None
+
+
+LOCATED_BOX = {"x_min": 108, "y_min": 382, "x_max": 688, "y_max": 399}
+
+
+def _located_event():
+    return {"id": 90, "job_id": "job-ground", "seq": 90,
+            "virtual_time": "00:39", "kind": "line_located",
+            "payload": {"claim_id": 80, "line_text": ARRIVAL_LINE,
+                        "bbox": dict(LOCATED_BOX),
+                        "png": "baltic_quote_Q-1187-B.png",
+                        "model": "muse-spark-1.3-test",
+                        "response_id": "resp-g", "seconds": 1.0,
+                        "on_target": True},
+            "created_at": "2026-10-28T00:00:00+00:00"}
+
+
+def _unlocated_event():
+    event = _located_event()
+    event["kind"] = "line_not_located"
+    event["payload"] = {"claim_id": 80, "line_text": ARRIVAL_LINE,
+                        "reason": "no_box"}
+    return event
+
+
+def _pass_verdict(monkeypatch):
+    monkeypatch.setattr(main_mod, "_grounding_verdict",
+                        lambda: {"verdict": "PASS", "passed": 9,
+                                 "runs": 10})
+
+
+def _fail_verdict(monkeypatch):
+    monkeypatch.setattr(main_mod, "_grounding_verdict",
+                        lambda: {"verdict": "FAIL", "passed": 7,
+                                 "runs": 10})
+
+
+def test_scan_section_draws_box_when_verdict_pass(monkeypatch):
+    _pass_verdict(monkeypatch)
+    html = main_mod.scan_grounding_section([_located_event()])
+    assert "Muse Spark located the line it quoted " \
+        "(grounding call; 9 of 10 probes on target)" in html
+    assert "outline:3px solid #f59e0b" in html
+    assert "left:10.8%;top:38.2%;width:58.0%;height:1.7%" in html
+    assert "data:image/png;base64," in html
+    assert ARRIVAL_LINE in html
+    assert "not a real scan" in html
+
+
+def test_scan_section_underlines_when_verdict_fail(monkeypatch):
+    _fail_verdict(monkeypatch)
+    html = main_mod.scan_grounding_section([_located_event()])
+    assert "<p>Line Muse Spark quoted</p>" in html
+    assert "#f59e0b" not in html
+    assert "border-top:3px solid #1d4ed8" in html
+    band = grounding_mod.find_band(ARRIVAL_LINE)
+    size = grounding_mod.png_size_of()
+    expect = (f"left:{band['x_left'] / size[0] * 100:.1f}%;"
+              f"top:{band['y_bottom'] / size[1] * 100:.1f}%;"
+              f"width:{(band['x_right'] - band['x_left']) / size[0] * 100:.1f}%")
+    assert expect in html
+
+
+def test_scan_section_underlines_when_not_located(monkeypatch):
+    _pass_verdict(monkeypatch)
+    html = main_mod.scan_grounding_section([_unlocated_event()])
+    assert "<p>Line Muse Spark quoted</p>" in html
+    assert "#f59e0b" not in html
+
+
+def test_scan_section_empty_without_grounding_event():
+    assert main_mod.scan_grounding_section([]) == ""
+    claim = {"id": 80, "job_id": "job-ground", "seq": 80,
+             "virtual_time": "00:39", "kind": "claim",
+             "payload": {"source": "Baltic revised Q-1187-B",
+                         "quote": ARRIVAL_LINE, "claim": "x"},
+             "created_at": "2026-10-28T00:00:00+00:00"}
+    assert main_mod.scan_grounding_section([claim]) == ""
+    morning = main_mod.render_morning_page("Job job-ground", [claim])
+    assert "Revised quote: the line it quoted" not in morning
+
+
+def test_morning_page_shows_scan_section(monkeypatch):
+    _fail_verdict(monkeypatch)
+    morning = main_mod.render_morning_page("Job job-ground",
+                                           [_unlocated_event()])
+    assert "<p>Line Muse Spark quoted</p>" in morning
+    assert "data:image/png;base64," in morning
+
+
+def test_job_page_shows_scan_section(tmp_path, monkeypatch):
+    _fail_verdict(monkeypatch)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    job = create_job(status="done", current_step="done",
+                     virtual_time="07:00")
+    append_event(job["id"], "00:39", "claim", {
+        "source": "Baltic revised Q-1187-B", "quote": ARRIVAL_LINE,
+        "claim": "dispatch-only"})
+    append_event(job["id"], "00:39", "line_not_located", {
+        "claim_id": 1, "line_text": ARRIVAL_LINE, "reason": "no_box"})
+    client = TestClient(main_mod.app, raise_server_exceptions=False)
+    response = client.get(f"/jobs/{job['id']}")
+    assert response.status_code == 200
+    assert "<p>Line Muse Spark quoted</p>" in response.text
+    assert "grounding: line not located (no_box)" in response.text
+
+
+def test_front_door_uses_recorded_job_event(tmp_path, monkeypatch):
+    _pass_verdict(monkeypatch)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    runs = tmp_path / "runs"
+    runs.mkdir(parents=True, exist_ok=True)
+    handoff = {"id": 1, "job_id": "groundrec", "seq": 1,
+               "virtual_time": "21:30", "kind": "handoff",
+               "payload": {"brief": "fixtures/brief.md", "source": "owner",
+                           "variant": "hero"},
+               "created_at": "2026-10-28T00:00:00+00:00"}
+    checkpoint = {"id": 95, "job_id": "groundrec", "seq": 95,
+                  "virtual_time": "00:47", "kind": "checkpoint",
+                  "payload": {"question_event_id": 0, "next_input": []},
+                  "created_at": "2026-10-28T00:01:00+00:00"}
+    record = {"job_id": "groundrec", "exported": True,
+              "events": [handoff, _located_event(), checkpoint]}
+    (runs / "job-groundrec.json").write_text(
+        json.dumps(record, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setenv("RECORDED_JOB", "groundrec")
+    body = main_mod.index()
+    assert "9 of 10 probes on target" in body
+    assert "outline:3px solid #f59e0b" in body
+
+
+def test_summarize_grounding_kinds():
+    assert "located" in main_mod._summarize(
+        "line_located", {"bbox": dict(LOCATED_BOX)})
+    assert "no_box" in main_mod._summarize(
+        "line_not_located", {"reason": "no_box"})

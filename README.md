@@ -52,7 +52,7 @@ Every Meta API call goes through [app/adapter.py](app/adapter.py), called from [
 - Effort per call type: night turns run at medium with `max_output_tokens` 8192; source extraction runs at low with 2048. The probe measured minimal (41 in / 241 out / 229 reasoning, 2.11 s), low (41 / 350 / 339, 1.85 s) and medium (41 / 1024 / 1022, 4.4 s, truncated with empty text — medium needs at least 2048).
 - Tool calling uses `tool_choice:"auto"` with parallel tool calls; a call whose arguments fail the schema is refused and logged as malformed, and a turn that answers in plain text is nudged once, then marked failed and recorded.
 - The builder is Muse Code: all code commits are Muse Code's, driven by the prompt files in [prompts/](prompts/). The exact instruction text the app sends is published in [docs/instructions.md](docs/instructions.md), generated from the code.
-- The grounding call and the cache key are planned for Wed Oct 28 and not built yet.
+- The grounding call: after the reassess turn, the app sends the scan-styled revised quote as a PNG plus the exact line Spark quoted and asks for its bounding box on a 0-1000 grid (call type `ground`, `text.format` json_schema, outside the decision context). This call does not detect the change — Spark found the change reading the page itself; it only points at the line Spark quoted. The probe scored 10 runs against the fixture's line band (vertical centre in band plus 70% width coverage): 2 of 10 on target at low effort, 7 of 10 at medium, verdict FAIL, so pages show the quoted line underlined instead of a box. 10 runs is a small sample.
 
 ## Results
 
