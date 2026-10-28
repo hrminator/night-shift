@@ -2,6 +2,10 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt F3 part 3: cache contract tests
+
+- New `tests/test_cache_key.py` (3 tests, fake transport, no network): `respond()` sends `prompt_cache_key` in the expected `nightshift-<12hex>-<call_type>` format plus `prompt_cache_retention: 24h`, and logs cached tokens; the key is stable across two calls of one type and distinct across call types and instruction texts; cached tokens settle through `SpendCap.call_with_cap` and `record_spend` at the cached price (1M cached input = $0.15, not $1.25). Suite: 161 passed.
+
 ## Wed Oct 28 — prompt F3 part 2: prompt-cache key per call type
 
 - `respond()`/`build_request()` in `app/adapter.py` take `call_type` (read, reassess, resume, decision, probe, extract, replay). Every request sends `prompt_cache_key = "nightshift-<instrhash>-<call_type>"` (instrhash = first 12 hex of SHA-256 of the instructions string) and `prompt_cache_retention = "24h"`. `run_turn()` threads the type through (read/reassess/resume/decision; eval nights and visitor resumes inherit it); the eval harness records it per call and the scripts pass their own. If the API names a cache field in an HTTP 400, that field is dropped and the call retried once without it.
