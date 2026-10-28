@@ -1,0 +1,20 @@
+Read AGENTS.md, SCENARIO.md, BUILDLOG.md (Day 4 notes), app/adapter.py, app/runner.py and docs/instructions.md. Prompt F3: check-6 rename and the prompt-cache key. Begin every shell command with Set-Location C:\Users\herma\night-shift and set $env:UV_CACHE_DIR='C:\Users\herma\night-shift\.uv-cache'. Not sandboxed; NIGHT_SHIFT_API_KEY_EVAL is in the environment. Port 8123. Commit after each part, do not push, do not deploy, suite green. Fictional names are NOT renamed in this prompt; a separate prompt may do that later.
+
+Part 1. Rename check 6. The sixth named check `can_ask_now` becomes `can_ask_supplier_or_venue_now` everywhere the code, tool schema enum, check definitions, tests, case files, prompts text inside the app, README and docs/instructions.md mention it (regenerate docs/instructions.md with scripts/dump_instructions.py; the sync test must stay green). Stored event logs are never rewritten: existing jobs, including the recorded hero job used by the front door, contain the old name. Add one display alias in the renderer so the morning page, the job page and the front door show the new name for both old and new events. Add a test that an old-name event renders with the new name. Note the rename in BUILDLOG.md with today's date.
+
+Part 2. Prompt-cache key per call type. Facts below are copied from Meta's docs (prompt caching page for the Responses API):
+  - `prompt_cache_key` is a top-level string field on the request; use a stable string for the shared prefix, not a per-user or per-request value.
+  - `prompt_cache_retention: "24h"` is a hint, not a guarantee.
+  - Cached input tokens are reported in `usage.input_tokens_details.cached_tokens`.
+  - Cached input is billed at $0.15 per million tokens (the spend table already uses this price).
+Implement:
+  a) `respond()` in app/adapter.py takes a `call_type` parameter (values: read, reassess, resume, plus any other call type the app makes; the eval harness and scripts pass their own). The request body gets `prompt_cache_key = "nightshift-<instrhash>-<call_type>"` where instrhash is the first 12 hex characters of the SHA-256 of the instructions string, and `prompt_cache_retention = "24h"`. One key per call type, never per job.
+  b) Log `cached_tokens` with every call: in the adapter log line, in the job's event log entry for the call, and in the spend table so cached input is priced at the cached rate instead of the full rate.
+  c) Check where volatile content sits in the request: virtual timestamps, job ids, the owner's answer. If any of it is inside the instructions string (the stable prefix) or before the tools, move it into the input items after the stable part, so the instruction text is identical across calls of one type. Do not change the meaning of any instruction. If this moves text out of the instructions, regenerate docs/instructions.md and say so in the summary; if nothing needs moving, say that.
+  d) Cut rule: if the API returns an error for either new field, remove that field, log the error text in BUILDLOG.md and finish the rest of this part without it.
+  e) Verify live: run one fresh night to the morning page with the eval harness (supervision arm, hero case, one run) and report per call type the input tokens and cached tokens. Then run the same case once more and report whether cached tokens rose on the second night. Keep both runs' results in results/ with a new timestamp folder.
+  f) The eval report (scripts/eval.py) gains one line per arm: "Y% of input tokens served from cache" computed from the logged cached_tokens over all calls in that arm's runs. No other UI or README change about caching.
+
+Part 3. Contract tests: `respond()` sends the two fields with the expected key format; the key is the same for two calls of one type with identical instructions and different for different call types; cached tokens flow into the spend table at the cached price (fake respond function, no network).
+
+End with a short summary: what changed, the commit list, the per-call-type token numbers from the two live nights (input, cached, both nights), whether any instruction text moved, and any error the API returned.
