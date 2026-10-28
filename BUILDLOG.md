@@ -2,6 +2,14 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt F4a: review fixes part A (wording, morning page, grounding off)
+
+- Part 1: `CHECK_DEFINITIONS` rewritten as digit-free questions answered from evidence (cheap supplier arrival, plan-of-record validity, Oslo lead time vs brief, van to Oslo, venue receipt in files, ask-before-cutoff); six names kept; deadline facts still from code. New `tests/test_check_definitions.py` (no digit in definitions or run_check description). `docs/instructions.md` regenerated. Suite: 201 passed.
+- Part 2: `propose_message` description and read/reassess/resume instructions now require subject/body exactly as they would be sent, with no DRAFT, DO NOT SEND, NOT YET or FOR REVIEW markers (app shows status). `gateway.check_propose_message` refuses marked versions with `draft_marker_refused` (marker logged) and asks for a clean re-issue; nothing stored. Resume gains "Say who confirmed what: a venue or supplier has confirmed nothing unless a source from that party says so; the owner's answer is the owner's answer." New `tests/test_draft_markers.py` incl. a fake-respond resume re-issue. Suite: 205 passed.
+- Part 3: morning page approval cards are only current heads to external parties; owner notes render under "For you" without approve buttons; superseded stays collapsed under "Earlier versions" and uncounted. The "Needs you" label count is dynamic and equals the approval cards. Approve flow and version hashes unchanged. New `tests/test_morning_counts.py`. Suite: 207 passed.
+- Part 4: `GROUNDING_ENABLED` defaults to off (live call leaves the path; verdict FAIL). Probe scripts, fixtures and `results/` probes stay. README grounding paragraph updated. `tests/test_grounding.py`: helper opts in with `1`, new default-off test. Suite: 208 passed.
+- Part 5: fresh hero night, supervision/W1_timely_answer x1 (`results/20261028T163836Z/`, $0.2503, 190.8 s wall): notified at 00:38, done/pass, hold H-2041, 7 clean drafts, 1 `draft_marker_refused` (DRAFT, re-issued clean).
+
 ## Wed Oct 28 — prompt S0b: premium pass on the three comps
 
 - `comps/v2/night-0038.html` (21,686 bytes), `comps/v2/question-0047.html` (20,698 bytes), `comps/v2/morning-0700.html` (26,159 bytes): same content and word-for-word MUSE SPARK text as round 1, machine-checked by a throwaway script (261 strings in both rounds: 22:30 reason, six check notes, wake reason, question + why/checked/if-yes/if-no, 3 draft bodies, quoted lines, version hashes). No JS, Google Fonts only, round 1 untouched. Taste skill loaded; the prompt's amendments took precedence throughout.
