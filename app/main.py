@@ -1109,7 +1109,15 @@ async def owner_phone_test(request: Request):
 
     if not push_mod.push_configured():
         return {"ok": False, "reason": "disabled"}
+    try:
+        asked = await request.json()
+    except ValueError:
+        asked = {}
+    if not isinstance(asked, dict):
+        asked = {}
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    title = asked.get("title") or "Night Shift test"
+    body = asked.get("body") or f"Test push at {now}"
     results = push_mod.send_to_all(
-        "Night Shift test", f"Test push at {now}", "/")
+        str(title)[:200], str(body)[:500], "/")
     return {"ok": True, "results": results}

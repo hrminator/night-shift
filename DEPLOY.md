@@ -73,5 +73,18 @@ https://night-shift-demo.fly.dev/owner/phone?token=...
 ```
 
 Tap "Subscribe this phone", accept the notification permission, then tap
-"Send test push" to verify. The service worker lives at
+"Send test push" to verify (title "Night Shift test", current UTC time). The service worker lives at
 `/static/sw.js` and only shows the notification and opens its URL.
+
+From the PC, with the keys in the environment (never on the command line):
+
+```powershell
+uv run python scripts/send_test_push.py --title "Night Shift test" --body "..."
+```
+
+against the local `DATA_DIR`, or `--remote` for the deployed site (uses
+`RUN_TOKEN` from the environment, same code path as the notify step):
+
+```powershell
+uv run python scripts/send_test_push.py --remote --title "Night Shift test" --body "..."
+```
