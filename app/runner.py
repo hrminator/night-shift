@@ -1525,11 +1525,17 @@ def _continue_open_job(job_id: str, job: dict, respond_fn,
     return {"status": "noop", "job_id": job_id}
 
 
-def run_job(variant: str = "hero", arm: str = "supervision", owner_job: bool = False) -> dict:
+def run_job(variant: str = "hero", arm: str = "supervision", owner_job: bool = False, respond_fn: Callable[..., dict] | None = None, upload_fn: Callable[[Path], dict] | None = None, delete_fn: Callable[[str], None] | None = None, job_id: str | None = None) -> dict:
     """Run the evidence-driven night: 21:30 handoff, 21:35 read turn, 00:38 event, 00:39 re-assess."""
     if variant not in ("hero", "contrast"):
         raise ValueError(f"unknown variant {variant!r}")
-    job = create_job(status="running", current_step="read_turn",
+    if respond_fn is None:
+        respond_fn = respond
+    if upload_fn is None:
+        upload_fn = upload_pdf
+    if delete_fn is None:
+        delete_fn = delete_file
+    job = create_job(job_id, status="running", current_step="read_turn",
                      owner_job=owner_job,
                      virtual_time=VT_HANDOFF)
     job_id = job["id"]
@@ -1537,13 +1543,15 @@ def run_job(variant: str = "hero", arm: str = "supervision", owner_job: bool = F
                  {"brief": "fixtures/brief.md", "source": "owner",
                   "variant": variant, "arm": arm})
     _permission.ensure_permission_record(job_id, VT_HANDOFF)
-    scan_meta = upload_pdf(ORIGINAL_PDF)
-    revised_meta = upload_pdf(REVISED_PDF)
+    from app import night_b as _night_b
+    _night_b.log_provenance(job_id, variant, VT_HANDOFF, arm)
+    scan_meta = upload_fn(ORIGINAL_PDF)
+    revised_meta = upload_fn(REVISED_PDF)
     try:
         read_first = [{"type": "message", "role": "user",
                        "content": build_read_content(scan_meta["id"], variant)}]
         read_turn = run_turn(job_id, build_read_instructions(), read_first,
-                             READ_TOOLS, respond, VT_READ, arm=arm,
+                             READ_TOOLS, respond_fn, VT_READ, arm=arm,
                              call_type="read")
         if read_turn["status"] == "failed":
             return {"job_id": job_id, "status": "failed",
@@ -1556,13 +1564,13 @@ def run_job(variant: str = "hero", arm: str = "supervision", owner_job: bool = F
             {"type": "message", "role": "user",
              "content": build_reassess_content(revised_meta["id"], variant)}]
         reassess = run_turn(job_id, build_reassess_instructions(arm),
-                            reassess_first, REASSESS_TOOLS, respond,
+                            reassess_first, REASSESS_TOOLS, respond_fn,
                             VT_REASSESS, arm=arm,
                             call_type="reassess")
         if reassess["status"] == "failed":
             return {"job_id": job_id, "status": "failed",
                     "result": reassess["result"]}
-        maybe_ground_scan_line(job_id)
+        maybe_ground_scan_line(job_id, respond_fn=respond_fn)
         asked = question_event_id_of(job_id)
         if asked is not None:
             save_checkpoint(job_id, reassess["input"], asked)
@@ -1581,7 +1589,7 @@ def run_job(variant: str = "hero", arm: str = "supervision", owner_job: bool = F
     finally:
         for meta in (scan_meta, revised_meta):
             try:
-                delete_file(meta["id"])
+                delete_fn(meta["id"])
             except Exception:  # noqa: BLE001 - cleanup must not fail the job
                 pass
 

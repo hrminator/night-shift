@@ -17,6 +17,9 @@ from pathlib import Path
 
 RECORDED_ENV_VAR = "RECORDED_JOB"
 
+#: Env var pinning the recorded Night B export (Part 2 pins a job id).
+RECORDED_B_ENV_VAR = "RECORDED_JOB_B"
+
 
 def runs_dirs() -> list[Path]:
     """Live runs first, then the records baked into the image."""
@@ -144,6 +147,64 @@ def resolve_recorded_job() -> dict | None:
             "date": _recorded_date(record, best)}
 
 
+def _is_contrast_night(record: dict) -> bool:
+    try:
+        events = record["events"]
+    except (KeyError, TypeError):
+        return False
+    handoffs = [e for e in events if e.get("kind") == "handoff"]
+    if not handoffs:
+        return False
+    return (handoffs[0].get("payload") or {}).get("variant") == "contrast"
+
+
+def resolve_recorded_night_b() -> dict | None:
+    """Pick the recorded-Night-B source: RECORDED_JOB_B, else latest.
+
+    RECORDED_JOB_B may be a job id, a file name, or a path. The default
+    is the latest contrast night in the run exports. Returns {"job_id",
+    "record", "path", "date"} or None.
+    """
+    want = (os.environ.get(RECORDED_B_ENV_VAR) or "").strip()
+    if want:
+        candidate = find_run_file(want)
+        if candidate is not None:
+            record = _load_record(candidate)
+            if record is not None:
+                job_id = str(record.get("job_id") or candidate.stem
+                             .removeprefix("job-"))
+                return {"job_id": job_id, "record": record,
+                        "path": candidate,
+                        "date": _recorded_date(record, candidate)}
+        direct = Path(want)
+        if direct.is_file():
+            record = _load_record(direct)
+            if record is not None:
+                job_id = str(record.get("job_id") or direct.stem
+                             .removeprefix("job-"))
+                return {"job_id": job_id, "record": record, "path": direct,
+                        "date": _recorded_date(record, direct)}
+        return None
+    best: dict | None = None
+    best_key: tuple = ()
+    for path in _export_files():
+        record = _load_record(path)
+        if record is None or not _is_contrast_night(record):
+            continue
+        stamps = [str(e.get("created_at") or "")
+                  for e in record.get("events", [])]
+        key = (max(stamps) if stamps else "", path.stat().st_mtime)
+        if best is None or key > best_key:
+            best, best_key = path, key
+    if best is None:
+        return None
+    record = _load_record(best)
+    assert record is not None
+    job_id = str(record.get("job_id") or best.stem.removeprefix("job-"))
+    return {"job_id": job_id, "record": record, "path": best,
+            "date": _recorded_date(record, best)}
+
+
 def replay_events(record: dict) -> list[dict]:
     """Events from 21:30 up to and including the checkpoint."""
     events = list(record.get("events") or [])
@@ -189,6 +250,13 @@ def copy_job_for_visitor(record: dict, choice: str,
         old_to_new[int(event.get("id", 0))] = int(stored["id"])
     from app import permission as _permission
     _permission.ensure_permission_record(new_id, "00:47")
+    from app import night_b as _night_b
+    _source_variant = (
+        next((e for e in source if e.get("kind") == "handoff"),
+             {}).get("payload") or {}).get("variant", "hero")
+    if _source_variant not in ("hero", "contrast"):
+        _source_variant = "hero"
+    _night_b.log_provenance(new_id, _source_variant, "00:47")
     from app.store import list_events
     live_questions = [e for e in list_events(new_id)
                       if e["kind"] == "question"]

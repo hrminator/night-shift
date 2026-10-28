@@ -67,12 +67,20 @@ def _run_case(case, arm, respond_fn, work_dir, out_path, upload_fn,
     _permission.ensure_permission_record(job_id, runner.VT_HANDOFF)
 
     original_meta = upload_fn(runner.ORIGINAL_PDF)
-    revised_meta = upload_fn(eval_world.revised_pdf_path(case, work_dir))
+    revised_path = eval_world.revised_pdf_path(case, work_dir)
+    revised_meta = upload_fn(revised_path)
     portal_restore = None
     if overrides.get("portal") == "error_once":
         portal_restore = _arm_portal_once(_portal)
     try:
         with eval_world.patched(case):
+            from app import night_b as _night_b
+            try:
+                _revised_bytes = Path(revised_path).read_bytes()
+            except OSError:
+                _revised_bytes = None
+            _night_b.log_provenance(job_id, variant, runner.VT_HANDOFF,
+                                    arm, _revised_bytes)
             read_first = [{"type": "message", "role": "user",
                            "content": runner.build_read_content(
                                original_meta["id"], variant)}]

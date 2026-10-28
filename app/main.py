@@ -289,8 +289,13 @@ def _replay_timeline(events: list) -> str:
     return "<ol>" + "".join(parts) + "</ol>"
 
 
+#: Start-up failures of background Night B nights, by job id.
+_NIGHT_B_ERRORS: dict[str, str] = {}
+
+
 def _visitor_question_card(question: dict) -> str:
-    """The recorded question with live answer buttons."""
+    """The recorded question with live answer buttons, plus the Night B control."""
+    from app import night_b as night_b_mod
     esc = html.escape
     payload = question.get("payload") or {}
     options = payload.get("options") or []
@@ -310,8 +315,26 @@ def _visitor_question_card(question: dict) -> str:
         f"<p>If yes: {esc(str(payload.get('if_yes', '')))}</p>"
         f"<p>If no: {esc(str(payload.get('if_no', '')))}</p>"
         f'<form method="post" action="/visitor/answer">{buttons}</form>'
+        "<details><summary>Change one fact instead</summary>"
+        "<p>Night A, the venue letter as it is: "
+        f"<i>{esc(night_b_mod.night_a_sentence())}</i></p>"
+        "<p>Night B, one line changed: "
+        f"<i>{esc(night_b_mod.night_b_sentence())}</i></p>"
+        f"{night_b_comparison_paragraph()}"
+        '<form method="post" action="/visitor/night-b">'
+        "<button type=\"submit\">Run the night with this fact</button>"
+        "</form>"
+        "<p><small>A fresh night from 21:30 on a new copy: same policy,"
+        " same permission, one fixture line changed. It runs compressed"
+        " and shows each step as it is logged.</small></p>"
+        "</details>"
         "</section>"
     )
+
+
+def night_b_comparison_paragraph() -> str:
+    """The comparison sentence beside the control (Part 3 fills it)."""
+    return ""
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -521,6 +544,18 @@ def _summarize(kind: str, payload: dict) -> str:
         return f"grounding: located the quoted line {payload.get('bbox', '?')}"
     if kind == "line_not_located":
         return f"grounding: line not located ({payload.get('reason', '?')})"
+    if kind == "provenance":
+        policy = str(payload.get("policy_hash", "?"))[:12]
+        fixtures = str(payload.get("fixture_hash", "?"))[:12]
+        return (f"audit: {payload.get('variant', '?')} night, policy"
+                f" {policy}…, fixtures {fixtures}…")
+    if kind == "model_call":
+        return (f"model call ({payload.get('call_type', '?')}):"
+                f" {payload.get('seconds', '?')} s,"
+                f" {payload.get('input_tokens', '?')} in /"
+                f" {payload.get('output_tokens', '?')} out")
+    if kind == "night_error":
+        return f"night failed: {payload.get('error', '')}"
     if kind == "step_failed":
         return f"Step failed: {payload.get('reason', '')}"
     if kind == "push_sent":
@@ -802,6 +837,23 @@ def _notification_section(job_id: str | None, events: list) -> str:
     return section
 
 
+def _morning_job_links(job_id: str | None, events: list) -> str:
+    """Raw-log link for live jobs, plus an answer link when one is open."""
+    if job_id is None:
+        return ""
+    from app import store as store_mod
+
+    esc = html.escape
+    links = (f'<p><a href="/jobs/{esc(job_id)}/events">Raw event log'
+             " (JSON)</a></p>")
+    job = store_mod.get_job(job_id)
+    if job is not None and job.get("status") == "waiting_for_owner" \
+            and any(e["kind"] == "question" for e in events):
+        links += (f'<p><a href="/jobs/{esc(job_id)}">Answer the open'
+                  " question</a></p>")
+    return links
+
+
 def render_morning_page(job_title: str, events: list, banner: str = "",
                         job_id: str | None = None) -> str:
     """Morning page HTML for live jobs and recorded runs alike."""
@@ -868,6 +920,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
         f"<h2>Outbox (Simulated delivery)</h2>{_outbox_section(events)}"
         f"<h2>How it decided (gateway checks)</h2><details><summary>Gateway checks: {sum(1 for c in checks if (c.get('payload') or {}).get('passed'))} of {len(checks)} pass (tap to expand)</summary><ol>{check_rows}</ol></details>"
         f"{evidence_section}"
+        f"{_morning_job_links(job_id, events)}"
         '<p><a href="/">Back to Night Shift</a></p></body></html>'
     )
 
@@ -881,6 +934,18 @@ def morning_page(job_id: str):
         return HTMLResponse("<h1>Unknown job</h1>", status_code=404)
     return render_morning_page(f"Job {job_id}",
                                store_mod.list_events(job_id), job_id=job_id)
+
+
+@app.get("/jobs/{job_id}/events")
+def job_events(job_id: str):
+    """One job's raw event log as JSON, in stored order."""
+    from app import store as store_mod
+
+    job = store_mod.get_job(job_id)
+    if job is None:
+        return JSONResponse({"error": "unknown job"}, status_code=404)
+    return {"job_id": job_id, "status": job.get("status"),
+            "events": store_mod.list_events(job_id)}
 
 
 @app.post("/jobs/{job_id}/approve")
@@ -966,6 +1031,163 @@ def _recorded_morning(note: str):
     return render_morning_page(
         f"Recorded run {resolved['job_id']}",
         list(resolved["record"].get("events") or []), banner)
+
+
+def _recorded_morning_b(note: str):
+    """Serve the recorded Night B morning page with a guard notice."""
+    from app import replay as replay_mod
+
+    resolved = replay_mod.resolve_recorded_night_b()
+    if resolved is None:
+        return _recorded_morning(note)
+    banner = f"<p><b>{html.escape(note)}</b></p>"
+    return render_morning_page(
+        f"Recorded Night B {resolved['job_id']}",
+        list(resolved["record"].get("events") or []), banner)
+
+
+def _run_night_b_background(job_id: str, owner: str, slot: str,
+                            run_lock: str, day: str) -> None:
+    """Run one fresh Night B night; always release the slot and lock."""
+    from app import night_b as night_b_mod
+    from app import spend as spend_mod
+    from app import store as store_mod
+
+    try:
+        night_b_mod.run_fresh_night_b(
+            respond_fn=_spend_wrapping_respond(job_id, day), job_id=job_id)
+    except Exception as exc:  # noqa: BLE001 - a failed night still releases
+        _NIGHT_B_ERRORS[job_id] = f"{type(exc).__name__}: {exc}"
+        job = store_mod.get_job(job_id)
+        if job is not None:
+            virtual_time = str(job.get("virtual_time") or "21:30")
+            store_mod.append_event(
+                job_id, virtual_time, "night_error",
+                {"error": _NIGHT_B_ERRORS[job_id][:500]})
+            store_mod.set_job_status(job_id, status="failed",
+                                     current_step="night_b",
+                                     virtual_time=virtual_time)
+    finally:
+        store_mod.release_lock(run_lock, owner)
+        spend_mod.release_visitor_slot(slot, owner)
+
+
+@app.post("/visitor/night-b")
+def visitor_night_b():
+    """Run one fact changed: a fresh Night B night on a new job id."""
+    import threading
+    import uuid
+
+    from app import night_b as night_b_mod
+    from app import spend as spend_mod
+    from app import store as store_mod
+
+    total, cap = spend_mod.spend_status()
+    if total >= cap:
+        return _recorded_morning_b(
+            f"Live resume unavailable (daily spend cap of ${cap:.2f} "
+            "reached; showing the recorded morning page).")
+    owner = uuid.uuid4().hex[:12]
+    slot = spend_mod.acquire_visitor_slot(owner)
+    if slot is None:
+        return _recorded_morning_b(
+            "Live resume unavailable (2 live resumes already running; "
+            "showing the recorded morning page).")
+    job_id = night_b_mod.new_night_b_job_id()
+    run_lock = f"job:{job_id}:run"
+    if not store_mod.acquire_lock(run_lock, owner, ttl_seconds=900):
+        spend_mod.release_visitor_slot(slot, owner)
+        return _recorded_morning_b(
+            "Live resume unavailable (2 live resumes already running; "
+            "showing the recorded morning page).")
+    thread = threading.Thread(
+        target=_run_night_b_background,
+        args=(job_id, owner, slot, run_lock, spend_mod.today_utc()),
+        daemon=True)
+    thread.start()
+    return RedirectResponse(url=f"/visitor/night/{job_id}", status_code=303)
+
+
+def _night_b_elapsed(events: list) -> dict[int, int]:
+    """Elapsed seconds per event since the night's first event."""
+    from datetime import datetime
+    stamps: dict[int, int] = {}
+    start = None
+    for event in events:
+        try:
+            moment = datetime.fromisoformat(
+                str(event.get("created_at") or ""))
+        except ValueError:
+            continue
+        if start is None:
+            start = moment
+        stamps[int(event.get("id", 0))] = max(
+            int((moment - start).total_seconds()), 0)
+    return stamps
+
+
+@app.get("/visitor/night/{job_id}", response_class=HTMLResponse)
+def visitor_night_progress(job_id: str):
+    """A fresh Night B night, each real step as it is logged.
+
+    Polls every 2 s while the night runs; every row shown was already in
+    the event log, with elapsed seconds. Ends on the copy's morning page.
+    """
+    from app import night_b as night_b_mod
+    from app import store as store_mod
+
+    esc = html.escape
+    job = store_mod.get_job(job_id)
+    if job is None:
+        error = _NIGHT_B_ERRORS.get(job_id)
+        if error is not None:
+            return (
+                "<!doctype html><html><head><title>Night B failed"
+                "</title></head>"
+                f"<body>{FRONT_CSS}<h1>Night B · Job {esc(job_id)}</h1>"
+                f"<p>The night failed to start: {esc(error)}</p>"
+                '<p><a href="/">Back to Night Shift</a></p></body></html>'
+            )
+        return (
+            "<!doctype html><html><head><title>Night B starting</title>"
+            '<meta http-equiv="refresh" content="1"></head>'
+            f"<body>{FRONT_CSS}<h1>Night B · Job {esc(job_id)}</h1>"
+            "<p>Starting the night from 21:30…</p>"
+            '<p><a href="/">Back to Night Shift</a></p></body></html>'
+        )
+    events = store_mod.list_events(job_id)
+    elapsed = _night_b_elapsed(events)
+    rows = "".join(
+        f"<li><b>{esc(str(e['virtual_time']))}</b>"
+        f" (+{elapsed.get(int(e['id']), 0)}s) — "
+        f"{esc(_summarize(e['kind'], e['payload'] or {}))}</li>"
+        for e in events
+    )
+    status = str(job.get("status", "?"))
+    morning_url = f"/jobs/{esc(job_id)}/morning"
+    raw_url = f"/jobs/{esc(job_id)}/events"
+    if status in night_b_mod.TERMINAL_STATUSES:
+        head = ('<meta http-equiv="refresh" content="0;url='
+                f'{morning_url}">')
+        state = (
+            f"<p>Night complete: {esc(status)}."
+            f' <a href="{morning_url}">Morning page</a> ·'
+            f' <a href="{raw_url}">Raw event log</a></p>'
+        )
+    else:
+        head = '<meta http-equiv="refresh" content="2">'
+        state = ("<p>The night is running, compressed. Each step below"
+                 " appeared when it was logged.</p>")
+    return (
+        "<!doctype html><html><head><title>Night B live</title>"
+        f"{head}</head>"
+        f"<body>{FRONT_CSS}<h1>Night B · Job {esc(job_id)}</h1>"
+        f"<p>Status: {esc(status)}</p>"
+        f"{state}"
+        f"<ol>{rows}</ol>"
+        f'<p><a href="{raw_url}">Raw event log</a> ·'
+        ' <a href="/">Back to Night Shift</a></p></body></html>'
+    )
 
 
 @app.post("/visitor/answer")
