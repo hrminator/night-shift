@@ -2,6 +2,14 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt M14: owner notify by web push
+
+- Part 1: `pywebpush` 2.5.0 via uv (+ PROVENANCE line); new `app/push.py` (env config, one-shot sender with a fake-sender seam); `scripts/make_vapid.py` prints one VAPID pair (round-trip checked, 87/43 chars) and writes nothing; all four env vars documented in DEPLOY.md without values.
+- Part 2: `push_subscriptions` table; token-guarded `GET /owner/phone` (registers `static/sw.js`, subscribes with the VAPID public key), `POST /owner/phone/subscribe`, `POST /owner/phone/test` ("Night Shift test" + UTC); token never echoed. Dockerfile ships `static/`. One bad schema edit of mine repaired via `git diff` (no stray columns).
+- Part 3: `jobs.owner_job` (ALTER migration for old DBs); `POST /jobs/run` sets it, visitor copies and eval runs never; `save_checkpoint` runs the notify step (one push per live subscription, `push_sent`/`push_failed`/`push_skipped`, 404/410 marks dead, failures never fail the night); morning page shows the notification plus one push line for owner jobs. The run-token gate test keeps its assertions; its `run_job` stub takes the new optional arg.
+- Part 4: `scripts/send_test_push.py` (local DATA_DIR or `--remote` via `/owner/phone/test` with RUN_TOKEN, `--title`/`--body`, prints status codes); the test endpoint takes optional title/body (page button unchanged). Verified against a local server on port 8124 — 8123 was held by another live python process, left alone.
+- Part 5: `tests/test_push.py` (11 tests, fake sender, no network): skip when disabled/keys missing, once per live subscription, never for visitor/eval, 410 marks dead, question event byte-identical, subscribe token gate, morning lines. Suite: 195 passed.
+
 ## Wed Oct 28 — prompt B1 part 4: rendering and the honest label
 
 - `app/main.py`: `scan_grounding_section` shows the scan PNG under the revised-quote claim on the morning page, the job page and the front-door replay. The amber box is drawn from the night's own `line_located` event only, positioned by value/10 percentages, and only when the probe verdict is PASS ("Muse Spark located the line it quoted (grounding call; N of 10 probes on target)"). Otherwise — verdict FAIL or `line_not_located` — the page shows the quoted line underlined from lines.json ("Line Muse Spark quoted"), no box. Nothing is drawn for nights with no grounding event, so the recorded hero run carries no box. Never a box after the fact.
