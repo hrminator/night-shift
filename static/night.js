@@ -53,3 +53,185 @@
     init();
   }
 })();
+
+/* S1b replay: State A performs the night beat by beat, then lands on B. */
+(function () {
+  "use strict";
+  window.__nightShiftAlive = 1;
+  var replay = document.getElementById("replay");
+  var note = document.getElementById("state-question");
+  function showNote() { if (note) note.hidden = false; }
+  if (!replay) return;
+  var root = document.documentElement;
+  var reduced = true;
+  try {
+    reduced = window.matchMedia
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : true;
+  } catch (e) { reduced = true; }
+  if (reduced || !root.classList.contains("rv")) {
+    root.classList.remove("rv");
+    showNote();
+    return;
+  }
+  var speed = 1;
+  try {
+    var wanted = new URLSearchParams(window.location.search).get("speed");
+    if (wanted === "2" || wanted === "4") speed = +wanted;
+  } catch (e) { speed = 1; }
+
+  /* The one mapping from the night's virtual beats to wall time (ms).
+     Beats are the events' own virtual times; dwells between clock groups
+     pad the replay to 20.5 s while in-group staggers stay on spec. */
+  var VT_BASE = {"21:30": 500, "22:30": 3000, "00:38": 6500,
+                 "00:39": 12000, "00:47": 20500};
+  var DWELL = {handoff: 0, reads: 0, verdict: 350, revised: 0, sheet: 1500,
+               sheetcap: 1500, diff: 3000, beatcap: 3400, decision: 4000,
+               deadline: 5250, skip: 0};
+  function wallAt(vt, slot, index) {
+    var base = VT_BASE[vt] || 0;
+    if (slot === "check") return base + (index || 0) * 450;
+    if (slot === "result") return base + (index || 0) * 450 + 250;
+    return base + (DWELL[slot] || 0);
+  }
+
+  function $(sel, ctx) { return (ctx || document).querySelector(sel); }
+  function $all(sel, ctx) {
+    return Array.prototype.slice.call((ctx || document).querySelectorAll(sel));
+  }
+  function reveal(el, still) {
+    if (!el) return;
+    el.classList.add("on");
+    if (!still) el.classList.add("feed-anim");
+  }
+
+  var clockEl = $(".clockblock .clock") || $(".clock");
+  var dotEl = $(".dot");
+  var trackEl = $(".tl");
+  var evtag = $(".evtag");
+  var curVt = "21:30";
+  function pctOf(vt) {
+    var parts = String(vt).split(":");
+    var mins = (+parts[0]) * 60 + (+parts[1]);
+    var delta = mins - (21 * 60 + 30);
+    if (delta < 0) delta += 24 * 60;
+    return Math.max(0, Math.min(100, delta * 100 / 720));
+  }
+  function dotTo(vt) {
+    if (!dotEl || !trackEl) return;
+    var width = trackEl.clientWidth || 0;
+    dotEl.style.transform = "translateX(" + (width * pctOf(vt) / 100) + "px)";
+  }
+  function setClock(vt, amber) {
+    curVt = vt;
+    if (clockEl) {
+      var parts = String(vt).split(":");
+      var h = $(".h", clockEl);
+      var m = $(".m", clockEl);
+      if (h) h.textContent = parts[0];
+      if (m) m.textContent = parts[1] || "";
+      clockEl.classList.add("dip");
+      setTimeout(function () { clockEl.classList.remove("dip"); }, 90);
+      var tl = $(".tl");
+      if (tl) tl.setAttribute("aria-label",
+        "Night timeline from 21:30 to 09:30, now at " + vt);
+    }
+    if (amber && dotEl) dotEl.classList.add("amber");
+    dotTo(vt);
+  }
+  if (dotEl) {
+    dotEl.style.left = "0px";
+    dotTo("21:30");
+  }
+  window.addEventListener("resize", function () { dotTo(curVt); });
+
+  var feedSec = $('[data-rv-sec="feed"]', replay);
+  var beatSec = $('[data-rv-sec="beat"]', replay);
+  var howSec = $('[data-rv-sec="how"]', replay);
+  var decSec = $('[data-rv-sec="decision"]', replay);
+  var checksFold = $('[data-rv="checks-fold"]', replay);
+  var cards = $all('[data-rv="check"]', replay);
+  function item(slot) { return $('[data-rv="' + slot + '"]', replay); }
+
+  var state = {done: false, manual: false, vnow: 0, fired: 0};
+  function finish() {
+    if (state.done) return;
+    state.done = true;
+    setClock("00:47", true);
+    if (evtag && evtag.parentNode) evtag.parentNode.removeChild(evtag);
+    if (replay.parentNode) replay.parentNode.removeChild(replay);
+    document.body.classList.add("state-b");
+    showNote();
+    var paper = note ? $(".note", note) : null;
+    if (paper) paper.classList.add("settle");
+    try { window.scrollTo(0, 0); } catch (e) {}
+    document.body.setAttribute("data-replay-done", "1");
+  }
+
+  var plan = [];
+  function at(vt, slot, index, fn) {
+    plan.push({at: wallAt(vt, slot, index), fn: fn});
+  }
+  at("21:30", "handoff", 0, function () {
+    reveal(feedSec, true); reveal(item("handoff"));
+    reveal(howSec, true); reveal(item("skip"), true);
+  });
+  at("22:30", "reads", 0, function () {
+    setClock("22:30", false); reveal(item("reads"));
+  });
+  at("22:30", "verdict", 0, function () { reveal(item("verdict")); });
+  at("00:38", "revised", 0, function () {
+    setClock("00:38", false);
+    if (evtag) evtag.hidden = false;
+    reveal(item("revised"));
+  });
+  at("00:38", "sheet", 0, function () {
+    reveal(beatSec, true); reveal(item("sheet"), true);
+    reveal(item("sheetcap"));
+  });
+  at("00:38", "diff", 0, function () { reveal(item("diff")); });
+  at("00:38", "beatcap", 0, function () { reveal(item("beatcap")); });
+  cards.forEach(function (card, i) {
+    at("00:39", "check", i, function () {
+      if (i === 0) {
+        setClock("00:39", false);
+        reveal(howSec, true); reveal(checksFold, true);
+      }
+      reveal(card);
+    });
+    at("00:39", "result", i, function () {
+      var yn = $(".yn", card);
+      if (yn) yn.classList.add("on");
+    });
+  });
+  at("00:39", "decision", 0, function () {
+    reveal(decSec, true); reveal(item("decision"));
+  });
+  at("00:39", "deadline", 0, function () { reveal(item("deadline")); });
+  at("00:47", "finish", 0, finish);
+
+  plan.sort(function (a, b) { return a.at - b.at; });
+  var duration = 0;
+  for (var p = 0; p < plan.length; p++) {
+    if (plan[p].at > duration) duration = plan[p].at;
+  }
+  var timers = plan.map(function (ev) {
+    return setTimeout(function () { if (!state.manual) ev.fn(); },
+                      ev.at / speed);
+  });
+  window.__nightShiftTick = function (ms) {
+    if (!state.manual) {
+      state.manual = true;
+      for (var i = 0; i < timers.length; i++) clearTimeout(timers[i]);
+    }
+    state.vnow += ms;
+    while (state.fired < plan.length &&
+           plan[state.fired].at / speed <= state.vnow) {
+      plan[state.fired].fn();
+      state.fired++;
+    }
+    return {vnow: state.vnow, done: state.done};
+  };
+  window.__nightShiftReplay = {duration: duration, speed: speed,
+                               state: state};
+})();

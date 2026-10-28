@@ -366,3 +366,11 @@ Deviations from the comps or rules, and why:
   in the repo; its amendments 1-10 were followed from that file.
 - "One clean column at 1440" was read as a centered max-1200 wrap with no
   horizontal scroll; desktop keeps the comp's two-column grid inside it.
+## Wed Oct 28 - prompt S1b part 1: the replay has motion
+
+- Default `/` now performs State A from the recorded events and lands on State B: `index()` wraps the night in `#replay` (clock starts 21:30, SCRIPTED tag hidden) and renders the question note hidden plus the same strip-fold/recline/cost tail as `?state=question`; `night.js` reveals rows on one `wallAt(vt, slot, index)` schedule (feed 350 ms apart in-group, checks 450 ms with results +250 ms, clock dip 80 ms, dot translateX 300 ms, sheet settle 300 ms) and at 20.5 s removes the replay, unhides the note, sets 00:47 amber and scrolls top. Verified by probe: finished innerText equals `?state=question` innerText exactly.
+- `?speed=1|2|4` scales every delay (probed: 20500/10250/5250 vnow at 250 ms ticks); `?state=` pages render static with no replay; `prefers-reduced-motion` (or no JS) shows everything at once via the `.rv` gate plus a `<noscript>` unhide. Skip link is visible from the first beat and lands on state B (probed from the 22:30 beat).
+- `window.__nightShiftTick(ms)` drives the same plan deterministically (first tick cancels wall timers); `window.__nightShiftReplay` exposes duration/speed/state for tests and the render script.
+- Taste skill loaded; the S0/S0b design rules took precedence where they conflict (Geist/Newsreader identity, tracked labels, amber accent are all specced).
+- Note: the prompt names `prompts/prompt-s0b-comps-premium.txt`; the file in the repo is `prompts/prompt-s0b-comps.txt` (same as S1a found), so the design rules were read from there.
+- Suite: 296 passed.

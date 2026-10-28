@@ -154,7 +154,7 @@ def feed_html(events: list) -> str:
     rows = []
     if any(e.get("kind") == "handoff" for e in events):
         rows.append(
-            "<div class=\"frow\"><span class=\"ftime\">21:30</span><div>"
+            "<div class=\"frow\" data-rv=\"handoff\" data-vt=\"21:30\"><span class=\"ftime\">21:30</span><div>"
             "<p>The owner hands over the brief and goes to bed.</p>"
             f"<p>{pages_mod.tag('code')}</p>"
             "<p class=\"quiet\">Fictional studio and suppliers · real Muse"
@@ -174,7 +174,7 @@ def feed_html(events: list) -> str:
             for e in reads
         )
         rows.append(
-            "<div class=\"frow\"><span class=\"ftime\">22:30</span><div>"
+            "<div class=\"frow\" data-rv=\"reads\" data-vt=\"22:30\"><span class=\"ftime\">22:30</span><div>"
             f"<details><summary class=\"foldrow\">"
             f"<span class=\"foldname\">Read {count} {noun}</span>"
             "<span class=\"chev\" aria-hidden=\"true\"></span>"
@@ -185,7 +185,7 @@ def feed_html(events: list) -> str:
     if verdict is not None:
         payload = _payload(verdict)
         rows.append(
-            "<div class=\"frow\"><span class=\"ftime\">"
+            "<div class=\"frow\" data-rv=\"verdict\" data-vt=\"22:30\"><span class=\"ftime\">"
             f"{esc(str(verdict.get('virtual_time', '22:30')))}</span><div>"
             "<p class=\"verdict\">No need to wake you.</p>"
             f"<p class=\"quote\">{esc(str(payload.get('reason', '')))}</p>"
@@ -195,7 +195,7 @@ def feed_html(events: list) -> str:
     if revised is not None:
         payload = _payload(revised)
         rows.append(
-            "<div class=\"frow\"><span class=\"ftime\">"
+            "<div class=\"frow\" data-rv=\"revised\" data-vt=\"00:38\"><span class=\"ftime\">"
             f"{esc(str(revised.get('virtual_time', '00:38')))}</span><div>"
             f"<p>The cheap one&rsquo;s revised quote "
             f"{esc(str(payload.get('quote', '?')))} arrives and replaces "
@@ -205,7 +205,7 @@ def feed_html(events: list) -> str:
     if not rows:
         return ""
     return (
-        "<section aria-label=\"Feed\" id=\"state-night\">"
+        "<section aria-label=\"Feed\" id=\"state-night\" data-rv-sec=\"feed\">"
         "<p class=\"lab\">The night so far</p>"
         f"<div class=\"card\">{''.join(rows)}</div></section>"
     )
@@ -252,7 +252,7 @@ def beat_html(events: list) -> str:
     if not revised_line:
         return ""
     sheet = (
-        "<div class=\"sheet\">"
+        "<div class=\"sheet\" data-rv=\"sheet\" data-vt=\"00:38\">"
         "<p class=\"firm\">Baltic Print OÜ (fictional)</p>"
         f"<h3>Quote {esc(quote_id)} — 100 tote bags with your logo</h3>"
         f"<p>This quote replaces quote {esc(replaces_id)}.</p>"
@@ -264,24 +264,24 @@ def beat_html(events: list) -> str:
         "<div class=\"gap\"></div>"
         "<p>Contact: quotes@baltic-print.example.com (fictional)</p>"
         "</div>"
-        f"<p class=\"sheetcap\">{pages_mod.ICONS['file']}"
+        f"<p class=\"sheetcap\" data-rv=\"sheetcap\" data-vt=\"00:38\">{pages_mod.ICONS['file']}"
         "Line Muse Spark quoted"
         f"{pages_mod.tag('spark')}</p>"
     )
     diff = ""
     if original:
         diff = (
-            "<div class=\"diff card\">"
+            "<div class=\"diff card\" data-rv=\"diff\" data-vt=\"00:38\">"
             f"<s>{esc(_diff_text(original))}</s>"
             f"<strong>{esc(_diff_text(revised_line))}</strong>"
             f"<div class=\"tagrow\">{pages_mod.tag('code')}</div>"
             "</div>"
         )
     return (
-        "<section aria-label=\"The revised quote\">"
+        "<section aria-label=\"The revised quote\" data-rv-sec=\"beat\">"
         "<p class=\"lab\">00:38 · the beat</p>"
         f"{sheet}{diff}"
-        "<p class=\"beatcap\">Same price. One verb changed. Muse Spark"
+        "<p class=\"beatcap\" data-rv=\"beatcap\" data-vt=\"00:38\">Same price. One verb changed. Muse Spark"
         " caught it from pixels.</p></section>"
     )
 
@@ -306,7 +306,7 @@ def checks_html(events: list, meta: str = "00:39–00:46",
     if not picked:
         return ""
     cards = "".join(
-        "<div class=\"check sub\"><div class=\"check-top\">"
+        "<div class=\"check sub\" data-rv=\"check\" data-vt=\"00:39\"><div class=\"check-top\">"
         f"<span class=\"check-title\">"
         f"{esc(check_title(_payload(e).get('name', '?')))}</span>"
         f"{_check_mark(str(_payload(e).get('result', 'fail')))}</div>"
@@ -319,7 +319,7 @@ def checks_html(events: list, meta: str = "00:39–00:46",
     )
     flag = " open" if open_fold else ""
     return (
-        f"<details class=\"fold\"{flag}>"
+        f"<details class=\"fold\" data-rv=\"checks-fold\" data-vt=\"00:39\"{flag}>"
         "<summary class=\"foldrow card\">"
         "<span class=\"foldname\">What it checked</span>"
         f"<span class=\"foldmeta\">{esc(meta)}</span>"
@@ -337,10 +337,10 @@ def decision_html(events: list) -> str:
     payload = _payload(decision)
     outcome = str(payload.get("outcome", "?")).replace("_", " ").title()
     return (
-        "<section aria-label=\"Decision\">"
+        "<section aria-label=\"Decision\" data-rv-sec=\"decision\">"
         f"<p class=\"lab\">Decision record · "
         f"{esc(str(decision.get('virtual_time', '?')))}</p>"
-        "<div class=\"decision card\">"
+        "<div class=\"decision card\" data-rv=\"decision\" data-vt=\"00:39\">"
         f"<p class=\"because\">{esc(outcome)}, because …</p>"
         f"<p class=\"quote\">{esc(str(payload.get('reason', '')))}</p>"
         f"<div class=\"tagrow\">{pages_mod.tag('spark')}</div>"
@@ -361,7 +361,7 @@ def deadline_html(events: list) -> str:
         woke = (f" · woke you "
                 f"{esc(str(notified.get('virtual_time', '?')))}")
     return (
-        f"<p class=\"deadline\">{pages_mod.ICONS['clock']}"
+        f"<p class=\"deadline\" data-rv=\"deadline\" data-vt=\"00:39\">{pages_mod.ICONS['clock']}"
         f"<span>Latest safe time to wake you {latest}{woke} · answer by "
         f"{due} · slot closes {cutoff} {pages_mod.tag('code')}</span></p>"
     )
@@ -369,7 +369,7 @@ def deadline_html(events: list) -> str:
 
 def skip_html() -> str:
     """Pinned text link into State B."""
-    return "<div class=\"skip\"><a href=\"?state=question\">Skip to 00:47</a></div>"
+    return "<div class=\"skip\" data-rv=\"skip\"><a href=\"?state=question\">Skip to 00:47</a></div>"
 
 
 def what_checked_items(what_checked: str) -> list[str]:
@@ -426,7 +426,7 @@ def question_collapsed_html(question: dict) -> str:
 
 
 def question_note(question: dict, post_action: str, ownerline: str,
-                  with_change: bool = False) -> str:
+                  with_change: bool = False, hidden: bool = False) -> str:
     """State B: banner plus the bedside note, buttons right under words."""
     esc = html.escape
     payload = _payload(question)
@@ -440,7 +440,7 @@ def question_note(question: dict, post_action: str, ownerline: str,
     )
     change = change_fact_html() if with_change else ""
     return (
-        "<section aria-label=\"Question\" id=\"state-question\">"
+        f"<section aria-label=\"Question\" id=\"state-question\"{' hidden' if hidden else ''}>"
         f"<div class=\"banner\">{pages_mod.ICONS['bell']}"
         f"<span>Night Shift · 1 question · answer by {due}</span>"
         "<span class=\"lampdot\" aria-hidden=\"true\"></span></div>"

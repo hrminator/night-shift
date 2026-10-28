@@ -173,6 +173,25 @@ FRONT_CSS = (
 )
 
 
+#: Inline starter for the front-door replay: marks <html> before first
+#: paint (skipped under prefers-reduced-motion), with a fallback that
+#: unhides everything if night.js never loads.
+RV_SCRIPT = (
+    "<script>try{if(window.matchMedia&&"
+    "!matchMedia('(prefers-reduced-motion: reduce)').matches){"
+    "document.documentElement.classList.add('rv')}"
+    "setTimeout(function(){if(!window.__nightShiftAlive){"
+    "document.documentElement.classList.remove('rv')}},3000)}"
+    "catch(e){}</script>"
+)
+
+#: Without JS the replay never runs, so the note must simply show.
+NOSCRIPT_SHOW = (
+    "<noscript><style>#state-question{display:block !important}"
+    "</style></noscript>"
+)
+
+
 def recorded_costs_path() -> Path:
     """Measured cost file shipped with the code (job id -> tokens)."""
     return Path(__file__).resolve().parent.parent / "data" / "recorded_costs.json"
@@ -340,7 +359,7 @@ def index(state: str = "") -> str:
         f"{states_mod.feed_html(events)}"
         f"{states_mod.beat_html(events)}"
         f"{scan_grounding_section(events)}"
-        '<section aria-label="How it decided">'
+        '<section aria-label="How it decided" data-rv-sec="how">'
         '<h2 class="sec">How it decided</h2>'
         f"{states_mod.checks_html(events)}"
         f"{states_mod.decision_html(events)}"
@@ -373,16 +392,18 @@ def index(state: str = "") -> str:
         top = pages_mod.header_row(chip)
         body_class = "state-b"
     else:
+        # Default: the replay performs State A, then lands on State B.
+        note_hidden = ""
         if question is not None:
-            status_text = str(
-                (question.get("payload") or {}).get("question", ""))
-        else:
-            status_text = ("Overnight replay: one job, 21:30 to the"
-                           " question.")
-        inst = (pages_mod.clock_block(notified_at, amber_dot=True)
-                + pages_mod.status_para(status_text) + strip)
-        detail = night_detail + note + cost
-        top = pages_mod.header_row(chip) + recline
+            note_hidden = states_mod.question_note(
+                question, "/visitor/answer", ownerline, with_change=True,
+                hidden=True)
+        inst = pages_mod.clock_block(
+            "21:30", event_tag="SCRIPTED TEST EVENT", evtag_hidden=True)
+        detail = ('<div id="replay">' + night_detail + "</div>"
+                  + note_hidden
+                  + states_mod.strip_fold_html(strip_rows) + recline + cost)
+        top = pages_mod.header_row(chip) + RV_SCRIPT + NOSCRIPT_SHOW
         body_class = ""
     body = (top
             + '<div class="grid"><div class="inst">'

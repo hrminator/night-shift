@@ -135,11 +135,12 @@ def timeline_pct(virtual_hhmm: str) -> float:
 
 
 def clock_block(current: str, event_tag: str | None = None,
-                amber_dot: bool = False) -> str:
+                amber_dot: bool = False, evtag_hidden: bool = False) -> str:
     """The big clock plus the timeline with its five ticks."""
     esc = html.escape
     hour, _, minute = current.partition(":")
-    tag_html = f"<span class=\"evtag\">{esc(event_tag)}</span>" \
+    hidden_attr = " hidden" if evtag_hidden else ""
+    tag_html = f"<span class=\"evtag\"{hidden_attr}>{esc(event_tag)}</span>" \
         if event_tag else ""
     ticks = "".join(
         f"<span class=\"tick\" style=\"left:{timeline_pct(t):.2f}%\">"
