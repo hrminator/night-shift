@@ -23,6 +23,8 @@ Added Tue Oct 27 (`uv add`): reportlab 5.1.0 (BSD), Pillow 13.0.0 (HPND) — for
 
 Added Tue Oct 27: tzdata 2026.5 (Apache-2.0) — provider of IANA time zone data, needed for the virtual clock on Windows.
 
+Added Wed Oct 28 (`uv add`): pywebpush 2.5.0 (MPL-2.0) with py-vapid 1.9.6 (MPL-2.0), http-ece 1.2.1 (MIT), cryptography 50.0.2, requests 2.34.2 and aiohttp 3.14.5 (plus transitive deps pinned in `uv.lock`) — Web Push encryption and delivery from the notify step to the owner's phone (M14).
+
 ## Fonts and assets
 
 (List every font, icon and image with its source and license as it is added. None yet.)

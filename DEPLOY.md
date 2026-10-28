@@ -31,6 +31,16 @@ Names only. Values live in the environment (or Fly secrets), never in files.
   file name, or a path). Empty means the latest hero run with a wake and a
   hold.
 - `DATA_DIR` — run data directory (`./data` locally; `/data` on Fly).
+- `VAPID_PUBLIC_KEY` — base64url VAPID public key for Web Push to the
+  owner's phone. Generated once by `scripts/make_vapid.py`; set as a Fly
+  secret on the live site.
+- `VAPID_PRIVATE_KEY` — base64url VAPID private key. Never printed except
+  once by `scripts/make_vapid.py`; set as a Fly secret, never in files.
+- `VAPID_SUBJECT` — a `mailto:` or `https:` URL identifying the push
+  sender (default `mailto:owner@example.invalid`).
+- `PUSH_ENABLED` — set to `1` to let the notify step deliver real pushes
+  for the operator's own job (default off; when off, or when the keys are
+  missing, the notify step logs `push_skipped` with reason `disabled`).
 
 ## Run it locally
 
