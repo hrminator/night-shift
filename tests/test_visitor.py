@@ -267,7 +267,8 @@ def test_run_token_gate(tmp_path, monkeypatch):
                        headers={"X-Run-Token": "wrong"}).status_code == 403
     monkeypatch.setenv("RUN_TOKEN", "test-token")
     monkeypatch.setattr("app.runner.run_job",
-                        lambda variant="hero": {"job_id": "abc",
+                        lambda variant="hero", owner_job=False: {
+                            "job_id": "abc",
                                                "status": "done"})
     response = client.post("/jobs/run", headers={"X-Run-Token": "test-token"},
                            follow_redirects=False)

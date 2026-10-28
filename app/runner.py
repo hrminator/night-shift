@@ -731,7 +731,7 @@ def build_next_input(
     return list(first_input) + list(output_items) + list(call_outputs)
 
 
-def save_checkpoint(job_id: str, next_input: list, question_event_id: int) -> dict:
+def _store_checkpoint_event(job_id: str, next_input: list, question_event_id: int) -> dict:
     event = append_event(
         job_id, VT_CHECKPOINT, "checkpoint",
         {"question_event_id": question_event_id, "next_input": next_input},
@@ -743,6 +743,20 @@ def save_checkpoint(job_id: str, next_input: list, question_event_id: int) -> di
         current_step="waiting_for_owner",
         virtual_time=VT_CHECKPOINT,
     )
+    return event
+
+
+def save_checkpoint(job_id: str, next_input: list, question_event_id: int) -> dict:
+    """Store the checkpoint, then run the owner notify step (web push).
+
+    The notify step only pushes for the operator's own job; every other
+    job keeps the simulated question event exactly as before. Push never
+    fails the night.
+    """
+    from app import push as push_mod
+
+    event = _store_checkpoint_event(job_id, next_input, question_event_id)
+    push_mod.notify_owner_job(job_id, question_event_id, VT_CHECKPOINT)
     return event
 
 
@@ -1507,11 +1521,12 @@ def _continue_open_job(job_id: str, job: dict, respond_fn,
     return {"status": "noop", "job_id": job_id}
 
 
-def run_job(variant: str = "hero", arm: str = "supervision") -> dict:
+def run_job(variant: str = "hero", arm: str = "supervision", owner_job: bool = False) -> dict:
     """Run the evidence-driven night: 21:30 handoff, 21:35 read turn, 00:38 event, 00:39 re-assess."""
     if variant not in ("hero", "contrast"):
         raise ValueError(f"unknown variant {variant!r}")
     job = create_job(status="running", current_step="read_turn",
+                     owner_job=owner_job,
                      virtual_time=VT_HANDOFF)
     job_id = job["id"]
     append_event(job_id, VT_HANDOFF, "handoff",

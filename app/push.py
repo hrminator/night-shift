@@ -141,3 +141,52 @@ def send_to_all(title: str, body: str, url: str) -> list[dict]:
                 "seconds": round(time.monotonic() - started, 3),
             })
     return results
+
+
+def notify_owner_job(job_id: str, question_event_id: int,
+                     virtual_time: str) -> None:
+    """Notify step: one real push per subscription for owner jobs.
+
+    Called when the model's ask_owner is accepted and the checkpoint is
+    stored. Visitor copies and eval runs return silently, keeping the
+    simulated question event exactly as before. Never raises: a push
+    failure never fails the night.
+    """
+    try:
+        _notify_owner_job(job_id, question_event_id, virtual_time)
+    except Exception:  # noqa: BLE001 - push never fails the night
+        pass
+
+
+def _notify_owner_job(job_id: str, question_event_id: int,
+                      virtual_time: str) -> None:
+    from app.store import append_event, get_job, list_events
+    from app.store import list_live_push_subscriptions
+
+    job = get_job(job_id)
+    if job is None or not job.get("owner_job"):
+        return
+    question = next((e for e in list_events(job_id)
+                     if e["id"] == question_event_id), None)
+    payload = (question or {}).get("payload") or {}
+    text = str(payload.get("question", ""))
+    if not push_configured():
+        append_event(job_id, virtual_time, "push_skipped",
+                     {"reason": "disabled"})
+        return
+    if not list_live_push_subscriptions():
+        append_event(job_id, virtual_time, "push_skipped",
+                     {"reason": "no_subscriptions"})
+        return
+    for result in send_to_all("Night Shift", text[:120], f"/jobs/{job_id}"):
+        if result["ok"]:
+            append_event(job_id, virtual_time, "push_sent", {
+                "subscription_id": result["subscription_id"],
+                "status_code": result["status_code"],
+                "seconds": result["seconds"],
+            })
+        else:
+            append_event(job_id, virtual_time, "push_failed", {
+                "subscription_id": result["subscription_id"],
+                "error": str(result.get("error", ""))[:200],
+            })

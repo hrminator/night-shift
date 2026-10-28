@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   pending_question_id INTEGER,
   current_step TEXT,
   virtual_time TEXT,
+  owner_job INTEGER NOT NULL DEFAULT 0,
   updated_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS locks (
@@ -111,6 +112,7 @@ def connect(path: Path | None = None) -> sqlite3.Connection:
     conn = sqlite3.connect(str(target))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
+    _ensure_owner_job_column(conn)
     return conn
 
 
@@ -130,12 +132,25 @@ def _now_utc() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+def _ensure_owner_job_column(conn: sqlite3.Connection) -> None:
+    """Add jobs.owner_job to databases created before M14 (no-op else)."""
+    try:
+        columns = [row[1] for row in
+                   conn.execute("PRAGMA table_info(jobs)").fetchall()]
+    except Exception:  # noqa: BLE001 - a schema check never breaks reads
+        return
+    if columns and "owner_job" not in columns:
+        conn.execute("ALTER TABLE jobs ADD COLUMN owner_job"
+                     " INTEGER NOT NULL DEFAULT 0")
+
+
 def _ensure_init(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
 
 
 def create_job(
     job_id: str | None = None,
+    owner_job: bool = False,
     status: str = "running",
     current_step: str | None = None,
     virtual_time: str | None = None,
@@ -148,8 +163,10 @@ def create_job(
         now = _now_utc()
         conn.execute(
             "INSERT INTO jobs (id, status, pending_question_id, current_step,"
-            " virtual_time, updated_at) VALUES (?, ?, NULL, ?, ?, ?)",
-            (jid, status, current_step, virtual_time, now),
+            " virtual_time, owner_job, updated_at)"
+            " VALUES (?, ?, NULL, ?, ?, ?, ?)",
+            (jid, status, current_step, virtual_time, 1 if owner_job else 0,
+             now),
         )
         conn.commit()
         return get_job(jid, path=path)

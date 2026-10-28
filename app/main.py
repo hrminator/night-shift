@@ -487,6 +487,12 @@ def _summarize(kind: str, payload: dict) -> str:
         return f"grounding: line not located ({payload.get('reason', '?')})"
     if kind == "step_failed":
         return f"Step failed: {payload.get('reason', '')}"
+    if kind == "push_sent":
+        return f"push sent to subscription {payload.get('subscription_id', '?')} (HTTP {payload.get('status_code', '?')})"
+    if kind == "push_failed":
+        return f"push failed for subscription {payload.get('subscription_id', '?')}"
+    if kind == "push_skipped":
+        return f"push skipped ({payload.get('reason', '?')})"
     return kind
 
 
@@ -503,7 +509,7 @@ def run_job_route(request: Request, variant: str = "hero"):
         )
     from app import runner as runner_mod
 
-    summary = runner_mod.run_job(variant=variant)
+    summary = runner_mod.run_job(variant=variant, owner_job=True)
     return RedirectResponse(url=f"/jobs/{summary['job_id']}", status_code=303)
 
 
@@ -692,6 +698,46 @@ def _outbox_section(events: list) -> str:
     return f"<ul>{rows}</ul>"
 
 
+def _push_delivery_line(job_id: str | None, events: list) -> str:
+    """One push line for owner jobs, else empty. Exact strings only."""
+    if job_id is None:
+        return ""
+    from app import store as store_mod
+
+    job = store_mod.get_job(job_id)
+    if job is None or not job.get("owner_job"):
+        return ""
+    sent = [e for e in events if e["kind"] == "push_sent"]
+    if sent:
+        stamp = str(sent[-1].get("created_at") or "")
+        hhmm = stamp[11:16] if len(stamp) >= 16 else ""
+        if hhmm:
+            return f"Delivered by web push to the owner's phone at {hhmm}"
+        return "Delivered by web push to the owner's phone"
+    if any(e["kind"] == "push_failed" for e in events):
+        return "Web push failed"
+    return ""
+
+
+def _notification_section(job_id: str | None, events: list) -> str:
+    """The night's question plus, for owner jobs, the push line below it."""
+    esc = html.escape
+    questions = [e for e in events if e["kind"] == "question"]
+    if not questions:
+        return ""
+    first = questions[0]
+    payload = first["payload"] or {}
+    section = (
+        "<h2>Notification</h2>"
+        f"<p>{esc(str(payload.get('question', '')))} "
+        f"(asked {esc(str(first.get('virtual_time', '')))})</p>"
+    )
+    line = _push_delivery_line(job_id, events)
+    if line:
+        section += f"<p>{esc(line)}</p>"
+    return section
+
+
 def render_morning_page(job_title: str, events: list, banner: str = "",
                         job_id: str | None = None) -> str:
     """Morning page HTML for live jobs and recorded runs alike."""
@@ -731,6 +777,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
             "<section><h2>Hold acknowledgement</h2>"
             f"<p>{esc(str(payload.get('acknowledgement', '')))}</p></section>"
         )
+    notification = _notification_section(job_id, events)
     cards = _draft_cards(job_id if job_id is not None else job_title,
                          events, with_forms=job_id is not None)
     check_rows = "".join(
@@ -748,6 +795,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
         f"{banner}"
         f"<p><b>{esc(label)}</b></p>"
         f"{ack}"
+        f"{notification}"
         f"{scan_grounding_section(events)}"
         f"<h2>Drafts awaiting your OK on the exact text</h2>{cards}"
         f"<h2>Outbox (Simulated delivery)</h2>{_outbox_section(events)}"
