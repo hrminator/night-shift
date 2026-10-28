@@ -71,7 +71,7 @@ Contrast runs so far: 1 of 2 fresh contrast runs placed the hold itself without 
 
 ## What real owners said
 
-Not yet: three to five small-business owners will be asked Thu–Sat and quoted by role, with permission. The true count will be reported.
+Not yet: one procurement professional (a real buyer of printed merchandise) will read a recorded night Thu-Sat and be quoted by role, with permission. One person, not a panel; the true count will be reported.
 
 ## Known failures and variance
 
@@ -99,7 +99,7 @@ Not yet: three to five small-business owners will be asked Thu–Sat and quoted 
 
 Night Shift was built Oct 27–Nov 3, 2026: see [PROVENANCE.md](PROVENANCE.md), [BUILDLOG.md](BUILDLOG.md) and the [git history](https://github.com/hrminator/night-shift).
 
-Night Shift was built during the hackathon, Oct 27–Nov 3, 2026, by one person with AI tools. All code, tests and fixtures were written by Muse Code (muse-spark-1.3), driven by the prompt files in prompts/. A general AI assistant (Claude) wrote and sent those prompt files and the README prose, and ran Muse Code headless; API details in the prompts are copied from Meta's docs and labelled as such. I set direction, made every decision and reviewed the results. Plain-language design documents written before Oct 27 were used as inputs; no pre-event code is in this repository. The studio, suppliers, venue, documents and contacts are fictional, with invented names. The revised quote is an image-only PDF rendered by our fixture script, not a scan of a real document, and it arrives as an injected test event. The supplier portal and mail are simulated. The model calls on the front door are real Muse Spark calls, recorded on [date of the recorded run] and replayed at compressed speed; the answer step runs live. [Opening-shot sentence to be added after the video is recorded.]
+Night Shift was built during the hackathon, Oct 27–Nov 3, 2026, by one person with AI tools. All code, tests and fixtures were written by Muse Code (muse-spark-1.3), driven by the prompt files in prompts/. A general AI assistant (Claude) wrote and sent those prompt files and the README prose, and ran Muse Code headless; API details in the prompts are copied from Meta's docs and labelled as such. I set direction, made every decision and reviewed the results. Plain-language design documents written before Oct 27 were used as inputs; no pre-event code is in this repository. The studio, suppliers, venue, documents and contacts are fictional, with invented names. The fictional supplier names were checked against the Norwegian and Estonian company registers on Oct 28: none of the Norwegian names is registered, and "Baltic Print" will be replaced by a coined name before the final recording because a similarly named real printer exists in Tallinn. The revised quote is an image-only PDF rendered by our fixture script, not a scan of a real document, and it arrives as an injected test event. The supplier portal and mail are simulated. The model calls on the front door are real Muse Spark calls, recorded on [date of the recorded run] and replayed at compressed speed; the answer step runs live. [Opening-shot sentence to be added after the video is recorded.]
 
 ## Run it locally and deploy
 
