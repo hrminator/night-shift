@@ -577,7 +577,8 @@ def _recorded_date(events: list) -> str:
 
 
 def render_morning_page(job_title: str, events: list, banner: str = "",
-                        job_id: str | None = None) -> str:
+                        job_id: str | None = None,
+                        dawn: bool = False) -> str:
     """Morning page HTML for live jobs and recorded runs alike."""
     from app import main as main_mod
     hold_id, ack = _hold_of(events)
@@ -629,5 +630,6 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
             + '<div class="grid"><div class="inst">'
             + inst + '</div><div class="detail">' + detail + "</div></div>"
             + pages_mod.footer(raw_url, main_mod.RESULTS_URL))
+    arrived = "arrive-dawn" if dawn else ""
     return pages_mod.shell(f"Night Shift morning · {job_title}", "paper",
-                           body)
+                           body, body_class=arrived)

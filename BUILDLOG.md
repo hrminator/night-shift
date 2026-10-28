@@ -374,3 +374,9 @@ Deviations from the comps or rules, and why:
 - Taste skill loaded; the S0/S0b design rules took precedence where they conflict (Geist/Newsreader identity, tracked labels, amber accent are all specced).
 - Note: the prompt names `prompts/prompt-s0b-comps-premium.txt`; the file in the repo is `prompts/prompt-s0b-comps.txt` (same as S1a found), so the design rules were read from there.
 - Suite: 296 passed.
+## Wed Oct 28 - prompt S1b part 2: the dawn
+
+- New `--horizon` token (night-1 through horizon-1/2 to paper-0) and a `#dawn` overlay (band + paper veil, z-50 so the grain sits over it). Terminal live pages (`/visitor/answer/{id}`, `/visitor/night/{id}`) render the overlay with a `morning?dawn=1` target: the clock jumps to 07:00, the band rises over 2.5 s, the veil settles to paper-0 over 0.4 s, then the page forwards. Nothing else moves during it (chip already still, steps static). No-JS falls back to a 4 s meta refresh to the same URL; reduced motion paints the end state and forwards in 120 ms.
+- `/jobs/{id}/morning?dawn=1` adds `arrive-dawn`: the receipt slides up over 0.6 s on load, i.e. after the dawn on the previous page. `?state=morning` and plain mornings never run the dawn (probed: no `#dawn`, no `arrive-dawn`).
+- The dawn IIFE also exposes `window.__nightShiftTick` (inline rise/settle, no CSS transitions in manual mode) so the film dawn beat and the render script share the same painter. Probed live: clock 07:00, band at translateY(50.5%) after a 1250 ms tick, forward to `morning?dawn=1` with the receipt visible.
+- Suite: 296 passed.

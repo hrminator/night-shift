@@ -147,14 +147,21 @@ def _progress_page(job_id: str, title: str, status_sentence: str,
         )
     morning_url = f"/jobs/{esc(job_id)}/morning"
     raw_url = f"/jobs/{esc(job_id)}/events"
+    dawn_html = ""
     if terminal:
-        head = ('<meta http-equiv="refresh" content="0;url='
-                f'{morning_url}">')
+        # The dawn plays, then the morning shows: JS drives #dawn for 3 s
+        # and forwards to ?dawn=1; the meta refresh is the no-JS path.
+        head = ('<meta http-equiv="refresh" content="4;url='
+                f'{morning_url}?dawn=1">')
         state = (
             f"<p>Night complete: {esc(status)}."
             f" <a href=\"{morning_url}\">Morning page</a> ·"
             f" <a href=\"{raw_url}\">Raw event log</a></p>"
         )
+        dawn_html = (
+            '<div id="dawn" data-target="'
+            f'{morning_url}?dawn=1" aria-hidden="true">'
+            '<div class="dawn-band"></div><div class="dawn-veil"></div></div>')
     else:
         head = '<meta http-equiv="refresh" content="2">'
         state = ("<p>The night is running, compressed. Each step below"
@@ -181,6 +188,7 @@ def _progress_page(job_id: str, title: str, status_sentence: str,
         pages_mod.chip_live(job_id, running=not terminal))
         + '<div class="grid"><div class="inst">'
         + inst + '</div><div class="detail">' + detail + "</div></div>"
+        + dawn_html
         + pages_mod.footer(raw_url, main_mod.RESULTS_URL))
     return pages_mod.shell(title, "night", body, head_extra=head)
 

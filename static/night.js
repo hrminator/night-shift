@@ -235,3 +235,95 @@
   window.__nightShiftReplay = {duration: duration, speed: speed,
                                state: state};
 })();
+
+/* S1b dawn: the clock jumps to 07:00, the band rises, then morning. */
+(function () {
+  "use strict";
+  var dawn = document.getElementById("dawn");
+  if (!dawn) return;
+  var band = dawn.querySelector(".dawn-band");
+  var veil = dawn.querySelector(".dawn-veil");
+  var target = dawn.getAttribute("data-target") || "";
+  var RISE = 2500, SETTLE = 400, LEAVE = 3000;
+  var reduced = true;
+  try {
+    reduced = window.matchMedia
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : true;
+  } catch (e) { reduced = true; }
+  function pctOf(vt) {
+    var parts = String(vt).split(":");
+    var mins = (+parts[0]) * 60 + (+parts[1]);
+    var delta = mins - (21 * 60 + 30);
+    if (delta < 0) delta += 24 * 60;
+    return Math.max(0, Math.min(100, delta * 100 / 720));
+  }
+  function jumpClock() {
+    var clockEl = document.querySelector(".clockblock .clock")
+      || document.querySelector(".clock");
+    if (clockEl) {
+      var h = clockEl.querySelector(".h");
+      var m = clockEl.querySelector(".m");
+      if (h) h.textContent = "07";
+      if (m) m.textContent = "00";
+      var tl = document.querySelector(".tl");
+      if (tl) tl.setAttribute("aria-label",
+        "Night timeline from 21:30 to 09:30, now at 07:00");
+    }
+    var dot = document.querySelector(".dot");
+    var track = document.querySelector(".tl");
+    if (dot && track && track.clientWidth) {
+      dot.style.left = "0px";
+      dot.style.transform = "translateX("
+        + (track.clientWidth * pctOf("07:00") / 100) + "px)";
+    } else if (dot) {
+      dot.style.left = pctOf("07:00") + "%";
+    }
+  }
+  function paintRise(x) {
+    if (band) band.style.transform = "translateY(" + (101 - 101 * x) + "%)";
+  }
+  function paintSettle(x) {
+    if (veil) veil.style.opacity = x.toFixed(3);
+  }
+  var state = {left: false, manual: false, vnow: 0};
+  function leave() {
+    if (state.left) return;
+    state.left = true;
+    if (target) {
+      try { window.location.assign(target); } catch (e) {}
+    }
+  }
+  jumpClock();
+  if (reduced) {
+    paintRise(1);
+    paintSettle(1);
+    setTimeout(leave, 120);
+    window.__nightShiftTick = function () { return {vnow: 0, done: true}; };
+    return;
+  }
+  if (band) band.classList.add("wall");
+  if (veil) veil.classList.add("wall");
+  if (window.requestAnimationFrame) {
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () { paintRise(1); });
+    });
+  } else {
+    paintRise(1);
+  }
+  setTimeout(function () { paintSettle(1); }, RISE);
+  setTimeout(leave, LEAVE);
+  window.__nightShiftTick = function (ms) {
+    if (!state.manual) {
+      state.manual = true;
+      if (band) band.classList.remove("wall");
+      if (veil) veil.classList.remove("wall");
+    }
+    state.vnow += ms;
+    paintRise(Math.min(1, state.vnow / RISE));
+    paintSettle(Math.max(0, Math.min(1, (state.vnow - RISE) / SETTLE)));
+    if (state.vnow >= LEAVE) leave();
+    return {vnow: state.vnow, done: state.left};
+  };
+  window.__nightShiftDawn = {rise: RISE, settle: SETTLE, leave: LEAVE};
+})();

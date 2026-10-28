@@ -880,21 +880,22 @@ def _morning_job_links(job_id: str | None, events: list) -> str:
 
 
 def render_morning_page(job_title: str, events: list, banner: str = '',
-                        job_id: str | None = None) -> str:
+                        job_id: str | None = None, dawn: bool = False) -> str:
     """Morning page HTML for live jobs and recorded runs alike."""
     from app import morning as morning_mod
     return morning_mod.render_morning_page(job_title, events, banner,
-                                           job_id=job_id)
+                                           job_id=job_id, dawn=dawn)
 
 @app.get("/jobs/{job_id}/morning", response_class=HTMLResponse)
-def morning_page(job_id: str):
+def morning_page(job_id: str, dawn: str = ""):
     from app import store as store_mod
 
     job = store_mod.get_job(job_id)
     if job is None:
         return HTMLResponse("<h1>Unknown job</h1>", status_code=404)
     return render_morning_page(f"Job {job_id}",
-                               store_mod.list_events(job_id), job_id=job_id)
+                               store_mod.list_events(job_id), job_id=job_id,
+                               dawn=(dawn == "1"))
 
 
 @app.get("/jobs/{job_id}/events")
