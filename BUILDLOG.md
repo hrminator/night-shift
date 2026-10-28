@@ -2,6 +2,10 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt B1c part 1: grounding call back to 1x (FAIL stands)
+
+- `app/runner.py` sends the 1x page again (595x841, the best-measured variant at 7 of 10 medium) instead of the @2x (0 of 10): `line_located` logs the 1x PNG name and scores `on_target` against the 1x band/size. The @2x fixture and its test stay as the record of the failed hypothesis; verdict FAIL, fallback (quoted line underlined, no box) unchanged. The operator checked the 2x fixture's ink rows against its band (ink rows 633-655 inside band 622-666), so the 2x misses were the model's, not the fixture's; the call reverts to 1x so logged line_located events reflect the best-measured variant. Suite: 199 passed.
+
 ## Wed Oct 28 — prompt B1b: grounding at 2x resolution (FAIL, fallback stays)
 
 - Part 1: `scripts/make_fixtures.py` now writes `fixtures/baltic_quote_Q-1187-B@2x.png` (1190x1682, same rotation/noise as the 1x, both resized from the same noisy page) alongside the 1x PNG kept for the pages; `lines.json` records scale 1 at the top (`{png, png_size, scale, lines}`) and the @2x bands are the 1x bands times 2. `app/grounding.py` sends the @2x PNG (`SCAN_PNG_2X_*`, `scale_band`/`scaled_lines`, `instruction_variant` default|tight); `app/runner.py` logs the @2x name and scores `on_target` against the 2x band/size; `scripts/probe_grounding.py` probes the @2x with `--variant`. Tests: @2x band equals 1x times 2 for every line, lines.json scale 1, tight wording, sent bytes are the @2x file. Suite: 199 passed.

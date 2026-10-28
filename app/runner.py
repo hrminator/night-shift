@@ -1037,7 +1037,7 @@ def _maybe_ground_scan_line(
 
     try:
         bbox = _grounding.locate_line(
-            _grounding.SCAN_PNG_2X_PATH, line_text, respond_fn=_capture)
+            _grounding.SCAN_PNG_PATH, line_text, respond_fn=_capture)
     except Exception as exc:  # noqa: BLE001 - failure is a logged event
         return append_event(job_id, vt, "line_not_located", {
             "claim_id": claim["id"], "line_text": line_text,
@@ -1050,14 +1050,14 @@ def _maybe_ground_scan_line(
         })
     return append_event(job_id, vt, "line_located", {
         "claim_id": claim["id"], "line_text": line_text, "bbox": bbox,
-        "png": _grounding.SCAN_PNG_2X_NAME,
+        "png": _grounding.SCAN_PNG_NAME,
         "model": captured.get("model"),
         "response_id": captured.get("response_id"),
         "seconds": captured.get("seconds", 0.0),
         "on_target": _grounding.score_line(
             bbox, line_text,
-            png_size=_grounding.png_size_of(_grounding.SCAN_PNG_2X_PATH),
-            lines=_grounding.scaled_lines(2)),
+            png_size=_grounding.png_size_of(),
+        ),
     })
 
 

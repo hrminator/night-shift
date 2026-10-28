@@ -131,8 +131,8 @@ def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
     calls: list = []
     band = grounding_mod.find_band(ARRIVAL_LINE)
     assert band is not None
-    box = _grid_box_for(grounding_mod.scale_band(band, 2),
-                        grounding_mod.png_size_of(SCAN_PNG_2X))
+    box = _grid_box_for(band,
+                        grounding_mod.png_size_of(SCAN_PNG))
 
     def fake_respond(instructions, input_items, **kwargs):
         calls.append(1)
@@ -148,7 +148,7 @@ def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
     payload = event["payload"]
     assert payload["bbox"] == box
     assert payload["line_text"] == ARRIVAL_LINE
-    assert payload["png"] == "baltic_quote_Q-1187-B@2x.png"
+    assert payload["png"] == "baltic_quote_Q-1187-B.png"
     assert payload["model"] == "muse-spark-1.3-test"
     assert payload["response_id"] == "resp-ground-1"
     assert payload["seconds"] == 1.2
@@ -163,7 +163,7 @@ def test_grounding_call_writes_line_located(tmp_path, monkeypatch):
     assert len(images) == 1
     assert images[0]["image_url"].startswith("data:image/png;base64,")
     sent_png = base64.b64decode(images[0]["image_url"].split(",", 1)[1])
-    assert sent_png == SCAN_PNG_2X.read_bytes()
+    assert sent_png == SCAN_PNG.read_bytes()
     assert ARRIVAL_LINE in texts[0]
     assert "0-1000" in texts[0]
     assert seen["kwargs"]["call_type"] == "ground"
