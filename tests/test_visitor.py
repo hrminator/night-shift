@@ -31,7 +31,7 @@ QUESTION = "Can Sjosalen receive the van Wed Nov 11 08:00-12:00?"
 def _record():
     check_names = ["baltic_arrival_committed", "original_quote_still_valid",
                    "nordtrykk_can_make_nov10", "vestland_can_deliver_oslo",
-                   "files_say_venue_accepts_delivery", "can_ask_now"]
+                   "files_say_venue_accepts_delivery", "can_ask_supplier_or_venue_now"]
     events = [
         {"id": 1, "job_id": "rec00000001", "seq": 1, "virtual_time": "21:30",
          "kind": "handoff",
@@ -279,3 +279,23 @@ def test_spend_math_uses_spark_prices():
     assert spend_mod.cost_usd(1_000_000, 0, 0) == 1.25
     assert spend_mod.cost_usd(1_000_000, 1_000_000, 0) == 0.15
     assert spend_mod.cost_usd(0, 0, 1_000_000) == 4.25
+
+
+def test_old_check_name_renders_with_new_name():
+    """Stored can_ask_now events render as can_ask_supplier_or_venue_now."""
+    event = {"id": 1, "job_id": "rec-old", "seq": 1,
+             "virtual_time": "00:41", "kind": "check",
+             "payload": {"name": "can_ask_now", "result": "fail",
+                         "evidence": [], "note": "no reply in time"},
+             "created_at": "2026-10-27T12:02:00+00:00"}
+    assert main_mod.display_check_name("can_ask_now") == \
+        "can_ask_supplier_or_venue_now"
+    assert main_mod.display_check_name(
+        "can_ask_supplier_or_venue_now") == "can_ask_supplier_or_venue_now"
+    for html in (main_mod._replay_timeline([event]),
+                 main_mod._decision_section([event]),
+                 main_mod.render_morning_page("Job rec-old", [event])):
+        assert "can_ask_supplier_or_venue_now" in html
+        assert "can_ask_now" not in html
+    assert "can_ask_supplier_or_venue_now" in main_mod._summarize(
+        "check", event["payload"])

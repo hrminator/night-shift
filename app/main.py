@@ -136,6 +136,17 @@ def render_evidence(record: dict) -> str:
     )
 
 
+#: Display alias for evidence checks: stored events keep the old name
+#: (existing jobs, including the recorded hero job, are never rewritten),
+#: while pages show the new name for both old and new events.
+CHECK_DISPLAY_NAMES = {"can_ask_now": "can_ask_supplier_or_venue_now"}
+
+
+def display_check_name(name: object) -> str:
+    """Name shown on pages for one evidence check."""
+    return CHECK_DISPLAY_NAMES.get(str(name), str(name))
+
+
 #: Where the front door points for the written results.
 RESULTS_URL = "https://github.com/hrminator/night-shift#results"
 
@@ -211,7 +222,7 @@ def _replay_timeline(events: list) -> str:
             mark = "pass" if payload.get("result") == "pass" else "FAIL"
             parts.append(
                 f"<li><b>{vt}</b> — check "
-                f"{esc(str(payload.get('name', '?')))}: <b>{mark}</b> — "
+                f"{esc(display_check_name(payload.get('name', '?')))}: <b>{mark}</b> — "
                 f"{esc(str(payload.get('note', '')))}</li>"
             )
         elif kind == "decision":
@@ -316,7 +327,7 @@ def _decision_section(events: list) -> str:
     claims = {e["id"]: e for e in events if e["kind"] == "claim"}
     if not checks and not decisions:
         return ""
-    items = "".join(f"<li>{esc(str((c['payload'] or {}).get('name', '?')))}: {esc(str((c['payload'] or {}).get('result', '?')))} — {esc(str((c['payload'] or {}).get('note', '')))}</li>" for c in checks)
+    items = "".join(f"<li>{esc(display_check_name((c['payload'] or {}).get('name', '?')))}: {esc(str((c['payload'] or {}).get('result', '?')))} — {esc(str((c['payload'] or {}).get('note', '')))}</li>" for c in checks)
     blocks = ""
     for d in decisions:
         p = d["payload"] or {}
@@ -343,7 +354,7 @@ def _summarize(kind: str, payload: dict) -> str:
     if kind == "owner_answer":
         return f"Owner answered: {payload.get('choice', '?')} (source: owner)."
     if kind == "check":
-        return f"check {payload.get('name', '?')}: {payload.get('result', '?')} — {str(payload.get('note', ''))[:200]}"
+        return f"check {display_check_name(payload.get('name', '?'))}: {payload.get('result', '?')} — {str(payload.get('note', ''))[:200]}"
     if kind == "gateway_check":
         mark = "pass" if payload.get("passed") else "FAIL"
         return f"gateway {payload.get('check', '?')}: {mark}"
@@ -589,6 +600,18 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
     effects = [e for e in events if e["kind"] == "effect"]
     drafts = [e for e in events if e["kind"] == "draft"]
     checks = [e for e in events if e["kind"] == "gateway_check"]
+    evidence = [e for e in events if e["kind"] == "check"]
+    evidence_rows = "".join(
+        "<li>"
+        f"{esc(display_check_name((c['payload'] or {}).get('name', '?')))}: "
+        f"{esc(str((c['payload'] or {}).get('result', '?')))} — "
+        f"{esc(str((c['payload'] or {}).get('note', '')))}"
+        "</li>"
+        for c in evidence
+    )
+    evidence_section = (
+        f"<h2>Evidence checks</h2><ol>{evidence_rows}</ol>" if evidence else ""
+    )
     if effects:
         label = (
             "Vestland slot held until 09:00 · Done: comparison, hold, "
@@ -629,6 +652,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
         f"<h2>Drafts awaiting your OK on the exact text</h2>{cards}"
         f"<h2>Outbox (Simulated delivery)</h2>{_outbox_section(events)}"
         f"<h2>How it decided (gateway checks)</h2><ol>{check_rows}</ol>"
+        f"{evidence_section}"
         '<p><a href="/">Back to Night Shift</a></p></body></html>'
     )
 

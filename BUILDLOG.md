@@ -2,6 +2,11 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt F3 part 1: check-6 rename
+
+- Sixth named check renamed `can_ask_now` -> `can_ask_supplier_or_venue_now` in `app/runner.py` (CHECK_NAMES, run_check tool schema enum, CHECK_DEFINITIONS), `tests/test_visitor.py`, and `docs/instructions.md` (regenerated with `scripts/dump_instructions.py`; sync test green). `cases/` and README carry no literal mention of the old name, so nothing to change there; `prompts/*.txt` and past BUILDLOG lines are driving records and stay as written.
+- Stored event logs never rewritten: `data/runs/` and `results/` exports keep the old name. `app/main.py` gains one display alias (CHECK_DISPLAY_NAMES + display_check_name) so the front door, the job page and the morning page (new Evidence checks section) show the new name for old and new events. New test: an old-name event renders with the new name. Suite: 158 passed.
+
 ## Tue Oct 27
 
 - 10:12 Repo created and pushed (public, hrminator/night-shift). Muse Code 1.4.13 installed; Contributor mode off via MUSE_CONTRIBUTOR_MODE=0; foreign skill root disabled. Model: muse-spark-1.3.
