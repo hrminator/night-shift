@@ -261,3 +261,83 @@ Part 2 — one fresh hero + one fresh contrast from 21:30 (muse-spark-1.3, mediu
 - W1_timely_answer: PASS — done, hold H-2041; notified once at 22:30, the reassess repeat refused as same_fact, then a genuinely different contact question allowed via ref. $0.2241, 155.5 s wall.
 - necessity_must_wake: PASS — notified 00:38, waiting_for_owner. $0.1643, 137.0 s wall.
 - Part 4 direct pilot, 12x1 (`results/20261027T134105Z`, concurrency 2): first pass scored 10 of 12; W1+W2 errored on transport (WinError 10054, ~$0.03 each, harness-isolated). Retried once (`results/20261027T135332Z`): both done/PASS. Combined direct totals: must-wake 4/4, needless wakes 1/4 (alternatives_no_wake, notified 22:30), duplicates got through 2 runs (no one-question rule on this arm), complete jobs 4/4, refused attempts 3 vs executed effects 3, $2.1184 total, 1397.4 model-s, harness wall 883.3 s vs 1674.5 s episode sum. Concurrency 2 saved ~658 s (~11 min) on the 12-episode run and ~1038 s (~17 min) across all of step B's runs versus sequential.
+## Wed Oct 28 — prompt S1a: the real screen, static states first (parts 1-6)
+
+The product's own pages adopt the comps/v2 look, static states first (motion
+in S1b). View layer only: the night, gateway, resume, scorer and event
+schema are untouched, except a process-wide lock around store schema init
+(the pre-existing DROP/CREATE TRIGGER race fails reliably once a background
+resume and progress polls run concurrently; behavior unchanged).
+
+- Part 1: shared chrome. static/night.css (tokens on :root, night + paper
+  themes, 19,576 bytes) and static/night.js (approval flip, #hash deep
+  links, 1,764 bytes); app/pages.py (shell, header + provenance chip, clock
+  + timeline, status sentence, supplier strip, footer with the three-tag
+  legend and scenario line). Chip model/date and the cost line come from
+  data/recorded_costs.json and the job's own events, never template text.
+- Part 2: State A on `/`. app/states.py renders the recorded replay: feed
+  with reads collapsed under "Read N sources", the 22:30 verdict with the
+  model's reason, the 00:38 paper sheet (quoted line underlined, caption
+  "Line Muse Spark quoted", never a box), the CODE diff, the six checks as
+  the runner's own plain-language questions with the model's notes, the
+  decision record, the CODE deadline line, "Skip to 00:47".
+  `?state=night|question|morning` selects one state; default shows all.
+- Part 3: State B on `/` and `/jobs/{id}` while a question is open. First
+  phone viewport holds header, clock, the question word for word in
+  Newsreader 28, both answer buttons with the model's own options, then
+  "Change one fact instead"; Why-now/checked/if-yes+no and the strip sit
+  collapsed below the buttons. No status sentence in State B: the note's
+  question is the status (see deviations). Taps post to /visitor/answer
+  exactly as before; job pages keep status, events, audit and scan rows.
+- Part 4: State C on /jobs/{id}/morning. app/morning.py: greeting from the
+  job's own effect, HOLD LAPSES chip, strip, thermal receipt under the
+  strip in the left column (larger, mark 1), approval letters exactly as
+  F4a counts (v·hash, editable textarea, button flips to "Your OK doesn't
+  cover this version" on edit and back on undo, approved collapsing to an
+  outbox row with SIMULATED DELIVERY), For-you notes, Done,
+  Couldn't-verify, What-was-saved, collapsed How-it-decided, resume panel
+  with the job's own token numbers plus the matched replay sentence, cost
+  line, gateway facts on tap. No-hold mornings read "No hold. The slot
+  went at 02:00. Here's what's left." Recorded mornings stay read-only.
+- Part 5: live steps. POST /visitor/answer now copies synchronously, then
+  resumes in a background thread under the same cap + 2-slot semaphore and
+  redirects to GET /visitor/answer/{id}, which polls every 2 s showing the
+  real logged steps with elapsed seconds (no spinner; the running step is
+  the loading state; chip LIVE · YOUR COPY #id). /visitor/night/{id} uses
+  the same renderer (app/live.py). Cap/slot refusals serve the recorded
+  morning with the one-line notice and the chip back on RECORDED.
+- Part 6: acceptance. tests/test_s1a_accept.py (module-scoped uvicorn on
+  8123 over a seeded temp DATA_DIR): no horizontal scroll at 360/390/430,
+  centered max-1200 column without scroll at 1440, question + both buttons
+  inside 390x844 in State B (measured boxes), approve flip end to end
+  (edit/flip/undo/approve/outbox row), HTML+CSS+JS under 100 KB per state.
+  scripts/shot_s1a.py shoots docs/screens/s1a/ (below) and asserts zero
+  overflow. Suite: 279 passed.
+
+Page weights (HTML + night.css 19,576 + night.js 1,764, before fonts):
+State A 12,200 + 21,340 = 33,540 bytes; State B 7,019 + 21,340 = 28,359;
+State C 19,215 + 21,340 = 40,555. All under 100 KB.
+
+Screenshots in docs/screens/s1a/: night-390x844.png,
+night-390x844-fold.png, night-1440x900.png, question-390x844.png,
+question-390x844-fold.png, question-1440x900.png, morning-390x844.png,
+morning-390x844-fold.png, morning-1440x900.png (morning shots are a seeded
+live copy with working approve buttons).
+
+Deviations from the comps or rules, and why:
+- State B drops the shared status sentence (comps show it): it repeats the
+  question verbatim and pushes the second button out of 390x844. Part 3's
+  viewport list (header, clock, question, buttons, change-action) wins.
+- Check titles come from runner.CHECK_DEFINITIONS (digit-free per F4a),
+  not the comps' hand-written questions; code stays the source of truth.
+- "Needs you: N approvals" keeps the colon (contract tests) instead of
+  the comp's middot; section headings are h2 (test contract) styled as
+  labels; Earlier-versions keeps a bare <details> (test contract).
+- What-I-checked splits at semicolons (5 items on the hero) rather than
+  the comp's comma/semicolon mix (6); no words changed either way.
+- night.js does not scroll ?state anchors into view: the server renders
+  one state at the top, and scrolling skipped the header in screenshots.
+- The prompt's "prompt-s0b-comps-premium.txt" is prompts/prompt-s0b-comps.txt
+  in the repo; its amendments 1-10 were followed from that file.
+- "One clean column at 1440" was read as a centered max-1200 wrap with no
+  horizontal scroll; desktop keeps the comp's two-column grid inside it.

@@ -310,7 +310,7 @@ def checks_html(events: list, meta: str = "00:39–00:46",
         f"<span class=\"check-title\">"
         f"{esc(check_title(_payload(e).get('name', '?')))}</span>"
         f"{_check_mark(str(_payload(e).get('result', 'fail')))}</div>"
-        f"<p class=\"note\">{esc(str(_payload(e).get('note', '')))}</p>"
+        f"<p class=\"check-note\">{esc(str(_payload(e).get('note', '')))}</p>"
         "<div class=\"check-foot\">"
         f"<span class=\"hint\">"
         f"{esc(display_check_name(_payload(e).get('name', '?')))}</span>"
@@ -354,11 +354,12 @@ def deadline_html(events: list) -> str:
     latest = clock_mod.fmt(clock_mod.latest_safe_notification())
     due = clock_mod.fmt(clock_mod.answer_deadline())
     cutoff = clock_mod.fmt(clock_mod.cutoff())
-    question = question_of(events)
+    checkpoints = [e for e in events if e.get("kind") == "checkpoint"]
+    notified = checkpoints[-1] if checkpoints else question_of(events)
     woke = ""
-    if question is not None:
+    if notified is not None:
         woke = (f" · woke you "
-                f"{esc(str(question.get('virtual_time', '?')))}")
+                f"{esc(str(notified.get('virtual_time', '?')))}")
     return (
         f"<p class=\"deadline\">{pages_mod.ICONS['clock']}"
         f"<span>Latest safe time to wake you {latest}{woke} · answer by "
@@ -475,3 +476,12 @@ def strip_fold_html(rows: list[tuple[str, str, str]]) -> str:
         f"<div class=\"tagrow\">{pages_mod.tag('code')}</div></div>"
         "</details>"
     )
+
+
+def beat_time(events: list, kind: str, default: str) -> str:
+    """One beat's virtual time from its own event, else the default."""
+    found = [e for e in events if e.get("kind") == kind]
+    stamp = str(found[-1].get("virtual_time", "")) if found else ""
+    if len(stamp) == 5 and stamp[2] == ":":
+        return stamp
+    return default

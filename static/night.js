@@ -41,28 +41,10 @@
     if (el.tagName === "DETAILS" && !el.open) el.open = true;
   }
 
-  function scrollToState() {
-    var state = "";
-    try {
-      state = new URLSearchParams(window.location.search).get("state") || "";
-    } catch (e) { state = ""; }
-    if (state !== "question" && state !== "morning" && state !== "night") return;
-    var anchor = document.getElementById("state-" + state);
-    if (!anchor) return;
-    var reduce = false;
-    try {
-      reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    } catch (e) { reduce = false; }
-    try {
-      anchor.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
-    } catch (e) { /* older browsers: leave the server-rendered position */ }
-  }
-
   function init() {
     var letters = document.querySelectorAll(".letter[data-draft]");
     for (var i = 0; i < letters.length; i++) wireLetter(letters[i]);
     openHashTarget();
-    scrollToState();
   }
 
   if (document.readyState === "loading") {

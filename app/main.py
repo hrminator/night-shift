@@ -348,6 +348,8 @@ def index(state: str = "") -> str:
         f"{states_mod.skip_html()}</section>"
     )
     strip_rows = states_mod.strip_rows_for(events)
+    beat = states_mod.beat_time(events, "revised_quote", "00:38")
+    notified_at = states_mod.beat_time(events, "checkpoint", "00:47")
     if state == "night":
         verdict = states_mod.verdict_2230(events)
         if verdict is not None:
@@ -356,20 +358,15 @@ def index(state: str = "") -> str:
             status_text = ("Overnight replay: one job, 21:30 to the"
                            " question.")
         inst = (pages_mod.clock_block(
-            "00:38", event_tag="SCRIPTED TEST EVENT")
+            beat, event_tag="SCRIPTED TEST EVENT")
             + pages_mod.status_para(status_text) + strip)
         detail = night_detail + cost
         top = pages_mod.header_row(chip) + recline
         body_class = ""
     elif state == "question":
-        if question is not None:
-            status_text = str(
-                (question.get("payload") or {}).get("question", ""))
-        else:
-            status_text = ("Overnight replay: one job, 21:30 to the"
-                           " question.")
-        inst = (pages_mod.clock_block("00:47", amber_dot=True)
-                + pages_mod.status_para(status_text))
+        # No status sentence: the note's question is the status, and
+        # both buttons must clear the first phone viewport.
+        inst = pages_mod.clock_block(notified_at, amber_dot=True)
         detail = (note
                   + states_mod.strip_fold_html(strip_rows)
                   + recline + cost)
@@ -382,7 +379,7 @@ def index(state: str = "") -> str:
         else:
             status_text = ("Overnight replay: one job, 21:30 to the"
                            " question.")
-        inst = (pages_mod.clock_block("00:47", amber_dot=True)
+        inst = (pages_mod.clock_block(notified_at, amber_dot=True)
                 + pages_mod.status_para(status_text) + strip)
         detail = night_detail + note + cost
         top = pages_mod.header_row(chip) + recline
@@ -675,10 +672,8 @@ def job_page(job_id: str):
         note = states_mod.question_note(
             question, f"/jobs/{esc(job_id)}/answer", ownerline)
         asked_at = str(question.get("virtual_time", "00:47"))
-        inst = (pages_mod.clock_block(asked_at, amber_dot=True)
-                + pages_mod.status_para(
-                    str((question.get("payload") or {}).get(
-                        "question", ""))))
+        # No status sentence here either: the note below carries it.
+        inst = pages_mod.clock_block(asked_at, amber_dot=True)
         detail = (note + states_mod.strip_fold_html(strip_rows)
                   + statusline + events_fold + audit + scan)
         body_class = "state-b"
