@@ -2,6 +2,11 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt X1 part 5: contract tests with a fake respond
+
+- New tests/test_night_b.py (6 tests): the control creates a fresh contrast job from 21:30 (hold H-2041 in reassess, no question, no `copied_from_recorded`, no reasoning items in any model input; progress/morning/raw pages render; spend ledger rows exist; slots released); the override diff is exactly one added line in venue_confirmation.md with the brief untouched; cap-0 and busy-slot POSTs serve the recorded Night B with the existing one-line notices and create no jobs; RECORDED_JOB_B pinning wins; and the Part 4 verbatim check (Night B job page: same policy hash, different fixture hash vs a hero copy).
+- Bug found by the tests: inside `eval_world.patched`, decision_facts.json is re-serialized in memory, so its bytes differ cosmetically from the file and identical worlds hashed differently. `fixture_set_hash` now canonicalizes JSON fixtures (sorted keys) before hashing; the harness's model inputs are untouched.
+
 ## Wed Oct 28 — prompt X1 part 4: the audit view
 
 - Every job page shows an Audit section from its `provenance` event: policy SHA-256, model id, effort, fixture-set SHA-256, and for Night B jobs the changed line with `venue_confirmation.md`. Jobs predating the view say so in one line. Policy = read + reassess + resume instruction text (fixtures travel in input messages, so Night A and B share it). New tests/test_night_b_audit.py (4 tests): same policy hash, different fixture hash, hero copy carries hero provenance.

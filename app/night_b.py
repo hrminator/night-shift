@@ -141,6 +141,22 @@ def policy_hash(arm: str = "supervision") -> str:
     return hashlib.sha256(policy_text(arm).encode("utf-8")).hexdigest()
 
 
+def _canonical_text(name: str, text: str) -> str:
+    """One fixture text in hash-canonical form (JSON re-serialized).
+
+    The eval override mechanism re-serializes decision_facts.json in
+    memory, so its bytes differ cosmetically from the file; canonical
+    JSON keeps identical worlds hashing identically.
+    """
+    if name.endswith(".json"):
+        try:
+            return json.dumps(json.loads(text), ensure_ascii=False,
+                              sort_keys=True)
+        except ValueError:
+            return text
+    return text
+
+
 def fixture_set_hash(variant: str,
                      revised_pdf_bytes: bytes | None = None) -> str:
     """SHA-256 over the fixture set as one night variant loads it.
@@ -154,7 +170,8 @@ def fixture_set_hash(variant: str,
     revised = (revised_pdf_bytes if revised_pdf_bytes is not None
                else _runner.REVISED_PDF.read_bytes())
     canonical = {
-        "texts": fixture_texts(variant),
+        "texts": {name: _canonical_text(name, text)
+                  for name, text in fixture_texts(variant).items()},
         "pdfs": {
             "baltic_quote_original.pdf": hashlib.sha256(
                 original).hexdigest(),
