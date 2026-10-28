@@ -29,6 +29,8 @@ Added Wed Oct 28 (`uv add`): pywebpush 2.5.0 (MPL-2.0) with py-vapid 1.9.6 (MPL-
 
 (List every font, icon and image with its source and license as it is added. None yet.)
 
+Added Wed Oct 28 (S0 design comps, loaded from the Google Fonts CDN with `display=swap`, not vendored): Newsreader (OFL) for the question note, quote sheet, greeting and draft letters; Geist (OFL) for the UI; Geist Mono (OFL) for the clock, times, ids, hashes, tags and receipt. Grain is an inline SVG feTurbulence data URI written for this project.
+
 ## Fixtures
 
 All fixtures are fictional and were written for this project. The businesses, suppliers, venue, quotes, portal records and people do not exist. Any resemblance is unintended; names were checked against public registers before use.

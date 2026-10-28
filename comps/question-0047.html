@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Night Shift · comp · the question at 00:47</title>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+:root{
+  --night-0:#070A14;--night-1:#0E1322;--night-2:#161C2E;
+  --paper-0:#F2ECE1;--paper-1:#FBF8F2;--thermal:#ECEAE6;
+  --ink-1:#ECE8E1;--ink-2:#A3A9B6;--ink-3:#646B7D;
+  --paper-ink-1:#1F1B16;--paper-ink-2:#5E574C;
+  --hair:rgba(255,255,255,.08);
+  --lamp:#F2B24C;--lamp-deep:#8A5208;--lamp-ink:#1A1306;
+  --refuse:#E0806E;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--night-0);color:var(--ink-1);font:400 16px/1.5 Geist,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.grain{position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.03;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+.col{max-width:560px;margin:0 auto;padding:20px 20px 64px}
+.wmrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.wm{font-weight:600;font-size:17px;letter-spacing:-.01em}
+.chip{font:500 11px/1 "Geist Mono",ui-monospace,SFMono-Regular,monospace;letter-spacing:.08em;border:1px solid var(--hair);border-radius:999px;padding:7px 12px;color:var(--ink-2);white-space:nowrap}
+.promise{margin:12px 0 0;font-size:16px}
+.quiet{margin:8px 0 0;font-size:15px;color:var(--ink-3)}
+.clockblock{margin:24px 0 0}
+.clock{font:500 64px/1 "Geist Mono",ui-monospace,SFMono-Regular,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tl{position:relative;height:44px;margin:16px 0 0}
+.tl-line{position:absolute;left:0;right:0;top:20px;height:2px;background:rgba(163,169,182,.35)}
+.tl-ends{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;font:400 11px/1 "Geist Mono",ui-monospace,monospace;color:var(--ink-3)}
+.tick{position:absolute;top:16px;width:2px;height:10px;background:var(--ink-3)}
+.tick em{position:absolute;top:14px;left:50%;transform:translateX(-50%);font:400 11px/1 "Geist Mono",ui-monospace,monospace;font-style:normal;color:var(--ink-2);white-space:nowrap}
+.tick em.up{top:-20px}
+.dot{position:absolute;top:17px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:var(--ink-1)}
+.job{margin:16px 0 0;font-size:15px;color:var(--ink-2)}
+.strip{margin:16px 0 0;background:var(--night-1);border:1px solid var(--hair);border-radius:14px;padding:8px 20px}
+.srow{display:flex;align-items:baseline;gap:12px;padding:10px 0;border-bottom:1px solid var(--hair)}
+.srow:last-of-type{border-bottom:none}
+.srole{font-size:16px}
+.sname{display:block;font-size:15px;color:var(--ink-3)}
+.sstat{margin-left:auto;text-align:right;font-size:15px;color:var(--ink-2);white-space:nowrap}
+.striptag{padding:8px 0 12px}
+section{margin:32px 0 0}
+.lab{font:600 12px/1.4 Geist,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin:0 0 12px}
+.tag{font:500 11px/1 "Geist Mono",ui-monospace,SFMono-Regular,monospace;letter-spacing:.08em;border:1px solid var(--hair);border-radius:999px;padding:6px 10px;color:var(--ink-2);white-space:nowrap}
+.banner{display:flex;align-items:center;gap:10px;background:var(--night-1);border:1px solid var(--hair);border-radius:999px;padding:12px 20px;font-size:15px}
+.banner .lampdot{width:8px;height:8px;border-radius:50%;background:var(--lamp);flex:none}
+.note{background:var(--night-2);border:1px solid var(--hair);border-top:6px solid var(--paper-1);border-radius:14px;padding:20px;margin-top:16px}
+.note .ask{margin:0 0 8px;font-size:15px;color:var(--ink-2)}
+.note h2{margin:0;font:500 28px/1.3 Newsreader,Georgia,serif;letter-spacing:-.01em}
+.note h3{font:600 12px/1.4 Geist,system-ui,sans-serif;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);margin:20px 0 8px}
+.note p{margin:0 0 8px}
+.note p:last-child{margin-bottom:0}
+.note ul{margin:0;padding-left:20px}
+.note li{margin:0 0 6px;font-size:16px}
+.note li:last-child{margin-bottom:0}
+.tagrow{margin-top:10px}
+.note .tagrow{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.ownerline{margin:20px 0 0;font-size:15px;color:var(--ink-2)}
+.btn{display:block;width:100%;margin:12px 0 0;padding:15px 20px;border-radius:999px;font:600 16px/1.3 Geist,system-ui,sans-serif;cursor:pointer}
+.btn.fill{background:var(--lamp);color:var(--lamp-ink);border:none}
+.btn.ghost{background:transparent;color:var(--ink-1);border:1px solid var(--ink-3)}
+.change{display:block;text-align:center;margin:16px 0 0;font-size:15px;color:var(--ink-2)}
+.check{background:var(--night-1);border:1px solid var(--hair);border-radius:14px;padding:20px;margin:0 0 12px}
+.check-top{display:flex;align-items:baseline;gap:12px}
+.check-top .mono{font:400 15px/1.4 "Geist Mono",ui-monospace,monospace;overflow-wrap:anywhere}
+.yn{margin-left:auto;font-size:16px;white-space:nowrap}
+.yn.ok{color:var(--ink-1)}
+.yn.no{color:var(--ink-2)}
+.check .q{margin:10px 0 0;font-size:15px;color:var(--ink-2)}
+.check .note{margin:8px 0 0;font-size:16px}
+.check .tagrow{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.decision{background:var(--night-1);border:1px solid var(--hair);border-radius:14px;padding:20px}
+.decision .because{margin:0 0 8px;font-size:16px}
+.quote{font:italic 400 17px/1.5 Newsreader,Georgia,serif}
+.decision .tagrow{margin-top:10px}
+.sheet{background:var(--paper-1);color:var(--paper-ink-1);border-radius:4px;padding:24px 24px 20px;transform:rotate(-1deg);box-shadow:0 18px 44px rgba(0,0,0,.55);font:400 17px/1.65 Newsreader,Georgia,serif}
+.sheet .firm{font:500 15px/1.4 Newsreader,Georgia,serif;letter-spacing:.06em;margin:0 0 8px}
+.sheet h3{margin:0 0 12px;font:500 17px/1.4 Newsreader,Georgia,serif}
+.sheet p{margin:0}
+.sheet .gap{height:14px}
+.sheet .quoted{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+.sheetcap{margin:12px 0 0;font-size:15px;color:var(--ink-2)}
+.resume{background:var(--night-1);border:1px solid var(--hair);border-radius:14px;padding:20px;margin-top:24px}
+.resume p{margin:0 0 10px}
+.resume p:last-child{margin-bottom:0}
+.resume .tokens{font:400 15px/1.6 "Geist Mono",ui-monospace,monospace}
+.resume .tagrow{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.measured{margin:16px 0 0;font-size:15px;color:var(--ink-2)}
+.links{margin:16px 0 0;font-size:15px;color:var(--ink-2)}
+.links a{color:var(--ink-1)}
+footer{margin:40px 0 0;border-top:1px solid var(--hair);padding-top:20px}
+.legend{list-style:none;margin:0 0 16px;padding:0}
+.legend li{margin:0 0 12px;font-size:15px;color:var(--ink-2)}
+.legend li:last-child{margin-bottom:0}
+.scenario{font-size:15px;color:var(--ink-3)}
+a{color:inherit}
+</style>
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+<div class="col">
+
+<header>
+  <div class="wmrow"><span class="wm">Night Shift</span><span class="chip">RECORDED · 2026-10-27 · MUSE-SPARK-1.3</span></div>
+  <p class="promise">Works your job through the night. Built to wake you only when it must.</p>
+  <p class="quiet">Built for nights like this one. Also fits: a venue booking that expires, a carrier cutoff, a quote that changes overnight. Only this one is built.</p>
+  <div class="clockblock">
+    <div class="clock">00:47</div>
+    <div class="tl" role="img" aria-label="Night timeline from 21:30 to 09:30, now at 00:47">
+      <div class="tl-ends"><span>21:30</span><span>09:30</span></div>
+      <div class="tl-line"></div>
+      <span class="tick" style="left:8.33%"><em>22:30</em></span>
+      <span class="tick" style="left:42.78%"><em>00:38</em></span>
+      <span class="tick" style="left:44.03%"><em class="up">00:47</em></span>
+      <span class="tick" style="left:54.17%"><em>02:00</em></span>
+      <span class="tick" style="left:79.17%"><em>07:00</em></span>
+      <span class="dot" style="left:44.03%"></span>
+    </div>
+  </div>
+  <p class="job">100 tote bags · Bergen customer day, Thu Nov 12 · budget NOK 3,500</p>
+  <div class="strip">
+    <div class="srow"><div><span class="srole">the Oslo printer</span><span class="sname">Nordtrykk AS</span></div><span class="sstat">Too slow</span></div>
+    <div class="srow"><div><span class="srole">the guaranteed van</span><span class="sname">Vestland Tekstil</span></div><span class="sstat">Van to the venue only</span></div>
+    <div class="srow"><div><span class="srole">the cheap one</span><span class="sname">Baltic Print OÜ</span></div><span class="sstat">Arrival unverified</span></div>
+    <div class="striptag"><span class="tag">CODE</span></div>
+  </div>
+</header>
+
+<main>
+  <section aria-label="Question">
+    <div class="banner"><span class="lampdot" aria-hidden="true"></span><span>Night Shift · 1 question · answer by 01:50</span></div>
+    <div class="note">
+      <p class="ask">Muse Spark asks</p>
+      <h2>Can Sjosalen, Sjogaten 5, 5003 Bergen receive the 100 tote bags in the Wed Nov 11 08:00-12:00 van window?</h2>
+      <div class="tagrow"><span class="tag">MUSE SPARK</span></div>
+      <h3>Why now</h3>
+      <p>Vestland hold requests close at 02:00 – waiting until 07:00 would lose the last verified on-time route; need your fact by 01:50 to hold in time</p>
+      <div class="tagrow"><span class="tag">MUSE SPARK</span></div>
+      <h3>What I checked</h3>
+      <ul>
+        <li>Baltic Q-1187-B is dispatch-only by 10 Nov (no arrival)</li>
+        <li>Q-1187 replaced</li>
+        <li>Nordtrykk 10 working days cannot make Nov 10</li>
+        <li>Vestland Oslo freight full, Bergen van guaranteed</li>
+        <li>venue confirms Thu Nov 12 only</li>
+        <li>studio contact/file verified</li>
+      </ul>
+      <div class="tagrow"><span class="tag">MUSE SPARK</span></div>
+      <h3>If yes</h3>
+      <p>I will submit the one zero-cost non-binding Vestland hold ending 09:00 for Sjøsalen Wed Nov 11 08:00-12:00 and prepare the 07:00 comparison.</p>
+      <div class="tagrow"><span class="tag">MUSE SPARK</span></div>
+      <h3>If no, or no answer by 01:50</h3>
+      <p>I will not place the hold and will prepare the 07:00 comparison showing no verified on-time route remains.</p>
+      <div class="tagrow"><span class="tag">MUSE SPARK</span></div>
+      <p class="ownerline">You&rsquo;re the owner. Your answer runs live on your own copy of this night.</p>
+      <button class="btn fill" type="button">Yes - Sjosalen can receive Wed 08-12</button>
+      <button class="btn ghost" type="button">No - cannot receive then</button>
+      <a class="change" href="#">Change one fact instead</a>
+    </div>
+  </section>
+
+  <section aria-label="How it decided">
+    <p class="lab">How it decided</p>
+    <div class="check"><div class="check-top"><span class="mono">baltic_arrival_committed</span><span class="yn no">No</span></div><p class="q">Does any source still commit to Baltic arrival now?</p><p class="note">Q-1187-B only states warehouse dispatch by 10 Nov, no arrival commitment; shipping terms says transit estimates not guaranteed</p><div class="tagrow"><span class="tag">CODE</span><span class="tag">MUSE SPARK</span></div></div>
+    <div class="check"><div class="check-top"><span class="mono">original_quote_still_valid</span><span class="yn no">No</span></div><p class="q">Is the original Baltic quote Q-1187 still valid?</p><p class="note">Q-1187-B explicitly replaces Q-1187, so original no longer valid</p><div class="tagrow"><span class="tag">CODE</span><span class="tag">MUSE SPARK</span></div></div>
+    <div class="check"><div class="check-top"><span class="mono">nordtrykk_can_make_nov10</span><span class="yn no">No</span></div><p class="q">Can Nordtrykk deliver by Nov 10 given 10 working days?</p><p class="note">10 working days from Nov 3 cannot meet Tue Nov 10 16:00 Oslo deadline</p><div class="tagrow"><span class="tag">CODE</span><span class="tag">MUSE SPARK</span></div></div>
+    <div class="check"><div class="check-top"><span class="mono">vestland_can_deliver_oslo</span><span class="yn no">No</span></div><p class="q">Can Vestland deliver to Oslo on this run?</p><p class="note">Portal v1 Oslo freight for Nov 6 run is full</p><div class="tagrow"><span class="tag">CODE</span><span class="tag">MUSE SPARK</span></div></div>
+    <div class="check"><div class="check-top"><span class="mono">files_say_venue_accepts_delivery</span><span class="yn no">No</span></div><p class="q">Do the studio files say the venue accepts Wed 08-12 delivery?</p><p class="note">Sjosalen confirmation covers Thu Nov 12 event only, says nothing about Wed Nov 11 08-12 delivery acceptance</p><div class="tagrow"><span class="tag">CODE</span><span class="tag">MUSE SPARK</span></div></div>
+    <div class="check"><div class="check-top"><span class="mono">can_ask_supplier_or_venue_now</span><span class="yn ok">✓</span></div><p class="q">Can Baltic or the venue be asked now with a reply before 02:00?</p><p class="note">At 00:41 before 01:30 latest notification, owner reply can arrive by 01:50 before 02:00 portal cutoff</p><div class="tagrow"><span class="tag">CODE</span><span class="tag">MUSE SPARK</span></div></div>
+    <div class="decision">
+      <p class="because">Wake, because …</p>
+      <p class="quote">Q-1187-B replaces Q-1187 with dispatch-only by 10 Nov so no Baltic verified arrival; Nordtrykk cannot make Nov 10; Vestland Oslo full. Last verified on-time route is Vestland Bergen van Wed Nov 11 08-12 guaranteed, but hold needs recipient-can-receive which no file verifies. Owner-only fact missing and 02:00 cutoff would be lost by 07:00.</p>
+      <div class="tagrow"><span class="tag">MUSE SPARK</span></div>
+    </div>
+  </section>
+
+  <section aria-label="The revised quote">
+    <p class="lab">The line it quoted · Q-1187-B</p>
+    <div class="sheet">
+      <p class="firm">Baltic Print OÜ (fictional)</p>
+      <h3>Quote Q-1187-B — 100 tote bags with your logo</h3>
+      <p>This quote replaces quote Q-1187.</p>
+      <div class="gap"></div>
+      <p>Price: NOK 18 per bag<br>Freight: NOK 350<br>Total: NOK 2,150</p>
+      <div class="gap"></div>
+      <p class="quoted">Delivery: Goods will leave our warehouse by 10 November.</p>
+      <div class="gap"></div>
+      <p>Contact: quotes@baltic-print.example.com (fictional)</p>
+    </div>
+    <p class="sheetcap">Line Muse Spark quoted <span class="tag">MUSE SPARK</span></p>
+    <div class="resume">
+      <p class="lab">The resume · 01:05</p>
+      <p>The night waited 18 minutes for the answer (00:47 → 01:05). It picked up its own reasoning; documents not re-sent (2 PDFs pruned at resume).</p>
+      <p class="tokens">Billed input tokens: 2,106 vs 6,349 in the reference run. Usage as reported by the API.</p>
+      <div class="tagrow"><span class="tag">CODE</span><span class="tag">MUSE SPARK</span></div>
+    </div>
+    <p class="measured">Measured: this night cost $0.26; 50% of input tokens served from cache. <span class="tag">CODE</span></p>
+    <p class="links"><a href="/evidence">Evidence</a> · <a href="https://github.com/hrminator/night-shift#results">Results in the README</a> · <a href="https://github.com/hrminator/night-shift/blob/main/data/runs/job-6c7c7c742513.json">This run&rsquo;s raw event log as JSON</a></p>
+  </section>
+</main>
+
+<footer>
+  <p class="lab">Where each line comes from</p>
+  <ul class="legend">
+    <li><span class="tag">MUSE SPARK</span> — the model wrote or read this, quoted word for word. It also marks the API&rsquo;s own usage numbers.</li>
+    <li><span class="tag">CODE</span> — code calculated or rendered it; it was not judged. This includes the strikethrough diff.</li>
+    <li><span class="tag">SIMULATED</span> — marks the fictional portal and mail.</li>
+  </ul>
+  <p class="scenario">Fictional studio and suppliers · real Muse Spark calls · night compressed.</p>
+</footer>
+
+</div>
+</body>
+</html>
