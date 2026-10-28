@@ -89,6 +89,11 @@ CREATE INDEX IF NOT EXISTS idx_push_subscriptions_dead
 
 _thread_data_dir = threading.local()
 
+#: Serializes schema init: two threads running the DROP/CREATE TRIGGER pair
+#: (or the owner_job ALTER) concurrently collide, which live progress polls
+#: plus a background resume hit reliably.
+_init_lock = threading.Lock()
+
 
 def set_thread_data_dir(path: Path | str) -> None:
     """Pin this thread's database directory (eval concurrency)."""
@@ -145,7 +150,9 @@ def _ensure_owner_job_column(conn: sqlite3.Connection) -> None:
 
 
 def _ensure_init(conn: sqlite3.Connection) -> None:
-    conn.executescript(SCHEMA)
+    with _init_lock:
+        conn.executescript(SCHEMA)
+        _ensure_owner_job_column(conn)
 
 
 def create_job(

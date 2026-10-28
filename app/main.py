@@ -1078,117 +1078,21 @@ def visitor_night_progress(job_id: str):
     Polls every 2 s while the night runs; every row shown was already in
     the event log, with elapsed seconds. Ends on the copy's morning page.
     """
-    from app import night_b as night_b_mod
-    from app import store as store_mod
-
-    esc = html.escape
-    job = store_mod.get_job(job_id)
-    if job is None:
-        error = _NIGHT_B_ERRORS.get(job_id)
-        if error is not None:
-            return (
-                "<!doctype html><html><head><title>Night B failed"
-                "</title></head>"
-                f"<body>{FRONT_CSS}<h1>Night B · Job {esc(job_id)}</h1>"
-                f"<p>The night failed to start: {esc(error)}</p>"
-                '<p><a href="/">Back to Night Shift</a></p></body></html>'
-            )
-        return (
-            "<!doctype html><html><head><title>Night B starting</title>"
-            '<meta http-equiv="refresh" content="1"></head>'
-            f"<body>{FRONT_CSS}<h1>Night B · Job {esc(job_id)}</h1>"
-            "<p>Starting the night from 21:30…</p>"
-            '<p><a href="/">Back to Night Shift</a></p></body></html>'
-        )
-    events = store_mod.list_events(job_id)
-    elapsed = _night_b_elapsed(events)
-    rows = "".join(
-        f"<li><b>{esc(str(e['virtual_time']))}</b>"
-        f" (+{elapsed.get(int(e['id']), 0)}s) — "
-        f"{esc(_summarize(e['kind'], e['payload'] or {}))}</li>"
-        for e in events
-    )
-    status = str(job.get("status", "?"))
-    morning_url = f"/jobs/{esc(job_id)}/morning"
-    raw_url = f"/jobs/{esc(job_id)}/events"
-    if status in night_b_mod.TERMINAL_STATUSES:
-        head = ('<meta http-equiv="refresh" content="0;url='
-                f'{morning_url}">')
-        state = (
-            f"<p>Night complete: {esc(status)}."
-            f' <a href="{morning_url}">Morning page</a> ·'
-            f' <a href="{raw_url}">Raw event log</a></p>'
-        )
-    else:
-        head = '<meta http-equiv="refresh" content="2">'
-        state = ("<p>The night is running, compressed. Each step below"
-                 " appeared when it was logged.</p>")
-    return (
-        "<!doctype html><html><head><title>Night B live</title>"
-        f"{head}</head>"
-        f"<body>{FRONT_CSS}<h1>Night B · Job {esc(job_id)}</h1>"
-        f"<p>Status: {esc(status)}</p>"
-        f"{state}"
-        f"<ol>{rows}</ol>"
-        f'<p><a href="{raw_url}">Raw event log</a> ·'
-        ' <a href="/">Back to Night Shift</a></p></body></html>'
-    )
-
+    from app import live as live_mod
+    return live_mod.night_progress_page(job_id)
 
 @app.post("/visitor/answer")
 async def visitor_answer(request: Request):
     """Answer as the owner: copy the recorded run and resume it live."""
-    import urllib.parse
-    import uuid
+    from app import live as live_mod
+    return await live_mod.post_answer(request)
 
-    from app import replay as replay_mod
-    from app import runner as runner_mod
-    from app import spend as spend_mod
-    from app import store as store_mod
 
-    resolved = replay_mod.resolve_recorded_job()
-    if resolved is None:
-        return HTMLResponse("<h1>No recorded run yet</h1>", status_code=404)
-    body = (await request.body()).decode("utf-8", "replace")
-    form = urllib.parse.parse_qs(body)
-    choice = form.get("choice", [""])[0]
-    if not choice:
-        return HTMLResponse("<h1>Pick one of the two answers</h1>",
-                            status_code=400)
-    total, cap = spend_mod.spend_status()
-    if total >= cap:
-        return _recorded_morning(
-            f"Live resume unavailable (daily spend cap of ${cap:.2f} "
-            "reached; showing the recorded morning page).")
-    owner = uuid.uuid4().hex[:12]
-    slot = spend_mod.acquire_visitor_slot(owner)
-    if slot is None:
-        return _recorded_morning(
-            "Live resume unavailable (2 live resumes already running; "
-            "showing the recorded morning page).")
-    try:
-        try:
-            new_id = replay_mod.copy_job_for_visitor(
-                resolved["record"], choice)
-        except ValueError as exc:
-            return HTMLResponse(f"<h1>Cannot resume</h1><p>{exc}</p>",
-                                status_code=400)
-        run_lock = f"job:{new_id}:run"
-        if not store_mod.acquire_lock(run_lock, owner, ttl_seconds=900):
-            return _recorded_morning(
-                "Live resume unavailable (2 live resumes already running; "
-                "showing the recorded morning page).")
-        try:
-            runner_mod.resume_job(
-                new_id,
-                respond_fn=_spend_wrapping_respond(new_id,
-                                                 spend_mod.today_utc()))
-        finally:
-            store_mod.release_lock(run_lock, owner)
-    finally:
-        spend_mod.release_visitor_slot(slot, owner)
-    return RedirectResponse(url=f"/jobs/{new_id}/morning", status_code=303)
-
+@app.get("/visitor/answer/{job_id}", response_class=HTMLResponse)
+def visitor_answer_progress(job_id: str):
+    """One visitor copy resuming: real steps as they are logged."""
+    from app import live as live_mod
+    return live_mod.answer_progress_page(job_id)
 
 def _owner_token_ok(request: Request) -> bool:
     """The owner-phone token rule: header or ?token=, never echoed."""
