@@ -342,40 +342,65 @@ def night_b_comparison_paragraph() -> str:
 
 
 @app.get("/", response_class=HTMLResponse)
-def index() -> str:
-    """The one product screen: replay of the recorded hero run."""
+def index(state: str = "") -> str:
+    """The one product screen: replay of the recorded hero run.
+
+    `?state=night|question|morning` deep links select one state; the
+    default (and direct calls) render the full page.
+    """
+    from app import pages as pages_mod
     from app import replay as replay_mod
 
     resolved = replay_mod.resolve_recorded_job()
     if resolved is None:
-        return (
-            "<!doctype html><html><head><title>Night Shift</title></head>"
-            f"<body>{FRONT_CSS}<h1>Night Shift</h1>"
-            "<p>No recorded run yet.</p></body></html>"
-        )
+        body = (pages_mod.header_row("")
+                + "<h1>Night Shift</h1><p>No recorded run yet.</p>")
+        return pages_mod.shell("Night Shift", "night", body)
     record = resolved["record"]
     events = replay_mod.replay_events(record)
+    full_events = list(record.get("events") or [])
+    model = pages_mod.model_for_events(full_events)
+    chip = pages_mod.chip_recorded(resolved["date"], model)
     question = next(
         (e for e in reversed(events) if e.get("kind") == "question"), None
     )
+    if question is not None:
+        status_text = str(
+            (question.get("payload") or {}).get("question", ""))
+    else:
+        status_text = "Overnight replay: one job, 21:30 to the question."
     card = _visitor_question_card(question) if question is not None else ""
-    return (
-        "<!doctype html><html><head><title>Night Shift</title></head>"
-        f"<body>{FRONT_CSS}<h1>Night Shift</h1>"
-        f"<p class=\"label\">Real muse-spark-1.3 calls recorded on "
-        f"{html.escape(resolved['date'])}. Supplier system and mail "
-        "simulated.</p>"
-        f"{recorded_cost_line(resolved['job_id'])}"
-        f"<h2>Overnight replay: one job, 21:30 to the question</h2>"
+    state = (state or "").strip().lower()
+    inst = (pages_mod.clock_block("00:47", amber_dot=True)
+            + pages_mod.status_para(status_text)
+            + pages_mod.supplier_strip(_default_strip_rows()))
+    detail = (
+        "<h2>Overnight replay: one job, 21:30 to the question</h2>"
         f"{_replay_timeline(events)}"
         f"{scan_grounding_section(events)}"
         f"{card}"
         f"{_decision_section(events)}"
-        f"<p><a href=\"{RESULTS_URL}\">Results in the README</a> · "
-        '<a href="/evidence">Source evidence: a real muse-spark-1.3 '
-        "result</a></p>"
-        "</body></html>"
+        f"{recorded_cost_line(resolved['job_id'])}"
     )
+    _ = state
+    raw_url = ("https://github.com/hrminator/night-shift/blob/main/data/runs"
+               f"/job-{resolved['job_id']}.json")
+    body = (pages_mod.header_row(chip)
+            + pages_mod.recorded_line(resolved["date"], model)
+            + '<div class="grid"><div class="inst">'
+            + inst + '</div><div class="detail">' + detail + "</div></div>"
+            + pages_mod.footer(raw_url, RESULTS_URL))
+    return pages_mod.shell("Night Shift", "night", body)
+
+
+def _default_strip_rows() -> list[tuple[str, str, str]]:
+    """Supplier strip rows before the per-state derivation (Part 2)."""
+    return [
+        ("the Oslo printer", "Nordtrykk AS", "Too slow"),
+        ("the guaranteed van", "Vestland Tekstil",
+         "Van to the venue only"),
+        ("the cheap one", "Baltic Print OÜ", "Arrival unverified"),
+    ]
 
 
 @app.get("/evidence", response_class=HTMLResponse)
