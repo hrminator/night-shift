@@ -396,8 +396,8 @@
     if (cur.name === "dawn" && cur.el) {
       var band = cur.el.querySelector(".fdawn-band");
       var veil = cur.el.querySelector(".fdawn-veil");
-      var rise = Math.min(1, local / 9000);
-      var settle = Math.max(0, Math.min(1, (local - 9000) / 1500));
+      var rise = Math.min(1, local / 7000);
+      var settle = Math.max(0, Math.min(1, (local - 7000) / 1500));
       if (band) band.style.transform = "translateY(" + (101 - 101 * rise)
         + "%)";
       if (veil) veil.style.opacity = settle.toFixed(3);
@@ -432,6 +432,7 @@
         window.cancelAnimationFrame(raf);
       }
       if (iv) clearInterval(iv);
+      vnow = 0;
     }
     vnow += ms;
     return renderAt(vnow);

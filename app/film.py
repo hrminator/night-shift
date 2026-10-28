@@ -57,12 +57,13 @@ def _revised_vt(events: list) -> str:
 
 
 def _beat_section(name: str, clock: str, kicker: str, theme: str,
-                  inner: str) -> str:
+                  inner: str, background: str = "") -> str:
     esc = html.escape
     return (
         f'<section class="fbeat" data-beat="{esc(name)}"'
         f' data-clock="{esc(clock)}" data-kicker="{esc(kicker)}"'
-        f' data-theme="{esc(theme)}"><div class="fc">{inner}</div>'
+        f' data-theme="{esc(theme)}">{background}'
+        f'<div class="fc">{inner}</div>'
         "</section>"
     )
 
@@ -302,12 +303,14 @@ def render_film_page(resolved: dict, frame: str = "",
         "morning": lambda: _morning_inner(full_events),
     }
     shown = [want] if want else names
+    backgrounds = {"dawn": _dawn_inner()}
     sections = "".join(
         _beat_section(
             name, _beat_clock(events, name),
             _beat_kicker(name, _beat_clock(events, name), events),
             "paper" if name == MORNING_BEAT else "night",
-            builders[name]())
+            "" if name == DAWN_BEAT else builders[name](),
+            backgrounds.get(name, ""))
         for name in shown
     )
     model = pages_mod.model_for_events(full_events)
