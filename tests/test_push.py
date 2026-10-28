@@ -204,7 +204,8 @@ def test_visitor_copy_never_pushes(tmp_path, monkeypatch):
         record, "Bergen: the venue can receive it")
     assert get_job(new_id)["owner_job"] == 0
     kinds = [e["kind"] for e in list_events(new_id)]
-    assert kinds == ["handoff", "question", "checkpoint", "owner_answer"]
+    assert kinds == ["handoff", "question", "checkpoint",
+                       "permission_parsed", "owner_answer"]
     assert calls == []
 
 

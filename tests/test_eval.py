@@ -186,6 +186,11 @@ def test_gateway_portal_error_is_retryable(tmp_path, monkeypatch):
     job_id = job["id"]
     append_event(job_id, "21:30", "handoff",
                  {"brief": "fixtures/brief.md", "source": "owner"})
+    append_event(job_id, "00:47", "question",
+                 {"question": "Can the venue receive Wed 08-12?",
+                  "why_now": "cutoff near", "what_checked": "sources",
+                  "if_yes": "hold", "if_no": "no hold",
+                  "options": ["yes", "No / not sure"]})
     answer = append_event(job_id, "01:05", "owner_answer",
                           {"choice": "yes", "source": "owner"})
     args = _hold_args(answer["id"])

@@ -53,6 +53,12 @@ def _seed(answer_vt: str = "01:05"):
     job_id = job["id"]
     append_event(job_id, "21:30", "handoff",
                  {"brief": "fixtures/brief.md", "source": "owner"})
+    append_event(job_id, "00:47", "question",
+                 {"question": "Can the venue receive Wed 08-12?",
+                  "why_now": "cutoff near", "what_checked": "sources",
+                  "if_yes": "hold", "if_no": "no hold",
+                  "options": ["Bergen: the venue can receive it",
+                              "No / not sure"]})
     answer = append_event(job_id, answer_vt, "owner_answer",
                           {"choice": "Bergen: the venue can receive it",
                            "source": "owner"})

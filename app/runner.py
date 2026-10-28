@@ -21,6 +21,7 @@ import re
 
 from app import clock
 from app import hold_schema as _hold_schema
+from app import permission as _permission
 from app.adapter import BASE_URL, api_key, respond
 from app.store import append_event, create_job, list_events, set_job_status
 
@@ -1535,6 +1536,7 @@ def run_job(variant: str = "hero", arm: str = "supervision", owner_job: bool = F
     append_event(job_id, VT_HANDOFF, "handoff",
                  {"brief": "fixtures/brief.md", "source": "owner",
                   "variant": variant, "arm": arm})
+    _permission.ensure_permission_record(job_id, VT_HANDOFF)
     scan_meta = upload_pdf(ORIGINAL_PDF)
     revised_meta = upload_pdf(REVISED_PDF)
     try:

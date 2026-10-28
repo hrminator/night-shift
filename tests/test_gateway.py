@@ -29,6 +29,13 @@ def _seed(brief_text: str | None = None):
 
 
 def _answer(job_id: str, virtual_time: str = "01:05"):
+    append_event(job_id, "00:47", "question",
+                 {"question": "Can Sjøsalen, Bergen receive the 100 tote bags"
+                              " Wed Nov 11 08:00-12:00?",
+                  "why_now": "cutoff 02:00", "what_checked": "all six checks",
+                  "if_yes": "one hold", "if_no": "no hold",
+                  "options": ["Bergen: the venue can receive it",
+                              "No / not sure"]})
     return append_event(job_id, virtual_time, "owner_answer",
                         {"choice": "Bergen: the venue can receive it",
                          "source": "owner"})

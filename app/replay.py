@@ -187,6 +187,8 @@ def copy_job_for_visitor(record: dict, choice: str,
         stored = append_event(new_id, event.get("virtual_time") or "00:47",
                               event.get("kind") or "note", payload)
         old_to_new[int(event.get("id", 0))] = int(stored["id"])
+    from app import permission as _permission
+    _permission.ensure_permission_record(new_id, "00:47")
     from app.store import list_events
     live_questions = [e for e in list_events(new_id)
                       if e["kind"] == "question"]

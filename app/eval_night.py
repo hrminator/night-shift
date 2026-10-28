@@ -13,6 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from app import eval_world
+from app import permission as _permission
 from app import runner
 from app.store import append_event, clear_thread_data_dir, create_job, init_db, list_events, set_job_status, set_thread_data_dir
 
@@ -63,6 +64,7 @@ def _run_case(case, arm, respond_fn, work_dir, out_path, upload_fn,
     if overrides.get("brief") == "no_permission":
         handoff["brief_text"] = eval_world.NO_PERMISSION_BRIEF
     append_event(job_id, runner.VT_HANDOFF, "handoff", handoff)
+    _permission.ensure_permission_record(job_id, runner.VT_HANDOFF)
 
     original_meta = upload_fn(runner.ORIGINAL_PDF)
     revised_meta = upload_fn(eval_world.revised_pdf_path(case, work_dir))

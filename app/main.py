@@ -834,7 +834,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
         f"{scan_grounding_section(events)}"
         f"<h2>Drafts awaiting your OK on the exact text</h2>{cards}"
         f"<h2>Outbox (Simulated delivery)</h2>{_outbox_section(events)}"
-        f"<h2>How it decided (gateway checks)</h2><ol>{check_rows}</ol>"
+        f"<h2>How it decided (gateway checks)</h2><details><summary>Gateway checks: {sum(1 for c in checks if (c.get('payload') or {}).get('passed'))} of {len(checks)} pass (tap to expand)</summary><ol>{check_rows}</ol></details>"
         f"{evidence_section}"
         '<p><a href="/">Back to Night Shift</a></p></body></html>'
     )

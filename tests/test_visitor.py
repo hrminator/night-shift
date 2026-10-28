@@ -162,12 +162,14 @@ def test_two_visitors_two_jobs_one_hold_each(tmp_path, monkeypatch):
     before = recorded.read_bytes()
     record = json.loads(before.decode("utf-8"))
 
+    # Both visitors answer yes: a "no" answer is refused by the gateway
+    # (sources check), so a no-answer copy would hold nothing.
     first = replay_mod.copy_job_for_visitor(record, OPTIONS[0])
-    second = replay_mod.copy_job_for_visitor(record, OPTIONS[1])
+    second = replay_mod.copy_job_for_visitor(record, OPTIONS[0])
     assert first != second
     assert recorded.read_bytes() == before
 
-    for job_id, choice in ((first, OPTIONS[0]), (second, OPTIONS[1])):
+    for job_id, choice in ((first, OPTIONS[0]), (second, OPTIONS[0])):
         kinds = [e["kind"] for e in list_events(job_id)]
         assert "checkpoint" in kinds
         assert "owner_answer" in kinds

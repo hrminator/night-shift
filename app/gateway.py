@@ -23,6 +23,7 @@ from pathlib import Path
 
 from app import clock
 from app import hold_schema as _hold_schema
+from app import permission as _permission
 from app import portal as portal_mod
 from app.store import append_event, list_events
 
@@ -159,12 +160,13 @@ def studio_contact_emails() -> list[str]:
     return emails
 
 
-def _check_permission(job_id: str, path: Path | None) -> tuple[bool, str, str]:
-    text, version = brief_text_of(job_id, path=path)
-    lowered = text.lower()
-    if "standing permission" in lowered and "vestland" in lowered:
-        return True, f"standing permission present (brief {version})", version
-    return False, "no standing permission in tonight's brief", version
+def _check_permission(job_id: str, submit_vt: str,
+                      path: Path | None) -> tuple[bool, str, str]:
+    record = _permission.ensure_permission_record(job_id, submit_vt, path)
+    version = str(record.get("version", "?"))
+    if not _permission.permission_allows(record):
+        return False, _permission.refusal_reason(record), version
+    return True, _permission.grant_detail(record), version
 
 
 def _check_target(args: dict) -> tuple[bool, str]:
@@ -178,7 +180,8 @@ def _check_target(args: dict) -> tuple[bool, str]:
             and "hold" not in action.lower():
         return (False, "action must be a capacity hold, not an order;"
                 f' expected {_hold_schema.HOLD_SHAPE["action"]}')
-    return True, "Vestland portal, action = capacity hold"
+    return True, ("target is Vestland Tekstil's order portal; action is a"
+                   " capacity hold, not an order")
 
 
 def _check_fields(args: dict) -> tuple[bool, str, dict]:
@@ -250,8 +253,9 @@ def _check_fields(args: dict) -> tuple[bool, str, dict]:
         return (False, "ordering contact must be the studio's ordering "
                 "contact from fixtures/studio.json;"
                 f' expected {_hold_schema.HOLD_SHAPE["ordering_contact"]}', {})
-    return True, "fields permitted; quantity 100; address on owner list", \
-        normalized
+    return True, (f"quantity is 100; address '{address}' is on the owner's"
+                   " list; window is Wed Nov 11 08:00-12:00; contact and"
+                   " print file match the studio file"), normalized
 
 
 def _check_terms(normalized: dict) -> tuple[bool, str]:
@@ -281,7 +285,8 @@ def _check_terms(normalized: dict) -> tuple[bool, str]:
     if minutes > 9 * 60:
         return (False, "hold must end at or before 09:00;"
                 f' expected {_hold_schema.HOLD_SHAPE["hold_ends"]}')
-    return True, "cost 0, non-binding, ends at or before 09:00"
+    return True, (f"hold costs {cost!r} (free), is non-binding, and ends"
+                   f" {ends} (at or before 09:00)")
 
 
 def _check_time(job_id: str, submit_vt: str,
@@ -316,6 +321,159 @@ def _normalize_source_key(key: str) -> str:
     return norm
 
 
+#: Day tokens of the van window, matched inside quotes and questions.
+DAY_TOKENS = ("wed", "nov 11", "november 11")
+
+#: Window tokens of the van window, matched inside quotes and questions.
+WINDOW_TOKENS = ("08", "8:00", "12:00")
+
+
+def _is_receiving_question(payload: dict) -> bool:
+    """True when a question asks about venue receipt in the van window."""
+    options = payload.get("options") or []
+    text = _fold(str(payload.get("question", "")) + " "
+                 + " ".join(str(option) for option in options))
+    return (("receiv" in text or "accept" in text)
+            and any(day in text for day in DAY_TOKENS)
+            and any(window in text for window in WINDOW_TOKENS))
+
+
+def _choice_verdict(choice: object) -> tuple[bool, str]:
+    """Whether one owner answer choice affirms receipt (yes/no/unclear)."""
+    norm = _fold(str(choice or "").strip())
+    if ("not sure" in norm or "cannot" in norm or "can't" in norm
+            or re.match(r"^no(\b|[-/])", norm)):
+        return False, "no"
+    if "yes" in norm or "can receive" in norm or norm.startswith("bergen"):
+        return True, "yes"
+    return False, "unclear"
+
+
+def _option_match(question: dict, choice: str) -> bool:
+    """True when the choice equals one of the question's options."""
+    options = (question.get("payload") or {}).get("options") or []
+    want = str(choice or "").strip().lower()
+    return any(isinstance(option, str)
+               and option.strip().lower() == want for option in options)
+
+
+def _check_recipient_answer(events: list[dict],
+                            answer_id: int) -> tuple[bool, str]:
+    """The answer must say yes to the receiving question."""
+    event = next((e for e in events
+                  if e["id"] == answer_id
+                  and e["kind"] == "owner_answer"), None)
+    if event is None:
+        return False, (f"'recipient can receive' cites event {answer_id},"
+                       " which is not the owner's answer")
+    choice = str((event["payload"] or {}).get("choice", ""))
+    at = event["virtual_time"]
+    questions = [e for e in events if e["kind"] == "question"]
+    receiving = [e for e in questions
+                 if _is_receiving_question(e["payload"] or {})]
+    if not receiving:
+        if questions:
+            asked = str((questions[-1]["payload"] or {}).get(
+                "question", "?"))[:80]
+            return False, (f"owner answered {choice!r} at {at}, but no"
+                           f" receiving question was asked (latest: {asked!r})")
+        return False, (f"owner answered {choice!r} at {at}, but no question"
+                       " was asked")
+    if not any(_option_match(asked, choice) for asked in receiving) and any(
+            _option_match(asked, choice) for asked in questions):
+        return False, (f"owner answered {choice!r} at {at} to a different"
+                       " question, not the receiving question")
+    affirms, label = _choice_verdict(choice)
+    if not affirms:
+        return False, (f"owner answered {label} ({choice!r} at {at}), not yes"
+                       " to the receiving question")
+    asked = str((receiving[-1]["payload"] or {}).get("question", ""))[:80]
+    return True, (f"owner answered yes to {asked!r} at {at}"
+                   f" (answer {answer_id})")
+
+
+def _venue_quote_accepts(quote: object) -> bool:
+    """True when a quote states receipt acceptance in the van window."""
+    text = _fold(str(quote or ""))
+    return (("receiv" in text or "accept" in text)
+            and any(day in text for day in DAY_TOKENS)
+            and any(window in text for window in WINDOW_TOKENS))
+
+
+def _check_recipient_claim(events: list[dict],
+                           claim_id: int) -> tuple[bool, str]:
+    """The claim must be a venue document quoting window acceptance."""
+    event = next((e for e in events
+                  if e["id"] == claim_id and e["kind"] == "claim"), None)
+    if event is None:
+        return False, (f"'recipient can receive' cites event {claim_id},"
+                       " which is not a recorded claim")
+    payload = event["payload"] or {}
+    source = str(payload.get("source", ""))
+    folded = _fold(source)
+    if "venue" not in folded and "sjosalen" not in folded:
+        return False, (f"'recipient can receive' cites claim {claim_id} from"
+                        f" {source!r}, not a venue document")
+    quote = str(payload.get("quote", ""))
+    if not _venue_quote_accepts(quote):
+        return False, (f"venue claim {claim_id} quotes only {quote[:100]!r}:"
+                       " no Wed 08:00-12:00 acceptance")
+    return True, (f"venue confirmation (claim {claim_id}) states receipt"
+                   f" {quote[:100]!r}")
+
+
+def _portal_version_in_use() -> int:
+    """The portal record version the hold's route facts come from."""
+    try:
+        record = json.loads(
+            (REPO_ROOT / "fixtures" / "vestland_portal.json").read_text(
+                encoding="utf-8"))
+        return int(record.get("version", 1))
+    except (OSError, ValueError, TypeError):
+        return 1
+
+
+def _portal_route_facts() -> dict:
+    """Short route/window facts from the portal record for log lines."""
+    try:
+        record = json.loads(
+            (REPO_ROOT / "fixtures" / "vestland_portal.json").read_text(
+                encoding="utf-8"))
+        van = (record.get("routes") or {}).get("bergen_van") or {}
+        destination = van.get("destination", "Bergen addresses")
+        window = van.get("window", "Wed Nov 11 08:00-12:00")
+        return {"route": f"Bergen van to {destination}",
+                "window": str(window)}
+    except (OSError, ValueError, AttributeError):
+        return {"route": "Bergen van",
+                "window": "Wed Nov 11 08:00-12:00"}
+
+
+def _check_portal_pointer(pointer: object, version: int,
+                          key: str) -> tuple[bool, str]:
+    """Route/window must cite the portal record version the hold uses."""
+    expected = f' expected {_hold_schema.HOLD_SHAPE["sources"]}'
+    if isinstance(pointer, dict):
+        if pointer.get("kind") != "portal" \
+                or pointer.get("version") != version:
+            return False, (f'"{key}" must cite the portal record version'
+                            f' v{version};{expected}')
+    elif isinstance(pointer, str):
+        lowered = pointer.lower()
+        if not (f"v{version}" in lowered
+                or (str(version) in lowered
+                    and ("vestland" in lowered or "portal" in lowered))):
+            return False, (f'"{key}" must cite the portal record version'
+                            f' v{version};{expected}')
+    else:
+        return False, (f'"{key}" must cite the portal record version'
+                        f' v{version};{expected}')
+    facts = _portal_route_facts()
+    if key == "route":
+        return True, f"route cites portal v{version} ({facts['route']})"
+    return True, f"window cites portal v{version} ({facts['window']})"
+
+
 def _check_sources(job_id: str, normalized: dict,
                    path: Path | None) -> tuple[bool, str]:
     sources = normalized.get("sources")
@@ -324,35 +482,40 @@ def _check_sources(job_id: str, normalized: dict,
                 f' expected {_hold_schema.HOLD_SHAPE["sources"]}')
     flat = {_normalize_source_key(str(key)): value
             for key, value in sources.items()}
-    answer_ids = {e["id"] for e in owner_answers(job_id, path=path)}
-    claim_by_id = {e["id"]: (e["payload"] or {}) for e in list_events(job_id, path=path) if e["kind"] == "claim"}
     recipient_source = flat.get("recipient_can_receive")
     if isinstance(recipient_source, str) \
             and recipient_source.strip().isdigit():
         recipient_source = int(recipient_source.strip())
-    if recipient_source in answer_ids:
-        pass
-    elif recipient_source in claim_by_id and "venue" in str(claim_by_id[recipient_source].get("source", "")).lower():
-        pass
-    else:
+    events = list_events(job_id, path=path)
+    if isinstance(recipient_source, bool) \
+            or not isinstance(recipient_source, int):
         return (False, "'recipient can receive' must cite the owner_answer"
-                f" event id; got {recipient_source!r};"
+                f" event id or a venue claim id; got {recipient_source!r};"
                 f' expected {_hold_schema.HOLD_SHAPE["sources"]}')
-    for key in ("route", "window"):
-        pointer = flat.get(key)
-        if not isinstance(pointer, str):
-            return (False, f'"{key}" must cite the portal record version;'
-                    f' expected {_hold_schema.HOLD_SHAPE["sources"]}')
-        lowered = pointer.lower()
-        if not ("v1" in lowered or ("1" in lowered and (
-                "vestland" in lowered or "portal" in lowered))):
-            return (False, f'"{key}" must cite the portal record version;'
-                    f' expected {_hold_schema.HOLD_SHAPE["sources"]}')
-    if recipient_source in answer_ids:
-        how = "owner answer"
+    target = next((e for e in events if e["id"] == recipient_source), None)
+    if target is not None and target["kind"] == "owner_answer":
+        ok, recipient_detail = _check_recipient_answer(events,
+                                                       recipient_source)
+    elif target is not None and target["kind"] == "claim":
+        ok, recipient_detail = _check_recipient_claim(events,
+                                                      recipient_source)
     else:
-        how = "authoritative venue claim"
-    return True, f"recipient cites {how}; route and window cite portal v1"
+        return (False, f"'recipient can receive' cites event"
+                f" {recipient_source}, which is neither the owner's answer"
+                " nor a recorded claim;"
+                f' expected {_hold_schema.HOLD_SHAPE["sources"]}')
+    if not ok:
+        return False, recipient_detail
+    version = _portal_version_in_use()
+    ok, route_detail = _check_portal_pointer(flat.get("route"), version,
+                                             "route")
+    if not ok:
+        return False, route_detail
+    ok, window_detail = _check_portal_pointer(flat.get("window"), version,
+                                              "window")
+    if not ok:
+        return False, window_detail
+    return True, f"{recipient_detail}; {route_detail}; {window_detail}"
 
 
 def _check_privacy(normalized: dict) -> tuple[bool, str]:
@@ -360,7 +523,7 @@ def _check_privacy(normalized: dict) -> tuple[bool, str]:
     leaked = [token for token in PRIVACY_FORBIDDEN if token in blob]
     if leaked:
         return False, f"payload leaks private material: {leaked}"
-    return True, "no budget, notes, or other suppliers' prices in payload"
+    return True, "payload carries no budget, notes, or other suppliers' prices"
 
 
 def check_submit_hold(
@@ -419,7 +582,8 @@ def check_submit_hold(
         append_event(job_id, submit_virtual_time, "gateway_check",
                      checks[-1], path=path)
 
-    ok, detail, brief_version = _check_permission(job_id, path)
+    ok, detail, brief_version = _check_permission(job_id, submit_virtual_time,
+                                                 path)
     if not ok:
         return refuse("permission", detail)
     accept("permission", detail)
@@ -839,3 +1003,4 @@ def pre_event_draft_lines(job_id: str,
                           path: Path | None = None) -> list[str]:
     """One line per pre-event draft for the resume follow-up message."""
     return pre_event_draft_lines_for(list_events(job_id, path=path))
+
