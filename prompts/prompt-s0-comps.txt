@@ -1,0 +1,227 @@
+Read AGENTS.md, SCENARIO.md, BUILDLOG.md, app/main.py (the front door route and its template), and export the recorded hero job (RECORDED_JOB) to JSON. Prompt S0: three static design comps. Begin every shell command with Set-Location C:\Users\herma\night-shift and set $env:UV_CACHE_DIR='C:\Users\herma\night-shift\.uv-cache'. Not sandboxed. Port 8123. Commit after each part, do not push, do not deploy, suite green. Copy this file into prompts/ and list it in prompts/README.md.
+
+Skill check first: invoke the /taste skill if it is available and say in the summary whether it loaded. The design rules below take precedence over it; taste only fills gaps they do not cover.
+
+What this is. Three static HTML pages, each a comp (a design mock) of one moment of the recorded hero night, filled with the real text from the recorded job's event log. No wiring, no motion, no JavaScript beyond what is needed to render static content. They exist so the owner can approve the look at 19:00 today; the approved screenshots become the reference for the real screen tomorrow. View layer only: no change to the night, the gateway, the resume or the event schema.
+
+Deliverables:
+  1. comps/night-0038.html: the night at 00:38 with the quote sheet (state A at the beat).
+  2. comps/question-0047.html: the bedside note at 00:47 (state B).
+  3. comps/morning-0700.html: the paper morning at 07:00 with the thermal receipt and the three draft letters (state C).
+  Each page: one HTML file with one inline CSS block; Google Fonts only (Newsreader, Geist, Geist Mono); all MUSE SPARK text copied word for word from the recorded job's events (the model's reason at 22:30, its six check notes, its decision record, its question, its drafts); the CODE and SIMULATED lines rendered from the same events. Where the recorded job has no text for an element, use the element's text from the spec below; never invent model words. Suppliers are named by role (the Oslo printer, the guaranteed van, the cheap one) with the current fictional name under the role in small type, so a later rename changes one line.
+  4. Playwright screenshots of each page at 390x844 and 1920x1080 into docs/screens/comps/ (six PNGs), committed. Serve the comps as static files under /comps/ from the app so they can be viewed on a phone from the deployed site (no auth; they contain nothing secret).
+  5. A BUILDLOG entry: page weight of each comp and the six screenshot paths.
+
+Design spec, in full. Follow it exactly; anything it does not decide is left plain, not decorated.
+
+### 3.1 Concept in one line
+
+**Night is a dark instrument; morning is a paper letter.** At night the page is a bedside instrument: a big clock, a few lines of evidence, and one amber light that comes on only when you are needed. At 07:00 a warm horizon band rises and the whole page turns into warm paper, like a letter left for you. That change has to be obvious on a phone in daylight after YouTube compression.
+
+**The identity is the three physical objects, not the typeface:**
+- **The quote** (Q-1187-B) is a sheet of paper: off-white, a soft drop shadow, rotated about 1°, with light grain. It lies on the dark night like a document on a desk.
+- **The receipt** is a thermal slip: narrow, mono, a torn or dashed top edge, slightly grey paper.
+- **The 00:47 question** is a note left on the bedside table: a small card with a paper edge and the question set in the serif.
+
+Everything else stays quiet so these three carry the look.
+
+**Recorded so nobody undoes it:**
+- **The replay is 20–25 seconds,** not v3's 60–90. A judge decides in about 10 seconds.
+- **Check 6 is renamed** from `can_ask_now` to `can_ask_supplier_or_venue_now` before the final recordings.
+- **"Simulated" is a provenance system,** not a disclaimer. Every line carries one tag: `MUSE SPARK`, `CODE` or `SIMULATED`.
+- **Spark's own question is shown word for word.** We don't polish the model's words.
+- **Every fictional name is checked and replaced with a coined one** in prompt F3 on Wed. That covers suppliers, the venue, the studio, people, contacts, email domains, phone numbers and the address. "Nordtrykk", "Vestland", "Sjøsalen" and "Baltic" are plausible or real Nordic names, so expect all four to change. In this plan, suppliers are called by role:
+  - **the Oslo printer**, which is too slow;
+  - **the guaranteed van**, in Bergen;
+  - **the cheap one**, in Tallinn.
+
+### 3.2 Tokens (on `:root`; dark for the night, paper for the morning)
+
+| Token | Value | Use |
+|---|---|---|
+| `--night-0` | `#070A14` | page background, 21:30 to 06:00 |
+| `--night-1` | `#0E1322` | cards and surfaces at night |
+| `--night-2` | `#161C2E` | raised cards at night |
+| `--horizon` | linear band `#0E1322 → #6B4A3A → #C98A45 → #F2ECE1` | the dawn band, rises 06:00–07:00 |
+| `--paper-0` | `#F2ECE1` | morning page background (warm paper) |
+| `--paper-1` | `#FBF8F2` | morning cards, the quote sheet |
+| `--thermal` | `#ECEAE6` | the receipt slip |
+| `--ink-1` | `#ECE8E1` | primary text at night |
+| `--ink-2` | `#A3A9B6` | secondary text at night |
+| `--ink-3` | `#646B7D` | tertiary text at night |
+| `--paper-ink-1` | `#1F1B16` | primary text on paper |
+| `--paper-ink-2` | `#5E574C` | secondary text on paper |
+| `--hair` | `rgba(255,255,255,.08)` night / `rgba(31,27,22,.12)` paper | dividers, tag outlines |
+| `--lamp` | `#F2B24C` | **the only accent** at night |
+| `--lamp-deep` | `#8A5208` | the same accent on paper (passes 4.5:1 on `--paper-0`) |
+| `--lamp-ink` | `#1A1306` | text on amber buttons |
+| `--refuse` | `#E0806E` night / `#A8432F` paper | gateway refusals only |
+| `--grain` | inline SVG noise at 3% opacity over every large flat area | stops banding after compression |
+
+- **Accent rule:** amber appears only where the owner is needed or something is live.
+  - There is no green anywhere.
+  - A passed check is a thin ✓ in the primary ink. A failed check is the word "No" in the secondary ink.
+- **No large radial glows.** Large areas stay flat, with grain on top. Gradients appear only in the horizon band, because smooth near-black gradients band badly in H.264.
+- **Fonts** (Google Fonts, `display=swap`, preloaded):
+  - **Newsreader** for the question note, the quote sheet, the greeting and the draft letters.
+  - **Geist** for the UI.
+  - **Geist Mono** for the clock, times, ids, hashes, tags and the receipt.
+  - The type stays plain on purpose, because the objects carry the identity.
+- **Type scale:**
+  - clock 64 mono 500 with tabular numbers;
+  - question 28 Newsreader 500;
+  - section labels 12 Geist 600, uppercase;
+  - body 16 Geist;
+  - quotes 17 Newsreader italic;
+  - tags 11 mono.
+  - Body text is never under 15px.
+- **Layout on the site:**
+  - 4px base grid;
+  - card padding 20px;
+  - corner radius 14px on cards, 999px on chips and buttons;
+  - side gutter 20px on a phone;
+  - on a desktop, one centred column of at most 560px.
+  - No device frame.
+
+### 3.3 The three states
+
+**Header, always visible:**
+- The "Night Shift" wordmark, with an amber dot only while something is live.
+- The provenance chip: `RECORDED · <date read from the run's own first event> · MUSE-SPARK-1.3`. After a tap it becomes `LIVE · YOUR COPY #a1b2`.
+- The promise line: *"Works your job through the night. Built to wake you only when it must."*
+- The clock block: a big time, plus a 2px timeline from 21:30 to 09:30 with ticks at 22:30, 00:38, 00:47, 02:00 and 07:00.
+- The job line.
+- A three-row supplier strip that updates in place. It names each supplier by role, with the coined name under it:
+  - the Oslo printer: *Too slow*
+  - the guaranteed van: *Van to the venue only*
+  - the cheap one: *On time, plan of record*, which becomes *Arrival unverified*
+- Under the promise, one quiet line: *"Built for nights like this one. Also fits: a venue booking that expires, a carrier cutoff, a quote that changes overnight. Only this one is built."*
+
+**State A: the replay, 21:30 to 00:47, about 25 seconds.**
+- **The feed.** Each row shows a mono time, the source and one quoted line, with its tag. The six reads at 22:30 collapse into "Read 6 sources", which opens on tap.
+- **22:30:** *"No need to wake you."*, plus the model's own reason, word for word.
+- **00:38 is the beat:**
+  - The clock pauses for 1.2 s and the `SCRIPTED TEST EVENT` tag appears.
+  - The quote sheet slides in as a paper object. If B1 passed, the line Spark quoted is boxed, with the caption "Muse Spark located the line it quoted".
+  - Under it is the two-line diff, tagged `CODE` because code renders it: ~~delivered to your address by 9 November~~ / **Goods will leave our warehouse by 10 November**.
+  - One caption: *"Same price. One verb changed. Muse Spark caught it from pixels."*
+  - The cheap one's row crossfades to *Arrival unverified*.
+- **The six checks.** They appear one at a time: the question, then "No" or ✓, then the model's own one-line reason.
+- **The decision record:** "Wake, because…", in the model's words.
+- **The deadline line,** tagged `CODE`: "Latest safe time to wake you 01:30 · woke you 00:47 · answer by 01:50 · slot closes 02:00".
+- **"Skip to 00:47"** stays pinned as a text link.
+
+**State B: the question at 00:47.**
+- The night dims a little. A compact banner drops in: `Night Shift · 1 question · answer by 01:50`.
+- After 600 ms it opens into **the bedside note**, a paper-edged card. It contains, in order:
+  1. "Muse Spark asks", then the question word for word in Newsreader 28.
+  2. "Why now", in two sentences.
+  3. "What I checked", as six short items.
+  4. "If yes" and "If no, or no answer by 01:50", one line each.
+  5. Two full-width buttons: a filled amber **The venue can receive it** and an outline **No / not sure**.
+- Above the buttons: *"You're the owner. Your answer runs live on your own copy of this night."*
+- Below the buttons, a quiet second action: **Change one fact instead** .
+
+**State C: the morning at 07:00.**
+- **The dawn.** The clock jumps to 07:00 and the horizon band rises from the bottom over 2.5 s. The page then settles on `--paper-0`. Nothing else moves at the same time.
+- **Greeting,** in Newsreader: *"Good morning. The guaranteed van's slot is held for you until 09:00."* Then the chip `HOLD LAPSES 09:00` in `--lamp-deep`.
+- **Four sections, in this order:**
+  - **Needs you:** three draft letters, the van order first.
+  - **Done:** each item with a ✓.
+  - **Couldn't verify:** the cheap one's arrival.
+  - **What was saved:** one sentence.
+- **Each draft is set as a letter on paper:**
+  - It shows the recipient, the subject, the body and a short version hash such as `v·3f9a`, with the button **Approve this exact text**.
+  - It is editable in place. Any edit turns the button into an outline reading **Your OK doesn't cover this version**, and undoing the edit restores it.
+  - Once approved, it collapses into an outbox row: "Order · 07:02 · SIMULATED DELIVERY".
+- **The thermal receipt** slides up. It is mono and narrow, carries the `SIMULATED` tag, and reads: "Hold confirmed until 09:00 · No purchase commitment · Owner review due 07:00".
+- **The "No / not sure" path** looks just as finished: *"No hold. The slot went at 02:00. Here's what's left."*
+
+**Below the fold, in every state: "How it decided".**
+- The full checks and the decision record.
+- The quote sheet at full width.
+- **The resume panel:**
+  - how long the night waited;
+  - then "picked up its own reasoning, documents not re-sent";
+  - the billed input tokens: 2,106 vs 6,349 in the reference run, and this run's own numbers on a live copy;
+  - tagged `MUSE SPARK`, with the note "usage as reported by the API".
+- One line: "Measured: this night cost $X; Y% of input tokens served from cache."
+- Links to /evidence, the README results and this run's raw event log as JSON.
+- A footer legend titled "Where each line comes from", which explains the three tags once.
+
+### 3.4 The two live actions
+
+**Answer the question.**
+- **The press:** the button scales to 0.98 for 120 ms, the phone vibrates for 12 ms where supported, and the amber fill sweeps across.
+- **Right away:**
+  - The chip becomes `LIVE · YOUR COPY #a1b2`, with a pulsing dot.
+  - One line appears: "Answer recorded 01:05. Your answer is a fact. The permission is from the 21:30 brief."
+- **Then the real steps,** streamed as they are logged, each with its real elapsed seconds:
+  1. "Resuming the saved night: own reasoning, documents not re-sent", with the billed tokens
+  2. "Checking the exact hold request against your permission", with the 8 gateway ✓ in one row
+  3. "Submitting to the van supplier's portal" (`SIMULATED`)
+  4. "Hold returned"
+  5. "100 × NOK 24 + NOK 400 van = NOK 2,800 (budget 3,500)", tagged `CODE`
+  6. "3 drafts updated"
+- **Then** the receipt slides up and the clock moves to dawn.
+
+**Change one fact (new, built Fri, cut at 18:00 if not green).**
+- **The control.** One control on the visitor's copy switches the venue's letter from "Can you deliver Wed 08–12?" to **"Deliveries accepted Wed 08–16"**.
+- **What it runs:**
+  - It starts a **fresh night** on a new copy with that one fixture changed.
+  - The night is compressed and streamed step by step, with its own job id and raw-log link.
+  - It reuses the existing contrast fixture and the existing visitor-copy path. There is no new decision logic.
+- **The line next to the control,** filled from results.json: *"In our final runs on this exact fixture it held without waking in k of n. When it is unsure it wakes you instead: that is the safe mistake. It never acts without a passing check."*
+- **Limits:** it counts against the same live spend cap and the 2-resume limit.
+
+**Rules for both:**
+- **There are no spinners.** The real step that is running is the loading state.
+- **If the spend cap is reached:** "Today's live budget is used. Showing the recorded answer instead." The chip returns to `RECORDED`. No apology.
+
+### 3.5 Motion, film mode, labels and DON'Ts
+
+**Motion.** Everything here is cheap.
+- **Clock:** digits change with an 80 ms opacity dip.
+- **Timeline dot:** moves with `translateX` over 300 ms.
+- **Feed rows:** fade in with a 6px rise over 220 ms, 350 ms apart.
+- **Checks:** 450 ms apart, with each result 250 ms after its question.
+- **Paper objects:** settle in with a 4px drop and a shadow that tightens over 300 ms.
+- **Dawn:** the horizon band and the paper surface take 2.5 s, with nothing else moving.
+- **Reduced motion:** with `prefers-reduced-motion`, everything appears at once.
+
+**Deep links:** `?state=night|question|morning` and `?speed=1|2|4` take judges and the camera straight to a state.
+
+**Film mode is a true 16:9 composition, not a phone column in a wide frame.**
+- `?film=1&frame=16x9` lays out each beat for 1920×1080:
+  - the quote sheet full-bleed at 00:38, with a slow push-in on the changed line;
+  - the six checks large across the frame;
+  - the clock as a corner overlay;
+  - the question note centred;
+  - the dawn across the whole frame;
+  - a lower-third band kept free for captions.
+- `?film=1&frame=9x16` does the same for the vertical cut.
+- Film mode hides the skip link and the cursor. It runs on fixed timing from a cue sheet: one JSON file of beat durations that matches the voice-over.
+- **Film mode is used only for the replayed beats.** The live answer beat is recorded in real time without film mode, with the job id and the raw-log URL visible. Any cut for length shows a small "time cut" marker.
+
+**Labels:**
+- `MUSE SPARK` means the model wrote or read this, quoted word for word. It also marks the API's own usage numbers.
+- `CODE` means code calculated or rendered it; it was not judged. This includes the strikethrough diff.
+- `SIMULATED` marks the fictional portal and mail.
+- All three tags look the same. None says "mock", "fake" or "sorry".
+- **The scenario line** appears as a lower-third over the 21:30 brief and in the footer: *"Fictional studio and suppliers · real Muse Spark calls · night compressed."*
+- **The box** appears only if B1 passed, captioned "Muse Spark located the line it quoted". Otherwise the quoted line is underlined and labelled "Line Muse Spark quoted". There is never a hand-placed box.
+
+**DON'Ts:**
+- No dashboards, KPI tiles, chat bubbles, typing dots or avatar.
+- No robot, sparkle, brain or wand icons, and no "AI" in the chrome.
+- No purple or blue gradient, glassmorphism, neon, particles or star fields. No large radial glows.
+- No emoji, no exclamation marks, and no "magic", "smart" or "powerful".
+- No spinners or skeleton loaders.
+- No drawn lock screen and no device frame.
+- No modals, toasts or autoplaying sound.
+- One accent colour only, and no green.
+- No light-mode toggle. The morning is paper by design.
+- No text under 15px, and no horizontal scroll at 360px.
+- No open visual decisions. Anything the comps don't show is decided at a review, not by the builder's defaults.
+
+End with a short summary: whether /taste loaded, the six screenshot paths, page weights, the commit list, and anything in the spec you could not follow and why.
