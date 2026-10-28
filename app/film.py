@@ -187,8 +187,9 @@ def _note_inner(events: list) -> str:
         return "<p class=\"fserif\">No question in this run.</p>"
     payload = _payload(question)
     options = "".join(
-        f"<p class=\"fopt\">{esc(str(option))}</p>"
-        for option in (payload.get("options") or [])
+        f"<button class=\"btn {'fill' if pos == 0 else 'ghost'}\""
+        f" type=\"button\" tabindex=\"-1\">{esc(str(option))}</button>"
+        for pos, option in enumerate(payload.get("options") or [])
     )
     return (
         "<div class=\"fnote\">"

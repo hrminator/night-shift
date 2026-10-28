@@ -185,9 +185,9 @@ details[open] .chev{transform:rotate(225deg)}
 .note details .foldbody{margin-top:8px}
 .btn{display:block;width:100%;min-height:48px;margin:12px 0 0;border-radius:999px;
   font:600 16px/1.3 Geist,system-ui,sans-serif;cursor:pointer;padding:12px 20px;overflow-wrap:break-word}
-.note .btn.fill{background:var(--lamp);color:var(--lamp-ink);border:none;
+.note .btn.fill,.fnote .btn.fill{background:var(--lamp);color:var(--lamp-ink);border:none;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 1px 2px rgba(26,19,6,.25)}
-.note .btn.ghost{background:transparent;color:var(--paper-ink-1);border:1px solid rgba(31,27,22,.12)}
+.note .btn.ghost,.fnote .btn.ghost{background:transparent;color:var(--paper-ink-1);border:1px solid rgba(31,27,22,.12)}
 .change{display:block;text-align:center;margin:16px 0 0;font-size:15px;color:var(--paper-ink-2)}
 .change summary{list-style:none;cursor:pointer}
 .change summary::-webkit-details-marker{display:none}
@@ -343,10 +343,10 @@ body.film .wrap{max-width:none;height:100vh;padding:0}
 .fsrc{margin:0;font:400 13px/1.5 "Geist Mono",ui-monospace,monospace;color:var(--fg-2)}
 .fquote{margin:4px 0 0;font:italic 400 20px/1.45 Newsreader,Georgia,serif;overflow-wrap:break-word}
 .fbeat[data-beat="sheet"] .fc{padding:0}
-.fsheet{border-radius:0;transform:none;height:calc(55vh - 64px);overflow:hidden;padding:32px 48px;font-size:26px;transform-origin:50% 72%}
+.fsheet{border-radius:0;transform:none;height:calc(55vh - 64px);overflow:hidden;padding:32px 96px;font-size:26px;transform-origin:50% 72%}
 .fsheet .firm{font-size:20px}
 .fsheet h3{font-size:30px}
-.fbeat[data-beat="sheet"] .sheetcap{margin:12px 48px 0}
+.fbeat[data-beat="sheet"] .sheetcap{margin:12px 96px 0}
 .fdiff s{display:block;font:400 28px/1.5 Newsreader,Georgia,serif;color:var(--fg-3);overflow-wrap:break-word}
 .fdiff strong{display:block;margin-top:12px;font:500 34px/1.4 Newsreader,Georgia,serif;overflow-wrap:break-word}
 .fchecks{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -358,7 +358,7 @@ body.film .wrap{max-width:none;height:100vh;padding:0}
 .fnote{max-width:940px;margin:0 auto;background:var(--paper-1);color:var(--paper-ink-1);border-radius:6px;padding:32px 40px;text-align:center}
 .fnote .fask{margin:0 0 8px;font-size:15px;color:var(--paper-ink-2)}
 .fnote h2{margin:0;font:500 46px/1.25 Newsreader,Georgia,serif;letter-spacing:-.01em;overflow-wrap:break-word}
-.fopt{margin:12px 0 0;font-size:20px;font-weight:500}
+
 .fans{margin:12px 0 0;font-size:15px;color:var(--paper-ink-2)}
 .fnote .tagrow{justify-content:center}
 .fdawn{position:absolute;inset:0;overflow:hidden}
@@ -368,6 +368,8 @@ body.film .wrap{max-width:none;height:100vh;padding:0}
 .fmorn .fcounts{margin:16px 0 0;font-size:20px}
 .fmorn .receipt{margin:0;flex:none}
 body.frame-9x16 .fc{padding:0 28px}
+body.frame-9x16 .fsheet{padding:32px 28px}
+body.frame-9x16 .fbeat[data-beat="sheet"] .sheetcap{margin:12px 28px 0}
 body.frame-9x16 .fgrid6{grid-template-columns:1fr}
 body.frame-9x16 .fchecks{grid-template-columns:1fr 1fr}
 body.frame-9x16 .fnote h2{font-size:40px}
