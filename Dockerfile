@@ -4,7 +4,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_CACHE_DIR=/tmp/uv-cache \
     DAILY_CAP_USD=5 \
-    RECORDED_JOB="6c7c7c742513"
+    RECORDED_JOB="6c7c7c742513" \
+    RECORDED_JOB_B="cde5841a68d2"
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
@@ -24,7 +25,8 @@ RUN uv sync --frozen --no-dev && chown -R app:app /app
 USER app
 
 # Front-door config: RECORDED_JOB pins the replayed export (empty = latest
-# hero run with a wake and a hold); DAILY_CAP_USD caps live-resume model
+# hero run with a wake and a hold); RECORDED_JOB_B pins the recorded Night B
+# (empty = latest contrast night); DAILY_CAP_USD caps live-resume model
 # spend per UTC day. RUN_TOKEN is a secret: set it with
 # `fly secrets set RUN_TOKEN=...`, never bake it into the image.
 EXPOSE 8080

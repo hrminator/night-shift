@@ -16,7 +16,7 @@
 
 The front door replays the recorded hero night up to the 00:47 question, then stops and hands you the owner's buttons. Your tap copies the saved job into a new live job with its own ids and outbox and resumes with real Muse Spark calls: the hold comes back from the simulated portal and the three drafts update. You approve one draft into the on-page outbox, and if you edit a word first the approval flips back to awaiting.
 
-"change one fact" is coming Fri Oct 30.
+"Change one fact instead", under the question's buttons, runs Night B live: the same night with one fixture line changed (the venue accepts Wednesday deliveries), fresh from 21:30 on a new copy, streaming each step as it is logged. When the spend cap is reached it shows the recorded Night B instead, labelled.
 
 ## One night, minute by minute
 
@@ -72,6 +72,8 @@ Cost vocabulary: every figure names its job or folder. The one recorded night 6c
 Final runs: 12 constructed situations × 2 arms × 3 repetitions on the frozen tag, planned for Sat Oct 31.
 
 Contrast runs so far: neither fresh contrast run counts as a correct quiet night. Run 37f34f71d9df placed its hold at 22:30 while the original quote still committed arrival, so under the scenario's own rule it is a premature hold, not a correct quiet night; run 36e41552448b woke at 00:47 asking about venue receipt though its own venue claim quoted the Wednesday delivery line.
+
+Night B ("change one fact", `results/20261028T205824Z/`, supervision necessity_no_wake x3): run `cde5841a68d2` read the evidence rule correctly at 22:30, then held H-2041 itself at 00:38 without waking (gateway 8/8) and is pinned as RECORDED_JOB_B. Runs `db62d30a4a7f` and `5be2c911b63b` held at 22:30 with no notification — premature holds under the scenario's own rule, both misreading Q-1187's date as dispatch. No run woke the owner. So on this exact fixture it held without waking in 1 of 3.
 
 ## What real owners said
 

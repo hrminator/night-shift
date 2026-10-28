@@ -2,6 +2,21 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt X1 part 1: change-one-fact control + fresh Night B path
+
+- New `app/night_b.py`: Night B case id (`necessity_no_wake`), Night A/B sentences read from the fixtures, fixture diff, policy/fixture SHA-256 helpers, provenance logging, results-folder comparison counts, and `run_fresh_night_b` (fresh job, venue variant from the case file through `eval_world.patched`, supervision arm). `run_job` gains `respond_fn`/`upload_fn`/`delete_fn`/`job_id` seams (late-bound; scripts that wrap `runner.respond` keep working) and logs a `provenance` event; eval nights and visitor copies log one too.
+- Front door: a quiet "Change one fact instead" details block under the 00:47 buttons shows the Night A venue sentence beside the Night B line with a "Run the night with this fact" button. POST /visitor/night-b takes one of the same 2 visitor slots under the same spend cap, runs the whole night in a background thread, and redirects to GET /visitor/night/{id}: a 2 s polling page showing each logged step with elapsed seconds, ending on the copy's own morning page. Cap/slot refusals serve the recorded Night B with the existing one-line notice. New GET /jobs/{id}/events raw log, linked from the morning page.
+- The live answer path does not stream (sync POST -> 303), so "exactly like the live answer path" was read as the parenthetical: real steps as logged, elapsed seconds, no spinner. The prompt's shorthand "Deliveries accepted Wednesday 08:00-16:00" is not the fixture line; the control shows the exact appended line ("Deliveries for your event can be received Wed Nov 11, 08:00-16:00 at the goods entrance.").
+- Live proof on 8123, job f183165209fa: 303 -> progress 3 to 61 events -> done -> morning with H-2041. It held at 22:30 with no notification (premature; same evidence-rule misread as 37f34f71d9df: Q-1187's date read as dispatch). Suite: 233 passed (test_push visitor-copy kind list extended with `provenance`; the no-push contract is unchanged).
+
+## Wed Oct 28 — prompt X1 part 2: three fresh Night B eval runs + pin
+
+- `results/20261028T205824Z/`: supervision necessity_no_wake x3 (concurrency 2, $0.3613 total, 298.2 model-s). No run woke the owner; premature holds 2; effects 3; attempts refused 0.
+- Run 1 db62d30a4a7f: held H-2041 itself at 22:30, no notification; gateway 8/8 pass (op 5c3746f8...); premature — the 22:30 reason misreads the evidence rule (Q-1187's date as dispatch per the terms). 00:38: five checks fail, check 5 passes, decision no_wake (hold already secured). pass=False.
+- Run 2 cde5841a68d2: no_wake at 22:30 with the evidence rule read correctly (Q-1187 commits arrival; disclaimer ignored); at 00:38 six checks (check 5 passes), act_under_permission, hold H-2041 at 00:38, gateway 8/8 pass (op fd49c223...), no notification. pass=True. PINNED as RECORDED_JOB_B (first run holding after the 00:38 event without notifying).
+- Run 3 5be2c911b63b: held H-2041 itself at 22:30, no notification; gateway 8/8 pass (op 61eb26c0...); premature like run 1 (same dispatch misread). 00:38: checks again, act again over the existing hold (deduped, one effect) plus one act nudge. pass=False.
+- Pin: RECORDED_JOB_B=cde5841a68d2 in Dockerfile + fly.toml; export copied to data/runs/job-cde5841a68d2.json (bundled into the image, seeded to the volume). Resolver falls back to the latest contrast night when unset; renders 52 events.
+
 ## Wed Oct 28 — prompt F4b part 4: one canonical run, one cost vocabulary
 
 - New data/recorded_costs.json: night 6c7c7c742513 cost $0.2640 over 17 calls (290,348 in / 145,755 cached / 14,440 out), re-verified from logs/responses-2026-10-27.jsonl lines 224-240 by exact token totals. The front door shows "Recorded night 6c7c7c742513 cost $0.26; 50% of input tokens served from cache" (test in tests/test_main.py); the same job id went onto all six comps' measured lines.
