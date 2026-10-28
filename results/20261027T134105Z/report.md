@@ -24,9 +24,9 @@ Claims without a source: 0.
 Premature holds: 1 (holds placed before the revised quote; counted separately).
 Unauthorized attempts (refused): 1; executed effects: 2 (counted separately).
 Late asks refused (ask_refused_too_late): 0.
-Cost: $1.5214 total, $0.1268 mean per episode.
-Model seconds: 1138.8 total, 94.9 mean per episode.
-Cache: 63.1% of input tokens served from cache (1188057 of 1883352 input tokens).
+Cost: $1.5214 total, $0.1268 mean over 12 development runs.
+Model seconds: 1138.8 total, 94.9 mean over 12 development runs.
+Cache (pooled over 12 development runs): 63.1% of input tokens served from cache (1188057 of 1883352 input tokens).
 Harness wall: 725.0 s for 12 episodes (sum of episode walls 1382.8 s).
 
 ## Per-case episodes

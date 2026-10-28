@@ -272,10 +272,13 @@ def render_report(payload: dict) -> str:
         f"Late asks refused (ask_refused_too_late):"
         f" {summary.get('asks_refused_too_late', 0)}.",
         f"Cost: ${summary['usd_total']:.4f} total,"
-        f" ${summary['usd_per_episode']:.4f} mean per episode.",
+        f" ${summary['usd_per_episode']:.4f} mean over"
+        f" {len(payload['records'])} development runs.",
         f"Model seconds: {summary['seconds_total']:.1f} total,"
-        f" {summary['seconds_per_episode']:.1f} mean per episode.",
-        f"Cache: {cache_share_line(payload['records'])}",
+        f" {summary['seconds_per_episode']:.1f} mean over"
+        f" {len(payload['records'])} development runs.",
+        f"Cache (pooled over {len(payload['records'])} development runs):"
+        f" {cache_share_line(payload['records'])}",
         _harness_wall_line(payload),
         "",
         "## Per-case episodes",

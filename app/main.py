@@ -173,6 +173,37 @@ FRONT_CSS = (
 )
 
 
+def recorded_costs_path() -> Path:
+    """Measured cost file shipped with the code (job id -> tokens)."""
+    return Path(__file__).resolve().parent.parent / "data" / "recorded_costs.json"
+
+
+def recorded_cost_for(job_id: str) -> dict | None:
+    """The recorded job's own measured cost, or None when unknown."""
+    try:
+        costs = json.loads(recorded_costs_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    entry = costs.get(str(job_id))
+    return entry if isinstance(entry, dict) else None
+
+
+def recorded_cost_line(job_id: str) -> str:
+    """One line: the recorded night's own cost and cache share, by job id."""
+    entry = recorded_cost_for(job_id)
+    if entry is None:
+        return ""
+    try:
+        usd = float(entry["usd"])
+        inputs = int(entry["input_tokens"])
+        cached = int(entry["cached_tokens"])
+    except (KeyError, TypeError, ValueError):
+        return ""
+    share = (100.0 * cached / inputs) if inputs else 0.0
+    return (f"<p>Recorded night {html.escape(job_id)} cost ${usd:.2f};"
+            f" {share:.0f}% of input tokens served from cache.</p>")
+
+
 def _live_respond_fn():
     if LIVE_RESPOND_FN is not None:
         return LIVE_RESPOND_FN
@@ -307,6 +338,7 @@ def index() -> str:
         f"<p class=\"label\">Real muse-spark-1.3 calls recorded on "
         f"{html.escape(resolved['date'])}. Supplier system and mail "
         "simulated.</p>"
+        f"{recorded_cost_line(resolved['job_id'])}"
         f"<h2>Overnight replay: one job, 21:30 to the question</h2>"
         f"{_replay_timeline(events)}"
         f"{scan_grounding_section(events)}"

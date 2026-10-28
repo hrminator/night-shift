@@ -2,6 +2,11 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Wed Oct 28 — prompt F4b part 4: one canonical run, one cost vocabulary
+
+- New data/recorded_costs.json: night 6c7c7c742513 cost $0.2640 over 17 calls (290,348 in / 145,755 cached / 14,440 out), re-verified from logs/responses-2026-10-27.jsonl lines 224-240 by exact token totals. The front door shows "Recorded night 6c7c7c742513 cost $0.26; 50% of input tokens served from cache" (test in tests/test_main.py); the same job id went onto all six comps' measured lines.
+- Eval reports now read "mean over N development runs" for cost and seconds and "Cache (pooled over N development runs)"; all 6 folders regenerated with scripts/rescore.py (wording only, no score change). README gains a cost-vocabulary note reconciling the three figures ($0.26+50% = the one recorded night; $0.19 = mean over 12 development runs in results/20261027T125850Z; 70-76% = per-night cache shares in results/20261028T082246Z), per-call probe wording, and "3 repetitions" for the final runs.
+
 ## Wed Oct 28 — prompt F4b part 3: matched replay experiment (6 live resumes)
 
 - New scripts/replay_matched.py: forks recorded night 6c7c7c742513 at its paused state in throwaway DATA_DIRs with the same answer ("Bergen: the venue can receive it" at 01:05), 3 runs per arm. Replay resumes via runner.resume_job (10 reasoning items replayed, no files); resend drops the reasoning and re-attaches the read+reassess source content (both PDFs by fresh id, texts inline; uploads deleted after). Mechanics covered by tests/test_replay_matched.py (5 stub tests, no network).
