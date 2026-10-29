@@ -2,6 +2,86 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Thu Oct 29 — prompt S1a-fix: owner's verdict on the v2 comps
+
+View layer only: model words untouched (word for word from the event log),
+page weight still under 100 KB before fonts (night 53,728; question 48,759;
+morning 61,231; replay 58,270; film 50,629/44,963). The prompt names
+prompts/prompt-s0b-comps-premium.txt; the file in the repo is
+prompts/prompt-s0b-comps.txt (same as S1a/S1b found).
+
+Four marks (new tests/test_s1a_fix_accept.py, 6 Playwright tests):
+1. Phone state B: landed in S1a. Header, clock, question and both buttons
+   sit inside 844 px at 360/390/430 on /?state=question and on a live
+   copy's /jobs/{id} while its question is open (tightest: 18 px margin
+   at 360); the strip fold starts below the buttons in all six.
+2. Morning receipt: position landed in S1a, size fixed here. It was
+   already under the strip in the left column with its own shadow;
+   max-width was 440 px at 13 px, now 360 px at Geist Mono 14.
+   Left column fills the fold (~866 px at 1440x900).
+3. Sticky left column (new): fixed here. The instrument part (clock,
+   timeline, status, strip, receipt) is a .stick wrapper with
+   position:sticky; top:32px; the feed below it scrolls normally, which
+   is what the tall-column rule means now that the feed lives in the
+   left column. First cut (sticky .inst with max-height + internal
+   scroll) clipped the feed in full-page shots, so it was reworked; a
+   ::before gutter cover keeps feed text out of the 32 px band above
+   the pinned block. Test: clock pinned at y=32 mid-scroll with x/width
+   unchanged, still in view at 1500 px (stuck, or parked exactly at the
+   row end by correct sticky physics), no header overlap at rest.
+4. Tick labels: landed in S1a. 00:38 ends 6 px before 02:00 starts at
+   360 px (10 px mono already applied on phones); the boxes do not
+   intersect. One row kept, per the comp.
+
+Numbered drifts 5-10, all fixed:
+5. Feed moved to the left column under the strip on ?state=night and in
+   the replay (right keeps beat, sheet, checks, decision). Replay JS
+   now queries feed rows document-wide and removes the feed when it
+   lands on State B, so finished-replay text still equals
+   ?state=question exactly.
+6. Top lines removed: the recorded line on the night/question pages and
+   "Morning page · 07:00 · Job …" on the morning. Simulation sentence
+   appended to the footer scenario line; job id appended to the raw-log
+   link text (front, job, morning, live pages). One test updated, not a
+   behavioural contract: test_visitor now asserts the chip carries date
+   + model and that no recline renders (footer sentence assertion kept).
+7. Morning summary paragraph removed from the body; kept only as the
+   page's meta description (test_resume's label assertion still reads
+   it from the head).
+8. Letters restyled, elements kept (test_morning_view + the S1a flip
+   test use textarea.edit and button[data-save]): the textarea sits on
+   the paper with no box or border until focus; Save edited version is
+   a quiet underlined text action; the approve button and its
+   flip/undo/disabled behaviour are unchanged.
+9. Film sheet beat: inner padding 32 px/96 px on 16x9 (28 px sides
+   kept on 9x16), caption re-aligned to 96 px; texture, fold line and
+   two-layer shadow untouched. At full 1.06 push-in the whole changed
+   line stays inside 1920x1080 (asserted).
+10. Film note beat renders the two recorded options as the product's
+    own buttons (btn fill lamp + btn ghost hair, same sizes, no form);
+    asserted with two button elements in those classes.
+
+Review pass (s1a/s1b vs comps-v2 side by side, S0b amendments 1-10):
+- R1: desktop state B left column held only the clock (verdict-driven
+  phone layout left a void on desktop). It now shows the question as
+  status plus the strip, desktop-only; the strip fold is phone-only;
+  the replay keeps the block hidden until it lands. Matches the comp.
+- R2: note Why-now/checked/if-yes rows used native disclosure
+  triangles; they now use the chevron summary row (amendment 1).
+  Earlier-versions stays bare (S1a's documented choice).
+- R3 (found while shooting): see mark 3 rework above.
+- Verified identical or per-verdict, no change: quote sheet (fold,
+  amber underline, tilt match the comp pixel-close in 2x crops),
+  receipt sawtooth/dashes/shadow (teeth confirmed in a 3x clip),
+  bedside note buttons, card surfaces, type scale, one dot tag per
+  card. Desktop state B keeps verdict order (buttons before lists)
+  against the comp's open-sections-first note.
+
+Screenshots in docs/screens/s1a-fix/: night/question/morning at
+390x844 full + fold and 1440x900 (shot_s1a.py takes --out now).
+docs/film/beats/ + docs/screens/s1b/ refreshed (sheet, note, morning
+stills changed with the fixes; dawn clip untouched). Suite: 317 passed.
+
 ## Wed Oct 28 — prompt F5 part 4: README results
 
 - Results section: Night B now reads 1 of 3 before the fix (20261028T205824Z) and 3 of 3 after (20261028T221930Z, run 849015e83ed8 pinned), plus the "Two behaviours we fixed from measurements" paragraph (premature hold, misattributed thanks, each with before/after folders, and the loose thanks-venue correction).

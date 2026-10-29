@@ -25,6 +25,10 @@ RECORDED = "6c7c7c742513"
 
 
 def main() -> None:
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", default="docs/screens/s1a")
+    out_dir = Path(parser.parse_args().out)
     from tests.test_s1a_accept import seed_live_morning
     tmp = Path(tempfile.mkdtemp(prefix="s1a-shots-"))
     os.environ["DATA_DIR"] = str(tmp)
@@ -51,7 +55,7 @@ def main() -> None:
         else:
             raise SystemExit("server never came up on 8123")
         from playwright.sync_api import sync_playwright
-        out = ROOT / "docs" / "screens" / "s1a"
+        out = out_dir if out_dir.is_absolute() else ROOT / out_dir
         out.mkdir(parents=True, exist_ok=True)
         shots = [
             ("night", "/?state=night"),
