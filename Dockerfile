@@ -1,3 +1,12 @@
+# Filter stage: ship only the comparison inputs out of results/
+# (results.json + report.md per folder, ~260 KB). The raw per-run
+# exports with their encrypted reasoning blobs stay out of the image.
+FROM python:3.13-slim AS results-filter
+WORKDIR /sel
+COPY results ./results
+COPY scripts/select_results.py ./
+RUN python select_results.py results ./selected
+
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -20,6 +29,7 @@ COPY static ./static
 COPY comps ./comps
 COPY film ./film
 COPY data ./data
+COPY --from=results-filter /sel/selected ./results
 
 RUN uv sync --frozen --no-dev && chown -R app:app /app
 

@@ -2,6 +2,12 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Thu Oct 29 — prompt F6: comparison sentence missing on the deployed site
+
+- Cause: the Dockerfile never copied results/, so on Fly night_b_results_dir() found no folder, comparison_line() returned "", and the front door's change-one-fact block rendered without the sentence. Reproduced locally first: an empty results root resolves to None and the line is "" (locally it reads "held without waking in 3 of 3" from 20261028T221930Z).
+- Fix, packaging only (app/night_b.py untouched): new scripts/select_results.py copies only results.json + report.md per results folder into a staging tree, keeping the results/<folder>/ layout; the Dockerfile runs it in a results-filter build stage and COPY --from's the staging tree into the final image. A plain COPY cannot filter and .dockerignore cannot re-include files under excluded run dirs, so the script + build stage is the mechanism. The image now carries 20 files / 260.8 KB from results/ (10 folders x results.json + report.md; the 5 grounding probe folders hold neither file and contribute nothing); the ~11.5 MB of raw run exports with encrypted reasoning blobs stay out.
+- Tests in tests/test_night_b_results.py (2 new, 9 in file): one runs the same script the Dockerfile runs, points a monkeypatched results root at the staging folder alone (no run exports anywhere on the path), and asserts night_b_results_dir() resolves inside staging and comparison_line() is non-empty; the other asserts the front door HTML contains "held without waking in" from the staging tree alone. The existing front-door test now shares the new seeding helper (assertions unchanged). Suite: 319 passed.
+
 ## Thu Oct 29 — prompt S1a-fix: owner's verdict on the v2 comps
 
 View layer only: model words untouched (word for word from the event log),
