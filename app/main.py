@@ -192,6 +192,7 @@ RV_SCRIPT = (
 #: Without JS the replay never runs, so the note must simply show.
 NOSCRIPT_SHOW = (
     "<noscript><style>#state-question{display:block !important}"
+    "@media(min-width:1024px){[data-qstatus]{display:block !important}}"
     "</style></noscript>"
 )
 
@@ -384,16 +385,17 @@ def index(state: str = "", film: str = "", frame: str = "", beat: str = "") -> s
         else:
             status_text = ("Overnight replay: one job, 21:30 to the"
                            " question.")
-        inst = (pages_mod.clock_block(
+        inst = (pages_mod.stick(pages_mod.clock_block(
             beat, event_tag="SCRIPTED TEST EVENT")
-            + pages_mod.status_para(status_text) + strip + feed)
+            + pages_mod.status_para(status_text) + strip)
+            + feed)
         detail = night_rest + cost
         top = pages_mod.header_row(chip)
         body_class = ""
     elif state == "question":
         # No status sentence: the note's question is the status, and
         # both buttons must clear the first phone viewport.
-        inst = pages_mod.clock_block(notified_at, amber_dot=True)
+        inst = pages_mod.stick(pages_mod.clock_block(notified_at, amber_dot=True) + states_mod.question_inst_extra(question, strip_rows))
         detail = (note
                   + states_mod.strip_fold_html(strip_rows)
                   + cost)
@@ -406,8 +408,10 @@ def index(state: str = "", film: str = "", frame: str = "", beat: str = "") -> s
             note_hidden = states_mod.question_note(
                 question, "/visitor/answer", ownerline, with_change=True,
                 hidden=True)
-        inst = pages_mod.clock_block(
-            "21:30", event_tag="SCRIPTED TEST EVENT", evtag_hidden=True) + feed
+        inst = (pages_mod.stick(pages_mod.clock_block(
+            "21:30", event_tag="SCRIPTED TEST EVENT", evtag_hidden=True)
+            + states_mod.question_inst_extra(question, strip_rows, hidden=True))
+            + feed)
         detail = ('<div id="replay">' + night_rest + "</div>"
                   + note_hidden
                   + states_mod.strip_fold_html(strip_rows) + cost)
@@ -702,7 +706,7 @@ def job_page(job_id: str):
             question, f"/jobs/{esc(job_id)}/answer", ownerline)
         asked_at = str(question.get("virtual_time", "00:47"))
         # No status sentence here either: the note below carries it.
-        inst = pages_mod.clock_block(asked_at, amber_dot=True)
+        inst = pages_mod.stick(pages_mod.clock_block(asked_at, amber_dot=True) + states_mod.question_inst_extra(question, strip_rows))
         detail = (note + states_mod.strip_fold_html(strip_rows)
                   + statusline + events_fold + audit + scan)
         body_class = "state-b"
@@ -733,7 +737,7 @@ def job_page(job_id: str):
             status_text = _job_status_sentence(status)
             action = ""
         tick = str(job.get("virtual_time") or "00:47")
-        inst = (pages_mod.clock_block(tick)
+        inst = pages_mod.stick(pages_mod.clock_block(tick)
                 + pages_mod.status_para(status_text)
                 + pages_mod.supplier_strip(strip_rows))
         detail = action + statusline + events_fold + audit + scan

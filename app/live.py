@@ -175,7 +175,7 @@ def _progress_page(job_id: str, title: str, status_sentence: str,
                     "Your answer is a fact. The permission is from the "
                     "21:30 brief.</p>")
     tick = str(job.get("virtual_time") or "01:05")
-    inst = (pages_mod.clock_block(tick, amber_dot=not terminal)
+    inst = pages_mod.stick(pages_mod.clock_block(tick, amber_dot=not terminal)
             + pages_mod.status_para(status_sentence)
             + pages_mod.supplier_strip(states_mod.strip_rows_for(events)))
     detail = (note + state

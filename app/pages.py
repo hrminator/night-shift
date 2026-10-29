@@ -158,6 +158,11 @@ def clock_block(current: str, event_tag: str | None = None,
     )
 
 
+def stick(inner_html: str) -> str:
+    """The pinned instrument: clock, status, strip (and receipt)."""
+    return f"<div class=\"stick\">{inner_html}</div>"
+
+
 def status_para(text: str) -> str:
     """The one serif status sentence."""
     return f"<p class=\"status\">{html.escape(text)}</p>"

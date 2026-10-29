@@ -189,15 +189,15 @@ def test_mark3_sticky_left_column(fix_server):
         for url in urls:
             page.goto(fix_server["base"] + url, wait_until="load")
             sticky = page.evaluate("""() => {
-              const cs = getComputedStyle(document.querySelector('.inst'));
+              const cs = getComputedStyle(document.querySelector('.stick'));
               return {position: cs.position, top: cs.top};
             }""")
             assert sticky == {"position": "sticky", "top": "32px"}, (
                 url, sticky)
             header = _box(page, ".wmrow")
-            inst = _box(page, ".inst")
-            assert inst["y"] >= header["y"] + header["height"], (
-                url, header, inst)
+            stick = _box(page, ".stick")
+            assert stick["y"] >= header["y"] + header["height"], (
+                url, header, stick)
         page.goto(fix_server["base"] + "/?state=night",
                   wait_until="load")
         before = _box(page, ".inst .clock")
@@ -219,10 +219,10 @@ def test_mark3_sticky_left_column(fix_server):
         assert after["width"] == pytest.approx(before["width"], abs=1), (
             before, after)
         if abs(after["y"] - 32) > 3:
+            stick = _box(page, ".stick")
             inst = _box(page, ".inst")
-            grid = _box(page, ".grid")
-            assert abs((inst["y"] + inst["height"])
-                       - (grid["y"] + grid["height"])) < 3, (inst, grid)
+            assert abs((stick["y"] + stick["height"])
+                       - (inst["y"] + inst["height"])) < 3, (stick, inst)
     finally:
         page.close()
 

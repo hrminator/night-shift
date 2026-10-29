@@ -412,12 +412,16 @@ def question_collapsed_html(question: dict) -> str:
         f"<li>{esc(piece)}</li>"
         for piece in what_checked_items(payload.get("what_checked", "")))
     return (
-        "<details><summary>Why now</summary>"
+        "<details><summary class=\"foldrow\"><span>Why now</span>"
+        "<span class=\"chev\" aria-hidden=\"true\"></span></summary>"
         f"<div class=\"foldbody\"><p>"
         f"{esc(str(payload.get('why_now', '')))}</p></div></details>"
-        "<details><summary>What I checked</summary>"
+        "<details><summary class=\"foldrow\"><span>What I checked</span>"
+        "<span class=\"chev\" aria-hidden=\"true\"></span></summary>"
         f"<div class=\"foldbody\"><ul>{items}</ul></div></details>"
-        f"<details><summary>If yes / If no, or no answer by {due}</summary>"
+        f"<details><summary class=\"foldrow\"><span>If yes / If no, or no "
+        f"answer by {due}</span><span class=\"chev\" "
+        "aria-hidden=\"true\"></span></summary>"
         "<div class=\"foldbody\">"
         f"<p>{esc(str(payload.get('if_yes', '')))}</p>"
         f"<p>{esc(str(payload.get('if_no', '')))}</p>"
@@ -457,6 +461,25 @@ def question_note(question: dict, post_action: str, ownerline: str,
     )
 
 
+def question_inst_extra(question: dict | None,
+                          rows: list[tuple[str, str, str]],
+                          hidden: bool = False) -> str:
+    """State B desktop instrument: the question as status plus the strip.
+
+    Desktop only (hidden on phones, where the buttons must clear the
+    fold). The replay hides it until it lands on State B.
+    """
+    if question is None:
+        return ""
+    flag = " hidden data-qstatus" if hidden else ""
+    asked = str(_payload(question).get("question", ""))
+    return (
+        f"<div class=\"desk-only\"{flag}>"
+        f"{pages_mod.status_para(asked)}"
+        f"{pages_mod.supplier_strip(rows)}</div>"
+    )
+
+
 def strip_fold_html(rows: list[tuple[str, str, str]]) -> str:
     """The supplier strip collapsed to one line (State B, below buttons)."""
     esc = html.escape
@@ -468,7 +491,7 @@ def strip_fold_html(rows: list[tuple[str, str, str]]) -> str:
         for role, name, status in rows
     )
     return (
-        "<details class=\"fold tight\">"
+        "<details class=\"fold tight phone-only\">"
         "<summary class=\"foldrow card\">"
         "<span class=\"foldname\">The three suppliers</span>"
         "<span class=\"chev\" aria-hidden=\"true\"></span></summary>"

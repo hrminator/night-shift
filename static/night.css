@@ -150,6 +150,8 @@ details[open] .chev{transform:rotate(225deg)}
 .skip{display:block;text-align:right;margin:24px 0 0}
 .skip a{color:var(--fg-2);font-size:15px}
 .small{font-size:15px;color:var(--fg-2)}
+.desk-only{display:none}
+.desk-only[hidden]{display:none}
 /* Reads */
 .read .src{margin:0 0 8px;font:400 15px/1.5 "Geist Mono",ui-monospace,monospace;color:var(--fg-2)}
 .read blockquote{margin:0}
@@ -282,13 +284,17 @@ body.state-b .detail>section:first-child{margin-top:24px}
 @media(min-width:1024px){
   .wrap{padding:40px 48px 96px}
   .wmrow{margin-bottom:40px}
-  .grid{display:grid;grid-template-columns:440px minmax(0,1fr);gap:56px;align-items:start}
-  .inst{position:sticky;top:32px;min-width:0;max-height:calc(100vh - 64px);overflow-y:auto;scrollbar-width:thin}
+  .grid{display:grid;grid-template-columns:440px minmax(0,1fr);gap:56px}
+  .inst{min-width:0}
+  .stick{position:sticky;top:32px;z-index:2;background:var(--bg);padding-bottom:8px}
+  .stick::before{content:"";position:absolute;top:-32px;left:0;right:0;height:32px;background:var(--bg)}
   .clock{font-size:72px}
   .card{padding:24px}
   .strip{padding:8px 24px}
   .note h2{font-size:32px}
   .detail{min-width:0}
+  .desk-only{display:block}
+  .phone-only{display:none}
   .detail>section:first-child,.detail>details:first-child{margin-top:0}
 }
 @media(prefers-reduced-motion:reduce){

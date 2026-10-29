@@ -602,7 +602,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
     strip = pages_mod.supplier_strip(
         states_mod.strip_rows_for(events, morning=True, hold_id=hold_id))
     receipt = _receipt_html(ack) if hold_id is not None else ""
-    inst = (pages_mod.clock_block("07:00")
+    inst = pages_mod.stick(pages_mod.clock_block("07:00")
             + pages_mod.status_para(_greeting(events))
             + holdchip + strip + receipt)
     lookup = job_id if job_id is not None else job_title

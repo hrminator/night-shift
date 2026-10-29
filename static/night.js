@@ -71,6 +71,8 @@
   } catch (e) { reduced = true; }
   if (reduced || !root.classList.contains("rv")) {
     root.classList.remove("rv");
+    var qs0 = document.querySelector("[data-qstatus]");
+    if (qs0) qs0.hidden = false;
     showNote();
     return;
   }
@@ -161,6 +163,8 @@
     if (evtag && evtag.parentNode) evtag.parentNode.removeChild(evtag);
     if (replay.parentNode) replay.parentNode.removeChild(replay);
     if (feedSec && feedSec.parentNode) feedSec.parentNode.removeChild(feedSec);
+    var qs = document.querySelector("[data-qstatus]");
+    if (qs) qs.hidden = false;
     document.body.classList.add("state-b");
     showNote();
     var paper = note ? $(".note", note) : null;
