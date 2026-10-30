@@ -1,8 +1,8 @@
-"""Superseded drafts (pure code): pre-00:38 drafts refresh on resume.
+"""Superseded drafts (pure code): pre-event drafts refresh on resume.
 
 A draft proposed before the revised-quote event is ``superseded_pending``
-until a newer draft with the same purpose exists; the resume follow-up
-message lists the pre-event drafts by purpose; the morning page collapses
+until a newer draft to the same recipient exists; the resume follow-up
+message lists the pre-event drafts; the morning page collapses
 them under "Earlier versions".
 """
 
@@ -17,9 +17,9 @@ from app.store import append_event, create_job, list_events
 PURPOSE = "comparison for 07:00 review"
 
 
-def _draft(job_id, purpose, body, virtual_time):
+def _draft(job_id, purpose, body, virtual_time, to="owner"):
     return append_event(job_id, virtual_time, "draft", {
-        "to": "owner", "subject": "sub", "body": body,
+        "to": to, "subject": "sub", "body": body,
         "purpose": purpose, "status": "awaiting_approval"})
 
 
@@ -30,7 +30,8 @@ def _seed_night():
     append_event(job_id, "21:30", "handoff",
                  {"brief": "fixtures/brief.md", "source": "owner"})
     old = _draft(job_id, PURPOSE, "Rannavere verified, cheapest", "22:30")
-    other = _draft(job_id, "order", "Rannavere order draft", "22:30")
+    other = _draft(job_id, "order", "Rannavere order draft", "22:30",
+                   to="supplier@example.com")
     append_event(job_id, "00:38", "revised_quote",
                  {"quote": "Q-1187-B", "replaces": "Q-1187"})
     return job_id, old, other

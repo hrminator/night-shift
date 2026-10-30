@@ -689,6 +689,11 @@ def draft_leak_flag(to: str, body: str) -> tuple[bool, str]:
     return False, ""
 
 
+def normalize_recipient(to: object) -> str:
+    """One current message per party: recipients compare case-insensitively."""
+    return str(to or "").strip().lower()
+
+
 DRAFT_MARKERS = ["DRAFT", "DO NOT SEND", "NOT YET", "FOR REVIEW"]
 
 
@@ -725,6 +730,11 @@ def check_propose_message(
     if credit.get("credit") is not None and not credit["ok"]:
         append_event(job_id, virtual_time, "attribution_refused", {"phrase": credit["credit"]["phrase"], "party": credit["credit"]["party"], "to": args["to"], "purpose": args["purpose"]}, path=path)
         return {"ok": False, "reason": credit["message"], "phrase": credit["credit"]["phrase"], "party": credit["credit"]["party"]}
+    same_turn = [e for e in list_events(job_id, path=path) if e["kind"] == "draft" and e.get("virtual_time") == virtual_time and normalize_recipient((e.get("payload") or {}).get("to")) == normalize_recipient(args["to"])]
+    if same_turn and args["purpose"] not in {str((e.get("payload") or {}).get("purpose", "")) for e in same_turn}:
+        existing_purpose = str((max(same_turn, key=lambda e: int(e["id"])).get("payload") or {}).get("purpose", ""))
+        append_event(job_id, virtual_time, "duplicate_recipient_refused", {"recipient": args["to"], "existing_purpose": existing_purpose, "purpose": args["purpose"]}, path=path)
+        return {"ok": False, "reason": f"a message to {args['to']} already exists in this turn under purpose {existing_purpose!r}; fold the new content into one message by re-issuing purpose {existing_purpose!r}, or drop it.", "recipient": args["to"], "existing_purpose": existing_purpose, "purpose": args["purpose"]}
     append_event(job_id, virtual_time, "gateway_result",
                  {"tool": "propose_message", "ok": True, "action": "draft",
                   "note": "drafts never send; nothing is delivered"},
@@ -951,29 +961,39 @@ def draft_events_in(events: list[dict]) -> list[dict]:
 
 
 def superseded_map_for(events: list[dict]) -> dict[int, str]:
-    """Pre-event drafts and whether a newer same-purpose draft exists.
+    """Superseded drafts: one current message per party.
 
-    A draft proposed before the revised-quote event is ``superseded``
-    when a newer draft with the same purpose exists, else
-    ``superseded_pending``. Post-event drafts are never listed.
+    Within one turn (same virtual time) a draft is ``superseded`` when a
+    newer draft with the same purpose exists. Across turns a draft is
+    ``superseded`` when a newer draft to the same recipient exists. A
+    pre-event draft with no such newer draft is ``superseded_pending``;
+    other drafts with none are current and omitted.
     """
     rev = revised_quote_id_in(events)
     if rev is None:
         return {}
     drafts = draft_events_in(events)
-    purposes: dict[str, list[int]] = {}
-    for draft in drafts:
-        purpose = str((draft.get("payload") or {}).get("purpose", ""))
-        purposes.setdefault(purpose, []).append(int(draft["id"]))
     result: dict[int, str] = {}
-    for draft in drafts:
+    for pos, draft in enumerate(drafts):
         did = int(draft["id"])
-        if did >= rev:
-            continue
-        purpose = str((draft.get("payload") or {}).get("purpose", ""))
-        newer = [other for other in purposes.get(purpose, [])
-                 if other > did]
-        result[did] = "superseded" if newer else "superseded_pending"
+        payload = draft.get("payload") or {}
+        purpose = str(payload.get("purpose", ""))
+        to = normalize_recipient(payload.get("to"))
+        vt = draft.get("virtual_time")
+        superseded = False
+        for newer in drafts[pos + 1:]:
+            n_payload = newer.get("payload") or {}
+            if newer.get("virtual_time") == vt:
+                if str(n_payload.get("purpose", "")) == purpose:
+                    superseded = True
+                    break
+            elif normalize_recipient(n_payload.get("to")) == to:
+                superseded = True
+                break
+        if superseded:
+            result[did] = "superseded"
+        elif did < rev:
+            result[did] = "superseded_pending"
     return result
 
 
