@@ -34,7 +34,7 @@ sys.path.insert(0, str(ROOT))
 
 PORT = 8123
 BASE = f"http://127.0.0.1:{PORT}"
-RECORDED = "6c7c7c742513"
+RECORDED = "3f6fc9663151"
 FPS = 30
 
 VIEWPORTS = {"16x9": {"width": 1920, "height": 1080},

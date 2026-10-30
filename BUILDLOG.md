@@ -2,6 +2,11 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Fri Oct 30 — prompt H1 part 4: render the film for the rough cut
+
+- Rendered every beat in film/cues.json in both frames from the new recorded night (scripts/render_film.py + scripts/shot_s1a.py repointed at RECORDED 3f6fc9663151) into render/2026-10-30/ (git-ignored; added render/ to .gitignore): 20 per-beat WebMs plus the full 16x9 sequence as one WebM, 15,300 frames in all. Total render wall time 9,140 s (~2h32m): 101 s brief-16x9, 1,719 s first loop (7 beats, then one transient Page.goto timeout on diff-16x9), 6,610 s second loop (13 beats, then the sequence VP9 encode hit the script's 600 s ffmpeg timeout), 710 s sequence re-encode run directly. Folder size 5,315,550,108 bytes (~4.95 GB), frames plus 21 WebMs (sequence 170 s / 1.9 MB; beats at their cue lengths 10-30 s, verified with ffprobe).
+- Refreshed docs/film/beats/*.png (10 stills) and docs/film/dawn-5s.webm from the new night; re-took the s1a-fix screenshots into docs/screens/h1/ (night/question/morning at 390x844 full+fold and 1440x900). Suite 326 green.
+
 ## Fri Oct 30 — prompt H1 part 3: two morning-page nits
 
 - (a) "Who said what" no longer shows a stray "- " inside each bullet: _ledger_section strips a leading "- " per line at render time; the stored fact_ledger event and ledger.render_lines are untouched.
