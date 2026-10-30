@@ -1,7 +1,7 @@
 """Morning page shows exactly the approvals it counts.
 
 An approval card is only a current draft head addressed to an external
-party. Notes to the owner render in a "For you" section without approve
+party. Notes to the owner render in a "Notes to you" section without approve
 buttons. Superseded pre-event drafts stay collapsed under "Earlier
 versions" and are never counted. The "Needs you" count equals the
 number of approval cards.
@@ -76,10 +76,11 @@ def test_needs_you_count_equals_approval_cards(tmp_path, monkeypatch):
     page = client.get(f"/jobs/{job_id}/morning").text
     assert _needs_you_count(page) == 3
     assert page.count("Approve this exact text") == 3
-    assert "<h2>For you</h2>" in page
+    assert "<h2>Notes to you</h2>" in page
     assert "What changed overnight" in page
-    for_you = page.split("<h2>For you</h2>", 1)[1]
-    for_you = for_you.split("<details>", 1)[0]
+    assert page.index("<h2>Notes to you</h2>") < page.index("<h2>Needs you:")
+    for_you = page.split("<h2>Notes to you</h2>", 1)[1]
+    for_you = for_you.split("<h2>Needs you:", 1)[0]
     assert "Approve this exact text" not in for_you
     assert "Earlier versions" in page
     earlier = page.split("Earlier versions", 1)[1]
@@ -115,5 +116,5 @@ def test_hero_like_three_externals_count_three(tmp_path, monkeypatch):
     page = client.get(f"/jobs/{job_id}/morning").text
     assert _needs_you_count(page) == 3
     assert page.count("Approve this exact text") == 3
-    assert "For you" not in page
+    assert "Notes to you" not in page
     assert "Earlier versions" not in page

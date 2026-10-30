@@ -58,7 +58,7 @@ def test_resume_instructions_list_pre_event_drafts(tmp_path, monkeypatch):
     message = runner.build_resume_stale_message(job_id)
     assert message is not None
     assert PURPOSE in message
-    assert "SAME purpose" in message
+    assert "SAME recipient" in message
 
 
 def _answer_and_checkpoint(job_id):

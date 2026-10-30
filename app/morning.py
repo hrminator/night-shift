@@ -3,7 +3,7 @@
 The v2 morning layout with the two marks applied (receipt under the strip
 in the left column, larger; staggered timeline labels come from the shared
 stylesheet): greeting from the job's own events, HOLD LAPSES chip, strip,
-thermal receipt, approval letters exactly as counted, For-you notes, Done,
+thermal receipt, approval letters exactly as counted, Notes-to-you, Done,
 Couldn't-verify, What-was-saved, collapsed How-it-decided, resume panel
 with the job's own token numbers, cost line, gateway facts on tap. The
 no-hold morning reads just as finished. View layer only.
@@ -250,8 +250,8 @@ def _for_you_section(events: list) -> str:
             f"{_leak_line(payload)}"
             f"{_letter_meta(draft, 'for you')}</div>"
         )
-    return ("<section class=\"sec\" aria-label=\"For you\">"
-            f"<h2>For you</h2>{letters}</section>")
+    return ("<section class=\"sec\" aria-label=\"Notes to you\">"
+            f"<h2>Notes to you</h2>{letters}</section>")
 
 
 def _earlier_section(events: list) -> str:
@@ -616,8 +616,8 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
     lookup = job_id if job_id is not None else job_title
     detail = (
 
-        f"{_needs_section(lookup, events, with_forms=job_id is not None)}"
         f"{_for_you_section(events)}"
+        f"{_needs_section(lookup, events, with_forms=job_id is not None)}"
         f"{_earlier_section(events)}"
         f"{_done_section(events)}"
         f"{_couldnt_section(events)}"
