@@ -2,6 +2,11 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Fri Oct 30 — prompt H1 part 3: two morning-page nits
+
+- (a) "Who said what" no longer shows a stray "- " inside each bullet: _ledger_section strips a leading "- " per line at render time; the stored fact_ledger event and ledger.render_lines are untouched.
+- (b) A live job with no cost record (no model_call events, or calls that billed zero tokens, as the stubbed screenshot copies do) now shows "cost not recorded for this copy." in the resume panel and no Measured line, instead of "$0.00 / 0 input tokens". Recorded runs without an entry keep "Usage as reported by the API.". Three new tests in tests/test_morning_view.py. Suite 326 green.
+
 ## Fri Oct 30 — prompt H1 part 2: re-record on the final contract
 
 - Ran hero (W1_timely_answer) x2 + Night B (necessity_no_wake) x3, supervision/medium/muse-spark-1.3, into one folder results/20261030T091757Z/ (two eval.py invocations with the same --out, hero first then Night B; merged with a /tmp script: hero records kept episodes 1-2, Night B renumbered 3-5, summary recomputed, report re-rendered, runs_per_case reads "2 hero + 3 Night B"). All 5 pass: 2/2 complete, 3/3 no-wake, 0 premature, 0 misattributed, 0 claims missing source, $0.79 total.

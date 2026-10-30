@@ -165,3 +165,70 @@ def test_resume_panel_uses_job_model_calls(tmp_path, monkeypatch):
     assert "12,000 input tokens over 2 calls" in body
     assert "4,000 served from cache" in body
     assert "Measured: this night cost $" in body
+
+
+def test_ledger_items_strip_list_marker(tmp_path, monkeypatch):
+    """The template strips the '- ' ledger marker; the event keeps it."""
+    from app import ledger as ledger_mod
+
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    job = create_job(status="done", current_step="done",
+                     virtual_time="07:00")
+    job_id = job["id"]
+    append_event(job_id, "21:30", "handoff",
+                 {"brief": "fixtures/brief.md", "source": "owner"})
+    append_event(job_id, "22:30", "claim",
+                 {"source": "Rannavere original Q-1187",
+                  "quote": "Delivery: delivered to your address by "
+                           "9 November.",
+                  "claim": "arrival monday"})
+    stored = append_event(job_id, "01:05", "fact_ledger",
+                          ledger_mod.build_ledger(list_events(job_id)))
+    client = TestClient(main_mod.app, raise_server_exceptions=False)
+    body = client.get(f"/jobs/{job_id}/morning").text
+    assert "Who said what" in body
+    assert "<li>- " not in body
+    assert "Rannavere Print" in body
+    assert ledger_mod.render_lines(stored["payload"])[0].startswith("- ")
+
+
+def test_stub_copy_shows_no_cost_record_not_zeros(tmp_path, monkeypatch):
+    """Zero-token model calls render 'cost not recorded', not zeros."""
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    job = create_job(status="done", current_step="done",
+                     virtual_time="07:00")
+    job_id = job["id"]
+    append_event(job_id, "21:30", "handoff",
+                 {"brief": "fixtures/brief.md", "source": "owner"})
+    append_event(job_id, "00:47", "checkpoint",
+                 {"question_event_id": 0, "next_input": []})
+    append_event(job_id, "01:05", "owner_answer",
+                 {"choice": "Bergen: the venue can receive it",
+                  "source": "owner"})
+    append_event(job_id, "01:05", "model_call", {
+        "call_type": "resume", "model": "stub", "seconds": 0.0,
+        "input_tokens": 0, "cached_tokens": 0, "output_tokens": 0})
+    client = TestClient(main_mod.app, raise_server_exceptions=False)
+    body = client.get(f"/jobs/{job_id}/morning").text
+    assert "cost not recorded for this copy" in body
+    assert "$0.00" not in body
+    assert "0 input tokens" not in body
+
+
+def test_live_job_without_any_cost_record_says_so(tmp_path, monkeypatch):
+    """Checkpoint + answer but no model calls: same sentence, no zeros."""
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    job = create_job(status="done", current_step="done",
+                     virtual_time="07:00")
+    job_id = job["id"]
+    append_event(job_id, "21:30", "handoff",
+                 {"brief": "fixtures/brief.md", "source": "owner"})
+    append_event(job_id, "00:47", "checkpoint",
+                 {"question_event_id": 0, "next_input": []})
+    append_event(job_id, "01:05", "owner_answer",
+                 {"choice": "Bergen: the venue can receive it",
+                  "source": "owner"})
+    client = TestClient(main_mod.app, raise_server_exceptions=False)
+    body = client.get(f"/jobs/{job_id}/morning").text
+    assert "cost not recorded for this copy" in body
+    assert "This night billed" not in body

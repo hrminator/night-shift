@@ -356,7 +356,7 @@ def _ledger_section(events: list) -> str:
     if not ledgers:
         return ""
     lines = "".join(
-        f"<li>{esc(line)}</li>"
+        f"<li>{esc(line[2:] if line.startswith('- ') else line)}</li>"
         for line in ledger_mod.render_lines(_payload(ledgers[-1])))
     return (
         "<section class=\"sec\" aria-label=\"Who said what\">"
@@ -459,7 +459,13 @@ def _waited_minutes(events: list) -> tuple[str, str, int] | None:
     return start, end, minutes
 
 
-def _resume_panel(events: list) -> str:
+def _has_cost_record(totals: dict | None) -> bool:
+    """A totals dict is a cost record only when tokens were billed."""
+    return totals is not None and (
+        totals["inputs"] + totals["cached"] + totals["outputs"]) > 0
+
+
+def _resume_panel(events: list, job_id: str | None) -> str:
     """The resume: waited minutes, pruned files, own tokens, matched line."""
     waited = _waited_minutes(events)
     if waited is None:
@@ -476,13 +482,15 @@ def _resume_panel(events: list) -> str:
     else:
         prune_clause = ""
     totals = _model_call_totals(events) or _recorded_totals(events)
-    if totals is not None:
+    if _has_cost_record(totals):
         tokens = (
             f"This night billed {totals['inputs']:,} input tokens over "
             f"{totals['calls']} calls "
             f"({totals['cached']:,} served from cache). "
             "Usage as reported by the API."
         )
+    elif job_id is not None:
+        tokens = "cost not recorded for this copy."
     else:
         tokens = "Usage as reported by the API."
     minute_word = "minute" if minutes == 1 else "minutes"
@@ -504,7 +512,7 @@ def _cost_line(job_id: str | None, events: list) -> str:
     from app import main as main_mod
     if job_id is not None:
         totals = _model_call_totals(events)
-        if totals is None:
+        if not _has_cost_record(totals):
             return ""
         from app.spend import cost_usd
         usd = cost_usd(totals["inputs"], totals["cached"],
@@ -617,7 +625,7 @@ def render_morning_page(job_title: str, events: list, banner: str = "",
         f"{_saved_section(events)}"
         f"{_notification_block(job_id, events)}"
         f"{_how_section(events)}"
-        f"{_resume_panel(events)}"
+        f"{_resume_panel(events, job_id)}"
         f"{_cost_line(job_id, events)}"
         f"{_gateway_fold(events)}"
     )
