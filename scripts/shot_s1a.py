@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT))
 
 PORT = 8123
 BASE = f"http://127.0.0.1:{PORT}"
-RECORDED = "3f6fc9663151"
+RECORDED = "387faa63af38"
 
 
 def main() -> None:
