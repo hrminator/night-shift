@@ -115,7 +115,7 @@ def _sheet_inner(events: list) -> str:
         return "<p class=\"fserif\">No revised quote in this run.</p>"
     return (
         "<div class=\"sheet fsheet\">"
-        "<p class=\"firm\">Baltic Print OÜ (fictional)</p>"
+        "<p class=\"firm\">Rannavere Print OÜ (fictional)</p>"
         f"<h3>Quote {esc(quote_id)} — 100 tote bags with your logo</h3>"
         f"<p>This quote replaces quote {esc(replaces_id)}.</p>"
         "<div class=\"gap\"></div>"
@@ -124,7 +124,7 @@ def _sheet_inner(events: list) -> str:
         "<div class=\"gap\"></div>"
         f"<p class=\"quoted\">{esc(revised_line)}</p>"
         "<div class=\"gap\"></div>"
-        "<p>Contact: quotes@baltic-print.example.com (fictional)</p>"
+        "<p>Contact: quotes@rannavere-print.example.com (fictional)</p>"
         "</div>"
         f"<p class=\"sheetcap\">Line Muse Spark quoted"
         f"{pages_mod.tag('spark')}</p>"

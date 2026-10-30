@@ -36,7 +36,7 @@ PURPOSE_LABELS = {
 PURPOSE_SHORT = {
     "order": "Order",
     "venue_note": "Venue note",
-    "baltic_note": "Baltic note",
+    "baltic_note": "Rannavere note",
 }
 
 
@@ -72,13 +72,13 @@ def _label_line(events: list) -> str:
             "Vestland slot held until 09:00 · Done: comparison, hold, "
             f"{approval_count} {draft_word} · Needs you: {approval_count} "
             f"{approval_word} (the Vestland order before "
-            "09:00) · Couldn't verify: Baltic's arrival · Supplier system "
+            "09:00) · Couldn't verify: Rannavere's arrival · Supplier system "
             "and mail simulated"
         )
     return (
         "No hold was placed · Done: comparison, drafts · "
         f"Needs you: {approval_count} {approval_word} · Couldn't verify: "
-        "Baltic's arrival · Supplier system and mail simulated"
+        "Rannavere's arrival · Supplier system and mail simulated"
     )
 
 

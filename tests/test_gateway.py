@@ -141,7 +141,7 @@ def _refused_case(extra_args=None, answer_vt="01:05", submit_vt="01:05",
 
 
 @pytest.mark.parametrize("label,make_args", [
-    ("wrong portal", lambda aid: {"portal": "Baltic Print",
+    ("wrong portal", lambda aid: {"portal": "Rannavere Print",
                                   "fields": _fields(aid)}),
     ("extra field", lambda aid: {"portal": "Vestland Tekstil",
                                  "fields": _fields(aid, courier="overnight")}),
@@ -286,7 +286,7 @@ def test_studio_contact_list_drives_leak_flag(tmp_path, monkeypatch):
     assert inside.get("leak") is None
     outside = gateway.check_propose_message(
         job_id, {"to": "booking@sjosalen.example.com", "subject": "Van",
-                 "body": "Also tell quotes@baltic-print.example.com",
+                 "body": "Also tell quotes@rannavere-print.example.com",
                  "purpose": "venue_note"}, "01:11")
     assert outside["ok"] is True
     assert outside.get("leak") is True

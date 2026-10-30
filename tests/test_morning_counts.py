@@ -27,13 +27,13 @@ def _seed_mixed():
     gateway.check_propose_message(job_id, {
         "to": "owner@fjord-fern.example.com",
         "subject": "Overnight comparison",
-        "body": "Baltic verified, cheapest.",
+        "body": "Rannavere verified, cheapest.",
         "purpose": "comparison for 07:00 review"}, "22:30")
     gateway.check_propose_message(job_id, {
-        "to": "quotes@baltic-print.example.com",
+        "to": "quotes@rannavere-print.example.com",
         "subject": "Order Q-1187",
         "body": "Please reserve Q-1187.",
-        "purpose": "baltic order pre-event"}, "22:30")
+        "purpose": "rannavere order pre-event"}, "22:30")
     append_event(job_id, "00:38", "revised_quote",
                  {"quote": "Q-1187-B", "replaces": "Q-1187"})
     gateway.check_propose_message(job_id, {
@@ -44,13 +44,13 @@ def _seed_mixed():
         "subject": "Van Wed 08-12", "body": "A van comes Wed 08-12.",
         "purpose": "venue_note"}, "01:05")
     gateway.check_propose_message(job_id, {
-        "to": "quotes@baltic-print.example.com",
+        "to": "quotes@rannavere-print.example.com",
         "subject": "Q-1187-B query", "body": "What is the arrival date?",
         "purpose": "baltic_note"}, "01:05")
     gateway.check_propose_message(job_id, {
         "to": "owner@fjord-fern.example.com",
         "subject": "What changed overnight",
-        "body": "Baltic arrival is now unverified.",
+        "body": "Rannavere arrival is now unverified.",
         "purpose": "overnight summary"}, "01:05")
     append_event(job_id, "01:05", "effect", {
         "tool": "submit_hold", "operation_id": "op-test",
@@ -101,7 +101,7 @@ def test_hero_like_three_externals_count_three(tmp_path, monkeypatch):
             ("Vestland Tekstil", "Confirm hold H-2041", "order"),
             ("booking@sjosalen.example.com", "Van Wed 08-12",
              "venue_note"),
-            ("quotes@baltic-print.example.com", "Q-1187-B query",
+            ("quotes@rannavere-print.example.com", "Q-1187-B query",
              "baltic_note")]:
         gateway.check_propose_message(job_id, {
             "to": to, "subject": subject, "body": "Exact body.",

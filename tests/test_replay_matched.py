@@ -104,7 +104,7 @@ def test_thanks_venue_matcher():
     assert matched.thanks_venue(
         "Thank you for confirming the venue can receive the van.") is True
     assert matched.thanks_venue("A van comes Wed 08-12.") is False
-    assert matched.thanks_venue("Thanks, Baltic, for the quote.") is False
+    assert matched.thanks_venue("Thanks, Rannavere, for the quote.") is False
     assert matched.thanks_venue("") is False
 
 

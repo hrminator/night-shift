@@ -1,6 +1,6 @@
 """Day 1 step 2 part 3: prove Spark reads the fixture sources.
 
-Uploads both Baltic PDFs once each via the files endpoint (purpose
+Uploads both Rannavere PDFs once each via the files endpoint (purpose
 ``user_data``; ``expires_after`` was tried and is ignored by the API, so no
 expiry is available) and sends them by file id, plus the portal JSON inline.
 Asks muse-spark-1.3, with a ``record_claim`` tool, to record the delivery

@@ -46,10 +46,10 @@ SEED_DRAFTS = [
               "bags to Sjosalen on Wed Nov 11 08:00-12:00.\n\nThank you "
               "for receiving it in that window.\n\nBest regards, "
               "Kari Strandli")},
-    {"to": "Baltic Print quotes desk",
+    {"to": "Rannavere Print quotes desk",
      "subject": "Q-1187-B arrival query",
      "purpose": "baltic_note",
-     "body": ("Hello Baltic Print,\n\nThanks for revised Quote Q-1187-B "
+     "body": ("Hello Rannavere Print,\n\nThanks for revised Quote Q-1187-B "
               "(100 tote bags, goods leave the warehouse by 10 November, "
               "replacing Q-1187).\n\nWe are declining for now as we need "
               "a guaranteed arrival date. Could you confirm one?\n\nBest "

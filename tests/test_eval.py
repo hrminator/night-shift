@@ -82,8 +82,8 @@ def _stub_night(job_ref):
                   {"to": "o", "subject": "s", "body": "comparison",
                    "purpose": "comparison"}, "read-d1"),
             _call("propose_message",
-                  {"to": "o", "subject": "s", "body": "baltic",
-                   "purpose": "baltic order"}, "read-d2"),
+                  {"to": "o", "subject": "s", "body": "rannavere",
+                   "purpose": "rannavere order"}, "read-d2"),
         ], "text": ""},
         {"output": [_text("read done")], "text": "read done"},
     ]
@@ -120,7 +120,7 @@ def _stub_night(job_ref):
                           {"to": "o", "subject": "s", "body": "venue",
                            "purpose": "venue_note"}, "res-d2"),
                     _call("propose_message",
-                          {"to": "o", "subject": "s", "body": "baltic",
+                          {"to": "o", "subject": "s", "body": "rannavere",
                            "purpose": "baltic_note"}, "res-d3"),
                 ], "text": ""}
             if resume["n"] == 2:

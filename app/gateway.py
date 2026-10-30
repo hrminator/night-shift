@@ -36,7 +36,7 @@ CHECK_ORDER = [
 ]
 
 PRIVACY_FORBIDDEN = [
-    "budget", "internal", "nordtrykk", "baltic",
+    "budget", "internal", "nordtrykk", "baltic", "rannavere",
     "2200", "2150", "3500",
 ]
 

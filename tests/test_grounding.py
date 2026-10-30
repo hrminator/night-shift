@@ -91,7 +91,7 @@ def _scan_job(tmp_path, monkeypatch, quote=ARRIVAL_LINE):
     job = create_job(status="running", current_step="reassess",
                      virtual_time="00:39")
     append_event(job["id"], "00:39", "claim", {
-        "source": "Baltic revised Q-1187-B",
+        "source": "Rannavere revised Q-1187-B",
         "version_or_file_id": "Q-1187-B",
         "quote": quote,
         "claim": "dispatch-only, no arrival date",
@@ -268,7 +268,7 @@ def test_grounding_default_off_makes_no_call(tmp_path, monkeypatch):
     job = create_job(status="running", current_step="reassess",
                      virtual_time="00:39")
     append_event(job["id"], "00:39", "claim", {
-        "source": "Baltic revised Q-1187-B",
+        "source": "Rannavere revised Q-1187-B",
         "version_or_file_id": "Q-1187-B",
         "quote": ARRIVAL_LINE,
         "claim": "dispatch-only, no arrival date",
@@ -456,7 +456,7 @@ def test_scan_section_empty_without_grounding_event():
     assert main_mod.scan_grounding_section([]) == ""
     claim = {"id": 80, "job_id": "job-ground", "seq": 80,
              "virtual_time": "00:39", "kind": "claim",
-             "payload": {"source": "Baltic revised Q-1187-B",
+             "payload": {"source": "Rannavere revised Q-1187-B",
                          "quote": ARRIVAL_LINE, "claim": "x"},
              "created_at": "2026-10-28T00:00:00+00:00"}
     assert main_mod.scan_grounding_section([claim]) == ""
@@ -478,7 +478,7 @@ def test_job_page_shows_scan_section(tmp_path, monkeypatch):
     job = create_job(status="done", current_step="done",
                      virtual_time="07:00")
     append_event(job["id"], "00:39", "claim", {
-        "source": "Baltic revised Q-1187-B", "quote": ARRIVAL_LINE,
+        "source": "Rannavere revised Q-1187-B", "quote": ARRIVAL_LINE,
         "claim": "dispatch-only"})
     append_event(job["id"], "00:39", "line_not_located", {
         "claim_id": 1, "line_text": ARRIVAL_LINE, "reason": "no_box"})

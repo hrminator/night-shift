@@ -90,7 +90,7 @@ def _scripted_night_b(seen):
                 return {"output": [_call(
                     "record_decision",
                     {"outcome": "no_wake",
-                     "reason": "Baltic Q-1187 commits arrival",
+                     "reason": "Rannavere Q-1187 commits arrival",
                      "evidence": [_venue_claim_id()]}, "d1")],
                     "text": "", "usage": usage}
             return {"output": [_text("read done")], "text": "read done",

@@ -36,7 +36,7 @@ WANT_PHRASES = [
 ]
 
 FORBIDDEN_TOKENS = [
-    "baltic", "vestland", "nordtrykk", "sjosalen", "sjøsalen",
+    "baltic", "rannavere", "vestland", "nordtrykk", "sjosalen", "sjøsalen",
     "bergen", "oslo", "tallinn", "q-1187", "nov",
 ]
 

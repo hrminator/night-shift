@@ -1,4 +1,4 @@
-"""Generate the Baltic Print quote PDFs for the fictional test world.
+"""Generate the Rannavere Print quote PDFs for the fictional test world.
 
 - fixtures/baltic_quote_original.pdf: clean text PDF, quote Q-1187.
 - fixtures/baltic_quote_Q-1187-B_text.pdf: same revised content as a text PDF.
@@ -40,7 +40,7 @@ SCAN_ROTATION_DEGREES = 0.8
 SCAN_SEED = 27
 
 ORIGINAL_LINES = [
-    "Baltic Print OÜ (fictional)",
+    "Rannavere Print OÜ (fictional)",
     "Quote Q-1187 — 100 tote bags with your logo",
     "",
     "Price: NOK 18 per bag",
@@ -50,11 +50,11 @@ ORIGINAL_LINES = [
     "Delivery: delivered to your address by 9 November.",
     "Valid until Nov 5.",
     "",
-    "Contact: quotes@baltic-print.example.com (fictional)",
+    "Contact: quotes@rannavere-print.example.com (fictional)",
 ]
 
 REVISED_LINES = [
-    "Baltic Print OÜ (fictional)",
+    "Rannavere Print OÜ (fictional)",
     "Quote Q-1187-B — 100 tote bags with your logo",
     "",
     "This quote replaces quote Q-1187.",
@@ -65,7 +65,7 @@ REVISED_LINES = [
     "",
     "Delivery: Goods will leave our warehouse by 10 November.",
     "",
-    "Contact: quotes@baltic-print.example.com (fictional)",
+    "Contact: quotes@rannavere-print.example.com (fictional)",
 ]
 
 

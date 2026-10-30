@@ -19,7 +19,7 @@ Everything in this repository was created during the hackathon building period (
 
 Added Tue Oct 27 (Python 3.13.5, `uv sync`): fastapi 0.162.0 (MIT), uvicorn 0.54.0 (BSD-3-Clause), httpx 0.28.1 (BSD-3-Clause), pytest 9.1.1 (MIT), plus their transitive deps pinned in `uv.lock`.
 
-Added Tue Oct 27 (`uv add`): reportlab 5.1.0 (BSD), Pillow 13.0.0 (HPND) — for generating the Baltic quote PDFs and the scan-styled raster effect.
+Added Tue Oct 27 (`uv add`): reportlab 5.1.0 (BSD), Pillow 13.0.0 (HPND) — for generating the Rannavere quote PDFs and the scan-styled raster effect.
 
 Added Tue Oct 27: tzdata 2026.5 (Apache-2.0) — provider of IANA time zone data, needed for the virtual clock on Windows.
 

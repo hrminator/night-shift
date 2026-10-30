@@ -281,7 +281,7 @@ def _replay_timeline(events: list) -> str:
             )
         elif kind == "revised_quote":
             parts.append(
-                f"<li><b>{vt} — the one scheduled event:</b> Baltic's "
+                f"<li><b>{vt} — the one scheduled event:</b> Rannavere's "
                 f"revised quote {esc(str(payload.get('quote', '?')))} "
                 f"arrives and replaces "
                 f"{esc(str(payload.get('replaces', '?')))}.</li>"

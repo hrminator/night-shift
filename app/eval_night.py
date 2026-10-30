@@ -93,7 +93,7 @@ def _run_case(case, arm, respond_fn, work_dir, out_path, upload_fn,
                                note="read turn failed")
             append_event(job_id, revised_time, "revised_quote",
                          {"quote": "Q-1187-B", "replaces": "Q-1187",
-                          "detail": "Baltic Print revised quote Q-1187-B"
+                          "detail": "Rannavere Print revised quote Q-1187-B"
                           " arrives and replaces original quote Q-1187"})
             reassess_first = list(read_turn["input"]) + [
                 {"type": "message", "role": "user",

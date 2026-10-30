@@ -29,8 +29,8 @@ def _seed_night():
     job_id = job["id"]
     append_event(job_id, "21:30", "handoff",
                  {"brief": "fixtures/brief.md", "source": "owner"})
-    old = _draft(job_id, PURPOSE, "Baltic verified, cheapest", "22:30")
-    other = _draft(job_id, "order", "Baltic order draft", "22:30")
+    old = _draft(job_id, PURPOSE, "Rannavere verified, cheapest", "22:30")
+    other = _draft(job_id, "order", "Rannavere order draft", "22:30")
     append_event(job_id, "00:38", "revised_quote",
                  {"quote": "Q-1187-B", "replaces": "Q-1187"})
     return job_id, old, other
@@ -41,7 +41,7 @@ def test_pre_event_drafts_pending_until_reissued(tmp_path, monkeypatch):
     job_id, old, other = _seed_night()
     assert gateway.superseded_map(job_id) == {
         old["id"]: "superseded_pending", other["id"]: "superseded_pending"}
-    new = _draft(job_id, PURPOSE, "Baltic arrival unverified", "01:05")
+    new = _draft(job_id, PURPOSE, "Rannavere arrival unverified", "01:05")
     assert new["id"] not in gateway.superseded_map(job_id)
     assert gateway.superseded_map(job_id) == {
         old["id"]: "superseded", other["id"]: "superseded_pending"}
@@ -91,7 +91,7 @@ def test_resume_reissue_clears_pending_with_fake_respond(
         if "calls" not in seen:
             seen["calls"] = 1
             return {"output": [_propose_call(
-                PURPOSE, "Baltic arrival now unverified", "c1")], "text": ""}
+                PURPOSE, "Rannavere arrival now unverified", "c1")], "text": ""}
         return {"output": [{"type": "message", "content": [
             {"type": "output_text", "text": "done"}]}], "text": "done"}
 
@@ -106,7 +106,7 @@ def test_resume_reissue_clears_pending_with_fake_respond(
                                job_id=job_id)
     assert "Earlier versions" in page
     assert "superseded" in page
-    assert "Baltic arrival now unverified" in page
+    assert "Rannavere arrival now unverified" in page
 
 
 def test_pending_draft_shown_collapsed_before_reissue(

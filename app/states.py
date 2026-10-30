@@ -95,7 +95,7 @@ def strip_rows_for(events: list, morning: bool = False,
     return [
         ("the Oslo printer", "Nordtrykk AS", oslo),
         ("the guaranteed van", "Vestland Tekstil", van),
-        ("the cheap one", "Baltic Print OÜ", cheap),
+        ("the cheap one", "Rannavere Print OÜ", cheap),
     ]
 
 
@@ -215,7 +215,7 @@ def _quote_lines(events: list) -> tuple[str, str, str, str]:
     """(quote id, replaces id, original line, revised line) for the beat.
 
     The lines are the claims' own quoted delivery commitments; empty when
-    the night logged no Baltic quote claims.
+    the night logged no Rannavere quote claims.
     """
     revised = revised_of(events)
     quote_id = str((_payload(revised).get("quote", "Q-1187-B"))
@@ -253,7 +253,7 @@ def beat_html(events: list) -> str:
         return ""
     sheet = (
         "<div class=\"sheet\" data-rv=\"sheet\" data-vt=\"00:38\">"
-        "<p class=\"firm\">Baltic Print OÜ (fictional)</p>"
+        "<p class=\"firm\">Rannavere Print OÜ (fictional)</p>"
         f"<h3>Quote {esc(quote_id)} — 100 tote bags with your logo</h3>"
         f"<p>This quote replaces quote {esc(replaces_id)}.</p>"
         "<div class=\"gap\"></div>"
@@ -262,7 +262,7 @@ def beat_html(events: list) -> str:
         "<div class=\"gap\"></div>"
         f"<p class=\"quoted\">{esc(revised_line)}</p>"
         "<div class=\"gap\"></div>"
-        "<p>Contact: quotes@baltic-print.example.com (fictional)</p>"
+        "<p>Contact: quotes@rannavere-print.example.com (fictional)</p>"
         "</div>"
         f"<p class=\"sheetcap\" data-rv=\"sheetcap\" data-vt=\"00:38\">{pages_mod.ICONS['file']}"
         "Line Muse Spark quoted"

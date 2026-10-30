@@ -31,7 +31,7 @@ def _seed_hold_job(drafts=3):
                  {"quote": "Q-1187-B", "replaces": "Q-1187"})
     purposes = ["order", "venue_note", "baltic_note"]
     recipients = ["Vestland Tekstil", "booking@sjosalen.example.com",
-                  "quotes@baltic-print.example.com"]
+                  "quotes@rannavere-print.example.com"]
     for pos in range(drafts):
         gateway.check_propose_message(job_id, {
             "to": recipients[pos], "subject": f"Subject {pos}",

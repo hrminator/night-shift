@@ -26,7 +26,7 @@ def _seed(attribution_world=True):
                      {"source": "venue confirmation",
                       "quote": "covers the Thursday event only"})
         append_event(job_id, "22:30", "claim",
-                     {"source": "Baltic original Q-1187",
+                     {"source": "Rannavere original Q-1187",
                       "quote": "Delivery: delivered to your address"
                                " by 9 November."})
     append_event(job_id, "00:47", "question",
@@ -312,7 +312,7 @@ def test_scorer_counts_misattributed_heads():
         "body": "Thank you for confirming you can receive it.",
         "purpose": "venue_note"}, 4)
     clean = _event("draft", "01:05", {
-        "to": "quotes@baltic-print.example.com", "subject": "Q",
+        "to": "quotes@rannavere-print.example.com", "subject": "Q",
         "body": "Could you confirm a guaranteed arrival date?",
         "purpose": "baltic_note"}, 5)
     assert eval_score.misattributed_confirmation(
@@ -389,3 +389,17 @@ def test_morning_page_shows_the_logged_ledger():
     assert "Bergen: the venue can receive it" in page
     plain = morning_mod.render_morning_page("ledger-test", events)
     assert "Who said what" not in plain
+
+
+def test_old_baltic_name_still_resolves_to_cheap_party():
+    """Old exports name the cheap supplier Baltic; they still resolve."""
+    assert ledger.party_of_source("Baltic original Q-1187") == "baltic"
+    assert (ledger.party_of_recipient("quotes@baltic-print.example.com")
+            == "baltic")
+
+
+def test_new_rannavere_name_resolves_and_displays_new():
+    assert ledger.party_of_source("Rannavere original Q-1187") == "baltic"
+    assert (ledger.party_of_recipient("quotes@rannavere-print.example.com")
+            == "baltic")
+    assert ledger.DISPLAY["baltic"] == "Rannavere Print"

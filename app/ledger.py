@@ -23,7 +23,7 @@ DISPLAY = {
     "owner": "the owner",
     "nordtrykk": "Nordtrykk",
     "vestland": "Vestland Tekstil",
-    "baltic": "Baltic Print",
+    "baltic": "Rannavere Print",
     "venue": "the venue",
 }
 
@@ -33,6 +33,7 @@ _SOURCE_TOKENS = (
     ("vestland", "vestland"),
     ("portal", "vestland"),
     ("baltic", "baltic"),
+    ("rannavere", "baltic"),
     ("venue", "venue"),
     ("sjosalen", "venue"),
     ("studio", "owner"),
@@ -47,6 +48,7 @@ _RECIPIENT_TOKENS = (
     ("vestland", "vestland"),
     ("portal", "vestland"),
     ("baltic", "baltic"),
+    ("rannavere", "baltic"),
     ("venue", "venue"),
     ("sjosalen", "venue"),
     ("owner", "owner"),
@@ -57,7 +59,7 @@ _PARTY_TOKENS = {
     "owner": ("owner",),
     "nordtrykk": ("nordtrykk",),
     "vestland": ("vestland",),
-    "baltic": ("baltic",),
+    "baltic": ("baltic", "rannavere"),
     "venue": ("venue", "sjosalen"),
 }
 
