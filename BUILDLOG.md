@@ -2,6 +2,11 @@
 
 A few lines per session: what was built, what failed, what was cut. Oslo time.
 
+## Mon Nov 2 — prompt S7: film-mode composition for 16x9
+
+- Part 1 (CSS only, static/night.css): the eight beats centre their content at y=450 in a 180..720 band (the lower-third test's <=720 edge, unchanged, is the binding constraint, so the band sits inside 0..900 rather than filling it). Clock digits 40->96 px on the eight beats; sheet/note keep 40 px via :has() on the .on beat. Headlines 72 px (brief/verdict/decision/diff new line; morning greeting 64 px), body/reasons 34 px (verdict measure 1200, decision 1300), read rows 30/30 px in 2x3, tags 18 px, checks 3x2 grid 1700 wide with the No/Yes floated beside the question at 40 px (pass icon 38 px), receipt 1.6x (22 px, 512 wide) with its caption wrapped underneath. Checks cards run 28/22 px for question/reason instead of 30/24: at 30/24 the grid measured 617 px and could neither centre at 450 under the 720 cap nor clear the 96 px clock without text-on-text overlap (160+617>720), so the prompt's "about" absorbed the 7-8%.
+- Part 2: new test_s7_beat_fills_frame (8 parametrized Playwright cases): read/checks assert their inner grids, the other six assert the band itself (their inner lines are short by nature; dawn's wash is full-frame by design). Failing-first observed (brief .fc 165 px tall). Suite 342 green (334 + 8). Determinism: script --check-determinism PASS on diff (50 frames) and morning (55 frames) at fps 5, plus the pytest twins. Stills re-rendered (docs/film/beats/ x8 committed); sheet/note PNGs byte-identical after re-render, proving :has() gating. No WebMs rendered. prompts/prompt-s7-film-16x9.txt copied and listed.
+
 ## Sun Nov 1 — prompt R2-final: final evaluation numbers into the README
 
 - results/20261101T213644Z/ (supervision, 12x3, concurrency 2, $5.3181 total, 3698.9 model-s): must-wake 12/12 in window, needless 3/12 (alternatives_no_wake runs 1-3 at 00:38), late/wrong 0, duplicates 0/0, complete 11/12 (W4_portal_error run 3 fails portal_errors_gte with 0 errors, H-2041 placed), premature 0, misattributed 0, refused 13 / effects 9, late asks refused 3. Harness wall 2178.6 s (sum 4304.3 s).

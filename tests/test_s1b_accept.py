@@ -276,3 +276,33 @@ def test_shortest_beats_render_identically_twice(live_server, tmp_path):
         render_mod.render_beat(pages, "16x9", entry["name"], 5, second)
         ok, detail = render_mod.frames_identical(first, second)
         assert ok, (entry["name"], detail)
+
+
+#: S7: the recomposed beats fill the 16x9 frame. Read and checks assert
+#: their inner grids (genuinely content-tall); the title-card beats assert
+#: the centred band itself (their inner lines are short by nature); dawn's
+#: horizon wash is full-frame by design (S1b), so its band stands in too.
+S7_BEAT_BLOCK = {"brief": ".fbeat.on .fc", "read": ".fbeat.on .fgrid6",
+                 "verdict": ".fbeat.on .fc", "diff": ".fbeat.on .fc",
+                 "checks": ".fbeat.on .fchecks",
+                 "decision": ".fbeat.on .fc", "dawn": ".fbeat.on .fc",
+                 "morning": ".fbeat.on .fc"}
+
+
+@pytest.mark.parametrize("beat", sorted(S7_BEAT_BLOCK))
+def test_s7_beat_fills_frame(live_server, beat):
+    page = live_server["browser"].new_page(
+        viewport={"width": 1920, "height": 1080})
+    try:
+        page.goto(
+            live_server["base"] + f"/?film=1&frame=16x9&beat={beat}",
+            wait_until="load")
+        total = page.evaluate("window.__nightShiftFilm.total")
+        page.evaluate(f"window.__nightShiftTick({total})")
+        box = page.locator(S7_BEAT_BLOCK[beat]).bounding_box()
+        assert box is not None, beat
+        assert box["y"] >= 0, (beat, box)
+        assert box["y"] + box["height"] <= 900, (beat, box)
+        assert box["height"] >= 400, (beat, box)
+    finally:
+        page.close()
